@@ -454,7 +454,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
                 setup:
                   msg.editor === null
                     ? { tag: "NotSet" }
-                    : { tag: "Url", editor: msg.editor },
+                    : { tag: "Preset", editor: msg.editor },
               },
             },
         [

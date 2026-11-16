@@ -9,7 +9,6 @@ import {
   makeErrorViewTarget,
   parseKeys,
   render,
-  getTextInputCursorMove,
 } from "../src/ErrorView.ts";
 import { removeColor } from "../src/Helpers.ts";
 import type { TerminalConfig } from "../src/Terminal.ts";
@@ -350,7 +349,7 @@ describe("render", () => {
       infoLine: undefined,
       editor: {
         ...noEditor,
-        current: { tag: "Preset", preset: webStorm },
+        current: webStorm,
       },
     });
     expect(removeColor(output.slice(output.lastIndexOf("\n\n") + 2)))
@@ -379,7 +378,7 @@ describe("render", () => {
         .replace(/\x1B\[0m\x1B\[1m(.*?)\x1B\[0m/g, "*$1*")
         .replace(/\x1B\[0m\x1B\[2m(.*?)\x1B\[0m/g, "$1");
     };
-    expect(chooser({ chooser: { other: undefined } })).toMatchInlineSnapshot(`
+    expect(chooser({ chooser: { showOther: false } })).toMatchInlineSnapshot(`
       "Which editor should I open this in?
       [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
       [*6*] Rider   [*7*] Other
@@ -388,93 +387,42 @@ describe("render", () => {
     `);
     expect(
       chooser({
-        chooser: {
-          other: {
-            input: { line: "myeditor://", cursor: 11 },
-            error: "The URL must contain {file}.",
-          },
-        },
-        current:
-          webStorm === undefined
-            ? undefined
-            : { tag: "Preset", preset: webStorm },
+        chooser: { showOther: true },
+        current: webStorm,
         commandHint: "# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='x'",
       }),
     ).toMatchInlineSnapshot(`
       "Which editor should I open this in?
+      [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] *WebStorm*
+      [*6*] Rider   [*7*] Other
 
-      Enter a URL that opens files in your editor.
-      Example: pycharm://open?file={file}&line={line}&column={column0}
-      Placeholders: {file} {line} {column} {line0} {column0}
-
-      Or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
+      To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
 
       # ~/.bashrc
       export ELM_WATCH_OPEN_EDITOR='x'
 
+      Try it out by running: elm-watch try-open
+      Then restart elm-watch.
+
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-      *The URL must contain {file}.*
-      [*enter*] use   [*esc*] back
-      Editor URL: myeditor://"
+      [*esc*] cancel"
     `);
     expect(
       chooser({
-        chooser: {
-          other: {
-            input: { line: "myeditor://{file}", cursor: 0 },
-            error: undefined,
-          },
-        },
-        current: { tag: "Custom", template: "myeditor://{file}" },
+        chooser: { showOther: true },
+        current: undefined,
       }),
     ).toMatchInlineSnapshot(`
       "Which editor should I open this in?
+      [*1*] VS Code   [*2*] Cursor   [*3*] Zed   [*4*] IntelliJ IDEA   [*5*] WebStorm
+      [*6*] Rider   [*7*] Other
 
-      Enter a URL that opens files in your editor.
-      Example: pycharm://open?file={file}&line={line}&column={column0}
-      Placeholders: {file} {line} {column} {line0} {column0}
-
-      Or use the openEditor option to run a command.
+      To use another editor, use the openEditor option.
 
       Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
-      [*enter*] use   [*esc*] back
-      Editor URL: myeditor://{file}"
-    `);
-  });
-
-  test("text field cursor", () => {
-    // "Editor URL: " is 12 characters.
-    const move = (columns: number, line: string, cursor: number): string => {
-      const { dx, dy } = getTextInputCursorMove(columns, { line, cursor });
-      return `${dx},${dy}`;
-    };
-    expect([
-      move(80, "abc", 3),
-      move(80, "abc", 0),
-      move(80, "abc", 1),
-      // 10 columns: "Editor URL" + ": abcdefgh" + "i".
-      move(10, "abcdefghi", 9),
-      move(10, "abcdefghi", 8),
-      move(10, "abcdefghi", 0),
-      // Exactly fills 2 rows: At the end, the cursor stays in the last column
-      // (on the "h"), rather than moving to the next line.
-      move(10, "abcdefgh", 8),
-      move(10, "abcdefgh", 7),
-      move(10, "abcdefgh", 0),
-    ]).toMatchInlineSnapshot(`
-      [
-        "0,0",
-        "-3,0",
-        "-2,0",
-        "0,0",
-        "-1,0",
-        "1,-1",
-        "0,0",
-        "0,0",
-        "-7,0",
-      ]
+      [*esc*] cancel"
     `);
   });
 

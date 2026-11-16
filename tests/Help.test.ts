@@ -72,6 +72,10 @@ describe("help", () => {
       By default all targets in the closest ⧙elm-watch.json⧘ are built.
       Pass ⧙target names⧘ to only build some. Names are matched by substring!
 
+      ⧙elm-watch try-open⧘
+          Try out ⧙ELM_WATCH_OPEN_EDITOR⧘ by opening the closest
+          package.json in your editor.
+
       ⧙---⧘
 
       ⧙Symbol legend:⧘
@@ -103,7 +107,8 @@ describe("help", () => {
               Disable colored output
 
           ⧙ELM_WATCH_OPEN_EDITOR⧘
-              Open your editor when clicking error locations in the browser
+              A URL or a command for opening your editor
+              when clicking error locations in the browser
               https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
           ⧙ELM_WATCH_HOST⧘
@@ -157,6 +162,10 @@ describe("help", () => {
         By default all targets in the closest elm-watch.json are built.
         Pass target names to only build some. Names are matched by substring!
 
+        elm-watch try-open
+            Try out ELM_WATCH_OPEN_EDITOR by opening the closest
+            package.json in your editor.
+
         ---
 
         Durations legend:
@@ -177,7 +186,8 @@ describe("help", () => {
                 Disable colored output
 
             ELM_WATCH_OPEN_EDITOR
-                Open your editor when clicking error locations in the browser
+                A URL or a command for opening your editor
+                when clicking error locations in the browser
                 https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
             ELM_WATCH_HOST

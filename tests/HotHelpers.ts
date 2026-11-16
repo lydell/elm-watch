@@ -1063,28 +1063,6 @@ export function clickUiButton(text: string): void {
   });
 }
 
-export function typeInUiInput(value: string): void {
-  withShadowRoot((shadowRoot) => {
-    const input = shadowRoot.querySelector('input[type="text"]');
-    if (!(input instanceof HTMLInputElement)) {
-      throw new Error("Could not find text input.");
-    }
-    input.value = value;
-    input.dispatchEvent(new Event("input"));
-  });
-}
-
-export function submitUiForm(): void {
-  withShadowRoot((shadowRoot) => {
-    const form = shadowRoot.querySelector("form");
-    if (form === null) {
-      throw new Error("Could not find form.");
-    }
-    form.requestSubmit();
-    window.__ELM_WATCH.ON_RENDER("submitUiForm");
-  });
-}
-
 export function getPanel(): string {
   let text = "(Panel not found)";
   withShadowRoot((shadowRoot) => {

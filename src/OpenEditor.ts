@@ -3,10 +3,17 @@ import * as path from "path";
 
 import type {
   OpenEditorError,
+  OpenEditorSetup,
   WebSocketToClientMessage,
 } from "../client/WebSocketMessages.ts";
 import type { OpenEditorFunction } from "./Config.ts";
-import { type Editor, editorToString, editorUrl } from "./Editor.ts";
+import {
+  EDITOR_PLACEHOLDERS,
+  EDITOR_URL_EXAMPLE,
+  editorUrl,
+  isEditorUrl,
+  validateEditorUrlTemplate,
+} from "./Editor.ts";
 import {
   __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
   ELM_WATCH_OPEN_EDITOR,
@@ -50,20 +57,41 @@ export function openEditor(
       message: Errors.openEditorInvalidFilePath(location.file),
     });
   } else {
+    const onDone = (error: OpenEditorError | undefined): void => {
+      if (error !== undefined) {
+        onError(error);
+      }
+    };
     switch (projectOpenEditor.tag) {
       case "NotSet":
         if (project.editor !== undefined) {
-          openEditorWithUrl(env, location, project.editor, onError);
+          openEditorWithUrl(
+            env,
+            location,
+            project.editor.template,
+            "Preset",
+            onDone,
+          );
         }
+        return;
+
+      case "Url":
+        openEditorWithUrl(
+          env,
+          location,
+          projectOpenEditor.template,
+          "Env",
+          onDone,
+        );
         return;
 
       case "Command":
         openEditorWithCommand(
           env,
-          project,
+          project.root,
           location,
           projectOpenEditor,
-          onError,
+          onDone,
         );
         return;
       case "Function":
@@ -79,34 +107,81 @@ export function getOpenEditorSetupMessage(
 ): WebSocketToClientMessage {
   return {
     tag: "OpenEditorSetupChanged",
-    setup:
-      project.openEditor.tag !== "NotSet"
-        ? { tag: "Server" }
-        : project.editor === undefined
-          ? { tag: "NotSet" }
-          : { tag: "Url", editor: editorToString(project.editor) },
+    setup: getOpenEditorSetup(project),
     commandHint: getCommandHint(env, project),
   };
 }
 
-// How to set `ELM_WATCH_OPEN_EDITOR` in the user’s shell. The environment
-// variable is only used with elm-watch.json.
+function getOpenEditorSetup(project: Project): OpenEditorSetup {
+  switch (project.openEditor.tag) {
+    case "NotSet":
+      return project.editor === undefined
+        ? { tag: "NotSet" }
+        : { tag: "Preset", editor: project.editor.id };
+
+    case "Url":
+      // Let the server show the error for invalid URLs.
+      return validateEditorUrlTemplate(project.openEditor.template) ===
+        undefined
+        ? { tag: "Url", template: project.openEditor.template }
+        : { tag: "Server" };
+
+    case "Command":
+    case "Function":
+      return { tag: "Server" };
+  }
+}
+
+// How to set `ELM_WATCH_OPEN_EDITOR` in the user’s shell: To a URL or a
+// command. The environment variable is only used with elm-watch.json.
 export function getCommandHint(env: Env, project: Project): string | null {
-  if (project.configSource.tag !== "ElmWatchJson") {
-    return null;
-  }
+  return project.configSource.tag === "ElmWatchJson"
+    ? getOpenEditorEnvHint(env)
+    : null;
+}
+
+export function getOpenEditorEnvHint(env: Env): string {
+  const urlComment = `A URL (${EDITOR_PLACEHOLDERS.join(" ")}):`;
+  const commandComment = (variables: Array<string>): string =>
+    `Or a command (${variables.join(" ")}):`;
+  const variableNames = EDITOR_PLACEHOLDERS.map((placeholder) =>
+    placeholder.slice(1, -1),
+  );
   if (IS_WINDOWS) {
-    return `# System Settings > Environment Variables\n${ELM_WATCH_OPEN_EDITOR}=your-editor "%file%:%line%:%column%"`;
+    return [
+      "# System Settings > Environment Variables",
+      `# ${urlComment}`,
+      `${ELM_WATCH_OPEN_EDITOR}=${EDITOR_URL_EXAMPLE}`,
+      `# ${commandComment(variableNames.map((name) => `%${name}%`))}`,
+      `${ELM_WATCH_OPEN_EDITOR}=your-editor "%file%:%line%:%column%"`,
+    ].join("\n");
   }
-  const shell = path.basename(env["SHELL"] ?? "");
+  const [comment, set] = getShellConfig(path.basename(env["SHELL"] ?? ""));
+  return [
+    `# ${comment}`,
+    `# ${urlComment}`,
+    set(`'${EDITOR_URL_EXAMPLE}'`),
+    `# ${commandComment(variableNames.map((name) => `$${name}`))}`,
+    set(`'your-editor "$file:$line:$column"'`),
+  ].join("\n");
+}
+
+function getShellConfig(
+  shell: string,
+): [comment: string, set: (quotedValue: string) => string] {
+  const exportValue = (quotedValue: string): string =>
+    `export ${ELM_WATCH_OPEN_EDITOR}=${quotedValue}`;
   switch (shell) {
     case "fish":
-      return `# Run once:\nset -Ux ${ELM_WATCH_OPEN_EDITOR} 'your-editor "$file:$line:$column"'`;
+      return [
+        "Run once:",
+        (quotedValue) => `set -Ux ${ELM_WATCH_OPEN_EDITOR} ${quotedValue}`,
+      ];
     case "bash":
     case "zsh":
-      return `# ~/.${shell}rc\nexport ${ELM_WATCH_OPEN_EDITOR}='your-editor "$file:$line:$column"'`;
+      return [`~/.${shell}rc`, exportValue];
     default:
-      return `# Your shell’s config file\nexport ${ELM_WATCH_OPEN_EDITOR}='your-editor "$file:$line:$column"'`;
+      return ["Your shell’s config file", exportValue];
   }
 }
 
@@ -122,14 +197,36 @@ export function printOpenEditorErrorForTerminal(
   }
 }
 
+// For `elm-watch try-open`: Open the location using `ELM_WATCH_OPEN_EDITOR`
+// (set to a URL or a command), and wait for the result.
+export async function openEditorFromEnv(
+  env: Env,
+  cwd: AbsolutePath,
+  location: OpenEditorLocation,
+  value: string,
+): Promise<OpenEditorError | undefined> {
+  return new Promise((resolve) => {
+    if (isEditorUrl(value)) {
+      openEditorWithUrl(env, location, value, "Env", resolve);
+    } else {
+      openEditorWithCommand(
+        env,
+        cwd,
+        location,
+        { command: value, source: "Env" },
+        resolve,
+      );
+    }
+  });
+}
+
 function openEditorWithCommand(
   env: Env,
-  project: Project,
+  cwd: AbsolutePath,
   location: OpenEditorLocation,
   { command, source }: { command: string; source: OpenEditorCommandSource },
-  onError: (error: OpenEditorError) => void,
+  onDone: (error: OpenEditorError | undefined) => void,
 ): void {
-  const cwd = project.root;
   const timeout = silentlyReadIntEnvValue(
     env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
     5000,
@@ -152,8 +249,10 @@ function openEditorWithCommand(
     },
     (error, stdout, stderr) => {
       clearTimeout(timeoutId);
-      if (error !== null) {
-        onError({
+      if (error === null) {
+        onDone(undefined);
+      } else {
+        onDone({
           tag: "CommandFailed",
           message: Errors.openEditorCommandFailed({
             error,
@@ -181,14 +280,23 @@ function openEditorWithCommand(
   }, timeout);
 }
 
-// Used from the terminal. The browser opens the URL by itself.
+// Used from the terminal. The browser opens the URL by itself (unless invalid).
 function openEditorWithUrl(
   env: Env,
   location: OpenEditorLocation,
-  editor: Editor,
-  onError: (error: OpenEditorError) => void,
+  template: string,
+  source: "Preset" | "Env",
+  onDone: (error: OpenEditorError | undefined) => void,
 ): void {
-  const url = editorUrl(editor, location);
+  const invalidReason = validateEditorUrlTemplate(template);
+  if (invalidReason !== undefined) {
+    onDone({
+      tag: "CommandFailed",
+      message: Errors.openEditorInvalidUrl(template, invalidReason),
+    });
+    return;
+  }
+  const url = editorUrl(template, location);
   const timeout = silentlyReadIntEnvValue(
     env[__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS],
     5000,
@@ -199,12 +307,15 @@ function openEditorWithUrl(
     args,
     { env, encoding: "utf8", timeout },
     (error, stdout, stderr) => {
-      if (error !== null) {
-        onError({
+      if (error === null) {
+        onDone(undefined);
+      } else {
+        onDone({
           tag: "CommandFailed",
           message: Errors.openEditorUrlFailed({
             error,
             command: [command, ...args],
+            source,
             timeout: error.killed === true ? timeout : undefined,
             stdout,
             stderr,

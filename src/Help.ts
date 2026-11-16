@@ -50,6 +50,10 @@ ${bold("elm-watch hot [target names...]")}
 By default all targets in the closest ${elmWatchJson} are built.
 Pass ${bold("target names")} to only build some. Names are matched by substring!
 
+${bold("elm-watch try-open")}
+    Try out ${bold(ELM_WATCH_OPEN_EDITOR)} by opening the closest
+    package.json in your editor.
+
 ${dim("---")}
 ${symbolLegend}
 ${bold("Durations legend:")}
@@ -70,7 +74,8 @@ ${bold("Environment variables:")}
         Disable colored output
 
     ${bold(ELM_WATCH_OPEN_EDITOR)}
-        Open your editor when clicking error locations in the browser
+        A URL or a command for opening your editor
+        when clicking error locations in the browser
         https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
     ${bold(ELM_WATCH_HOST)}

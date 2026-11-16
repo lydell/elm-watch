@@ -1,18 +1,15 @@
 import { describe, expect, test } from "vitest";
 
 import {
-  type Editor,
   editorUrl,
-  parseEditor,
+  findPreset,
+  isEditorUrl,
   validateEditorUrlTemplate,
 } from "../src/Editor.ts";
 
-function parse(string: string): Editor {
-  const editor = parseEditor(string);
-  if (editor === undefined) {
-    throw new Error(`Invalid editor: ${string}`);
-  }
-  return editor;
+// A preset ID or a URL template.
+function parse(string: string): string {
+  return findPreset(string)?.template ?? string;
 }
 
 const location = {
@@ -114,8 +111,31 @@ describe("validateEditorUrlTemplate", () => {
   });
 });
 
-describe("parseEditor", () => {
-  test("unknown preset ID is not a valid template", () => {
-    expect(parseEditor("emacs")).toBeUndefined();
+describe("isEditorUrl", () => {
+  test.each([
+    "myeditor://open?file={file}",
+    "pycharm://open",
+    "x-bbedit://open?url=file://{file}",
+    "http://example.com",
+    "myeditor://open?file={file} --with-space",
+  ])("URL: %s", (string) => {
+    expect(isEditorUrl(string)).toBe(true);
+  });
+
+  test.each([
+    'code --goto "$file:$line:$column"',
+    "C://Program Files/editor.exe %file%",
+    "C:\\Program Files\\editor.exe %file%",
+    "/usr/bin/myeditor $file",
+    "myeditor:{file}",
+    "",
+  ])("command: %s", (string) => {
+    expect(isEditorUrl(string)).toBe(false);
+  });
+});
+
+describe("findPreset", () => {
+  test("unknown preset ID", () => {
+    expect(findPreset("emacs")).toBeUndefined();
   });
 });

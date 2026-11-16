@@ -1571,7 +1571,7 @@ export function openEditorEnvNotSetForTerminal(
 Opening errors in your editor only works if you set it up. Either choose your editor in the browser UI (by clicking an error location there), or ${
     commandHint === null
       ? "use the openEditor option"
-      : `set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a command:
+      : `set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:
 
 ${commandHint}`
   }
@@ -1582,19 +1582,92 @@ Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-l
 
 export function openEditorOtherForTerminal(commandHint: string | null): string {
   return `
-Enter a URL that opens files in your editor.
-Example: ${EDITOR_URL_EXAMPLE}
-Placeholders: ${EDITOR_PLACEHOLDERS.join(" ")}
-
-Or ${
+To use another editor, ${
     commandHint === null
-      ? "use the openEditor option to run a command."
-      : `set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a command:
+      ? "use the openEditor option."
+      : `set the ${ELM_WATCH_OPEN_EDITOR} environment variable to a URL or a command:
 
-${commandHint}`
+${commandHint}
+
+Try it out by running: elm-watch try-open
+Then restart elm-watch.`
   }
 
 Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+  `.trim();
+}
+
+export function openEditorInvalidUrl(url: string, error: string): string {
+  return `
+Your ${ELM_WATCH_OPEN_EDITOR} environment variable looks like a URL:
+
+${url}
+
+But it is not a valid URL for opening an editor: ${error}
+
+These placeholders are replaced: ${EDITOR_PLACEHOLDERS.join(" ")}
+  `.trim();
+}
+
+export function tryOpenEnvNotSet(hint: string): string {
+  return `
+${boldTerminal("elm-watch try-open")} tries out the ${ELM_WATCH_OPEN_EDITOR} environment variable, but it isn’t set. Set it to a URL or a command:
+
+${hint}
+
+Or try it out without setting it permanently:
+
+${
+  IS_WINDOWS
+    ? `$env:${ELM_WATCH_OPEN_EDITOR}='${EDITOR_URL_EXAMPLE}'; elm-watch try-open`
+    : `${ELM_WATCH_OPEN_EDITOR}='${EDITOR_URL_EXAMPLE}' elm-watch try-open`
+}
+
+Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+  `.trim();
+}
+
+export function tryOpenNoPackageJson(cwd: Cwd): string {
+  return `
+${boldTerminal("elm-watch try-open")} opens the closest package.json, but I couldn’t find one in this directory or any of its parents:
+
+${cwd}
+  `.trim();
+}
+
+export function tryOpenReadError(file: AbsolutePath, error: unknown): string {
+  return `
+I tried to read the closest package.json, but failed:
+
+${file}
+
+${toError(error).message}
+  `.trim();
+}
+
+export function tryOpenOpening(
+  value: string,
+  location: { file: AbsolutePath; line: number; column: number },
+  // `undefined` if "elm-watch" wasn’t found in package.json.
+  lineText: string | undefined,
+): string {
+  const position = `${location.file}:${location.line}:${location.column}`;
+  return `
+Opening package.json using ${ELM_WATCH_OPEN_EDITOR}:
+
+${value}
+
+${
+  lineText === undefined
+    ? `package.json does not mention "elm-watch", so your editor should show the cursor at the very start of the file:
+
+${position}`
+    : `Your editor should show the cursor right before "elm-watch":
+
+${position}
+${lineText}
+${" ".repeat(location.column - 1)}^`
+}
   `.trim();
 }
 
@@ -1657,12 +1730,14 @@ ${printStdio(stdout, stderr)(DEFAULT_COLUMNS, (piece) => piece.text)}
 export function openEditorUrlFailed({
   error,
   command,
+  source,
   timeout,
   stdout,
   stderr,
 }: {
   error: ExecFileException;
   command: [string, ...Array<string>];
+  source: "Preset" | "Env";
   // Set if the command timed out.
   timeout: number | undefined;
   stdout: string;
@@ -1675,7 +1750,11 @@ export function openEditorUrlFailed({
         ? `The command exited with code ${error.code}.`
         : `The command failed: ${error.message}`;
   return `
-I tried to open your editor (chosen in the browser UI) via a URL:
+I tried to open your editor (${
+    source === "Preset"
+      ? "chosen in the browser UI or the terminal"
+      : `set via the ${ELM_WATCH_OPEN_EDITOR} environment variable`
+  }) via a URL:
 
 ${commandToPresentationName(command)}
 

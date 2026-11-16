@@ -1,13 +1,10 @@
 import * as Codec from "tiny-decoders";
 
 import {
-  EDITOR_PLACEHOLDERS,
   EDITOR_PRESETS,
-  EDITOR_URL_EXAMPLE,
-  type Editor,
+  type EditorPreset,
   editorUrl,
-  parseEditor,
-  validateEditorUrlTemplate,
+  findPreset,
 } from "../src/Editor.ts";
 import {
   type ErrorGroup,
@@ -203,27 +200,20 @@ type OverlayErrorsEntry = {
 type EditorChooser = {
   // The error location to open once an editor has been chosen.
   location: LocationToOpen | undefined;
-  // Whether “Other” has been chosen, showing the URL field and how to run a
-  // command instead.
+  // Whether “Other” has been chosen, showing how to set up other editors.
   showOther: boolean;
-  // Kept here, since the panel is re-created on every render.
-  customTemplate: string;
-  customError: string | undefined;
 };
 
 type EditorChooserProps = EditorChooser & {
-  current: Editor | undefined;
+  current: EditorPreset | undefined;
   commandHint: string | null;
   onChoose: (editor: string) => void;
   onShowOther: () => void;
-  onCustomInput: (value: string) => void;
-  onCustomSubmit: () => void;
-  onUseExample: () => void;
 };
 
 type OverlayEditor = {
-  // The editor chosen in the browser, if any.
-  current: Editor | undefined;
+  // The editor chosen in the browser or the terminal, if any.
+  current: EditorPreset | undefined;
   chooser: EditorChooserProps | undefined;
 };
 
@@ -640,10 +630,14 @@ export function createUi(): Ui {
   ): void => {
     const setup = getOpenEditor()?.openEditor.setup;
     switch (setup?.tag) {
-      case "Url": {
-        const editor = parseEditor(setup.editor);
-        if (editor !== undefined) {
-          openUrl(editorUrl(editor, location));
+      case "Url":
+        openUrl(editorUrl(setup.template, location));
+        return;
+
+      case "Preset": {
+        const preset = findPreset(setup.editor);
+        if (preset !== undefined) {
+          openUrl(editorUrl(preset.template, location));
         }
         return;
       }
@@ -671,7 +665,8 @@ export function createUi(): Ui {
     const result = getOpenEditor();
     return (
       result?.connectedTarget !== undefined &&
-      result.openEditor.setup.tag !== "Server"
+      (result.openEditor.setup.tag === "NotSet" ||
+        result.openEditor.setup.tag === "Preset")
     );
   };
 
@@ -679,20 +674,11 @@ export function createUi(): Ui {
     if (!canChooseEditor()) {
       return;
     }
-    const setup = getOpenEditor()?.openEditor.setup;
-    const current =
-      setup?.tag === "Url" ? parseEditor(setup.editor) : undefined;
-    editorChooser = {
-      location,
-      showOther: current?.tag === "Custom",
-      customTemplate: current?.tag === "Custom" ? current.template : "",
-      customError: undefined,
-    };
+    const current = getCurrentPreset();
+    editorChooser = { location, showOther: false };
     renderOverlay();
     const element = overlay.querySelector(
-      current?.tag === "Custom"
-        ? `[${DATA_FOCUS_KEY}="editorCustom"]`
-        : `[${DATA_FOCUS_KEY}="editor:${current?.tag === "Preset" ? current.preset.id : (EDITOR_PRESETS[0]?.id ?? "")}"]`,
+      `[${DATA_FOCUS_KEY}="editor:${current?.id ?? EDITOR_PRESETS[0]?.id ?? ""}"]`,
     );
     if (element instanceof HTMLElement) {
       element.focus({ preventScroll: true });
@@ -705,10 +691,6 @@ export function createUi(): Ui {
     }
     editorChooser.showOther = true;
     renderOverlay();
-    const input = overlay.querySelector(`[${DATA_FOCUS_KEY}="editorCustom"]`);
-    if (input instanceof HTMLElement) {
-      input.focus();
-    }
   };
 
   const closeEditorChooser = (): void => {
@@ -718,14 +700,14 @@ export function createUi(): Ui {
 
   const chooseEditor = (editorString: string): void => {
     const connectedTarget = getOpenEditor()?.connectedTarget;
-    const editor = parseEditor(editorString);
-    if (connectedTarget === undefined || editor === undefined) {
+    const preset = findPreset(editorString);
+    if (connectedTarget === undefined || preset === undefined) {
       return;
     }
     const location = editorChooser?.location;
     editorChooser = undefined;
     if (location !== undefined) {
-      openUrl(editorUrl(editor, location));
+      openUrl(editorUrl(preset.template, location));
     }
     dispatchToTarget(connectedTarget.targetName, {
       tag: "ChoseEditor",
@@ -735,11 +717,14 @@ export function createUi(): Ui {
     renderOverlay();
   };
 
+  const getCurrentPreset = (): EditorPreset | undefined => {
+    const setup = getOpenEditor()?.openEditor.setup;
+    return setup?.tag === "Preset" ? findPreset(setup.editor) : undefined;
+  };
+
   const getOverlayEditor = (): OverlayEditor => {
     const result = getOpenEditor();
-    const setup = result?.openEditor.setup;
-    const current =
-      setup?.tag === "Url" ? parseEditor(setup.editor) : undefined;
+    const current = getCurrentPreset();
     return {
       current,
       chooser:
@@ -751,40 +736,6 @@ export function createUi(): Ui {
               commandHint: result.openEditor.commandHint,
               onChoose: chooseEditor,
               onShowOther: showOtherEditor,
-              onCustomInput: (value) => {
-                if (editorChooser !== undefined) {
-                  editorChooser.customTemplate = value;
-                }
-              },
-              onCustomSubmit: () => {
-                if (editorChooser === undefined) {
-                  return;
-                }
-                const template = editorChooser.customTemplate.trim();
-                const error = validateEditorUrlTemplate(template);
-                if (error === undefined) {
-                  chooseEditor(template);
-                } else {
-                  editorChooser.customError = error;
-                  renderOverlay();
-                }
-              },
-              onUseExample: () => {
-                if (editorChooser === undefined) {
-                  return;
-                }
-                editorChooser.customTemplate = EDITOR_URL_EXAMPLE;
-                editorChooser.customError = undefined;
-                renderOverlay();
-                const input = overlay.querySelector(
-                  `[${DATA_FOCUS_KEY}="editorCustom"]`,
-                );
-                if (input instanceof HTMLInputElement) {
-                  input.focus();
-                  // Select the scheme, which is the part to change.
-                  input.setSelectionRange(0, input.value.indexOf(":"));
-                }
-              },
             },
     };
   };
@@ -1701,9 +1652,6 @@ const CLASS = {
   dialog: "dialog",
   editorChooser: "editorChooser",
   editorChooserOptions: "editorChooserOptions",
-  editorCustom: "editorCustom",
-  editorExample: "editorExample",
-  editorNote: "editorNote",
   envNotSet: "envNotSet",
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
@@ -1997,8 +1945,7 @@ supported by browsers, for browsers without popover support.
   padding: 0;
 }
 
-.${CLASS.editorChooser} button,
-.${CLASS.editorChooser} input {
+.${CLASS.editorChooser} button {
   font: inherit;
   color: inherit;
 }
@@ -2013,8 +1960,7 @@ supported by browsers, for browsers without popover support.
   gap: 1ch 3ch;
 }
 
-.${CLASS.editorChooserOptions} button,
-.${CLASS.editorCustom} button {
+.${CLASS.editorChooserOptions} button {
   appearance: none;
   padding: 0;
   border: none;
@@ -2023,9 +1969,7 @@ supported by browsers, for browsers without popover support.
   cursor: pointer;
 }
 
-.${CLASS.editorChooserOptions} button:hover,
-.${CLASS.editorCustom} button:hover,
-.${CLASS.editorExample}:hover {
+.${CLASS.editorChooserOptions} button:hover {
   text-decoration: underline;
 }
 
@@ -2035,59 +1979,6 @@ supported by browsers, for browsers without popover support.
 
 .${CLASS.editorChooser} [aria-pressed="true"] {
   font-weight: bold;
-}
-
-.${CLASS.editorCustom} {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1ch;
-}
-
-.${CLASS.editorCustom} label {
-  flex: 1 1 40ch;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 1ch;
-}
-
-.${CLASS.editorCustom} input {
-  flex: 1 1 30ch;
-  min-width: 0;
-  padding: 0.25ch 1ch;
-  border: 1px solid;
-  border-radius: 0;
-  background: none;
-}
-
-.${CLASS.editorCustom} input[aria-invalid="true"] {
-  border-style: dashed;
-}
-
-.${CLASS.editorCustom} button::before {
-  content: "[";
-  opacity: 0.6;
-}
-
-.${CLASS.editorCustom} button::after {
-  content: "]";
-  opacity: 0.6;
-}
-
-.${CLASS.editorNote} {
-  opacity: 0.7;
-}
-
-.${CLASS.editorExample} {
-  appearance: none;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: none;
-  text-align: left;
-  word-break: break-all;
-  cursor: pointer;
 }
 
 .${CLASS.overlayKeyHint} button:disabled {
@@ -3321,8 +3212,7 @@ function viewOverlay({
     .join("   ");
 
   const canOpenEditor = getOverlayOpenEditorLocation(item) !== undefined;
-  const openInName =
-    editor.current?.tag === "Preset" ? editor.current.preset.name : "editor";
+  const openInName = editor.current?.name ?? "editor";
 
   return [
     viewOverlayError(item, expanded, onKey, onOpenEditor),
@@ -3389,15 +3279,10 @@ function viewOverlay({
 function viewEditorChooser({
   location,
   showOther,
-  customTemplate,
-  customError,
   current,
   commandHint,
   onChoose,
   onShowOther,
-  onCustomInput,
-  onCustomSubmit,
-  onUseExample,
 }: EditorChooserProps): HTMLElement {
   const otherNumber = (EDITOR_PRESETS.length + 1).toString();
   return h(
@@ -3423,9 +3308,7 @@ function viewEditorChooser({
             attrs: {
               [DATA_FOCUS_KEY]: `editor:${preset.id}`,
               "aria-keyshortcuts": (index + 1).toString(),
-              "aria-pressed": (
-                current?.tag === "Preset" && current.preset.id === preset.id
-              ).toString(),
+              "aria-pressed": (current?.id === preset.id).toString(),
             },
             onclick: () => {
               onChoose(preset.id);
@@ -3443,7 +3326,6 @@ function viewEditorChooser({
           attrs: {
             [DATA_FOCUS_KEY]: "editorOther",
             "aria-keyshortcuts": otherNumber,
-            "aria-pressed": (current?.tag === "Custom").toString(),
           },
           onclick: onShowOther,
         },
@@ -3453,119 +3335,47 @@ function viewEditorChooser({
         " Other",
       ),
     ),
-    ...(showOther
-      ? viewOtherEditor({
-          customTemplate,
-          customError,
-          current,
-          commandHint,
-          onCustomInput,
-          onCustomSubmit,
-          onUseExample,
-        })
-      : []),
+    ...(showOther ? viewOtherEditor(commandHint) : []),
   );
 }
 
-function viewOtherEditor({
-  customTemplate,
-  customError,
-  current,
-  commandHint,
-  onCustomInput,
-  onCustomSubmit,
-  onUseExample,
-}: Pick<
-  EditorChooserProps,
-  | "customTemplate"
-  | "customError"
-  | "current"
-  | "commandHint"
-  | "onCustomInput"
-  | "onCustomSubmit"
-  | "onUseExample"
->): Array<HTMLElement | undefined> {
-  return [
-    h(
-      HTMLFormElement,
-      {
-        className: CLASS.editorCustom,
-        onsubmit: (event: SubmitEvent) => {
-          event.preventDefault();
-          onCustomSubmit();
-        },
-      },
-      h(
-        HTMLLabelElement,
-        {},
-        "Editor URL:",
-        h(HTMLInputElement, {
-          type: "text",
-          value: customTemplate,
-          spellcheck: false,
-          attrs: {
-            [DATA_FOCUS_KEY]: "editorCustom",
-            "aria-invalid": (customError !== undefined).toString(),
-          },
-          oninput: (event: Event) => {
-            if (event.currentTarget instanceof HTMLInputElement) {
-              onCustomInput(event.currentTarget.value);
-            }
-          },
-        }),
-      ),
-      h(
-        HTMLButtonElement,
-        {
-          type: "submit",
-          attrs: {
-            [DATA_FOCUS_KEY]: "editorCustomSubmit",
-            "aria-pressed": (current?.tag === "Custom").toString(),
-          },
-        },
-        "Use",
-      ),
-    ),
-    customError === undefined
-      ? undefined
-      : h(HTMLParagraphElement, { attrs: { role: "alert" } }, customError),
-    h(
-      HTMLParagraphElement,
-      { className: CLASS.editorNote },
-      "Example: ",
-      h(
-        HTMLButtonElement,
-        {
-          className: CLASS.editorExample,
-          title: "Use this example",
-          attrs: { [DATA_FOCUS_KEY]: "editorExample" },
-          onclick: onUseExample,
-        },
-        EDITOR_URL_EXAMPLE,
-      ),
-      h(HTMLElement, { localName: "br" }),
-      `Placeholders: ${EDITOR_PLACEHOLDERS.join(" ")}`,
-    ),
-    h(
-      HTMLParagraphElement,
-      { className: CLASS.editorNote },
-      commandHint === null
-        ? "Or use the openEditor option to run a command. "
-        : "Or run a command, by setting an environment variable. ",
-      h(
-        HTMLAnchorElement,
-        {
-          href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
-          target: "_blank",
-          rel: "noreferrer",
-        },
-        "Clickable error locations",
-      ),
-    ),
-    commandHint === null
-      ? undefined
-      : h(HTMLPreElement, { className: CLASS.editorNote }, commandHint),
-  ];
+// Other editors are set up with an environment variable (or the `openEditor`
+// option), rather than in the browser, so they survive deleting elm-stuff/.
+function viewOtherEditor(commandHint: string | null): Array<HTMLElement> {
+  const link = h(
+    HTMLAnchorElement,
+    {
+      href: "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations",
+      target: "_blank",
+      rel: "noreferrer",
+    },
+    "Clickable error locations",
+  );
+  return commandHint === null
+    ? [
+        h(
+          HTMLParagraphElement,
+          {},
+          "To use another editor, use the openEditor option. ",
+          link,
+        ),
+      ]
+    : [
+        h(
+          HTMLParagraphElement,
+          {},
+          "To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:",
+        ),
+        h(HTMLPreElement, {}, commandHint),
+        h(
+          HTMLParagraphElement,
+          {},
+          "Try it out by running ",
+          h(HTMLElement, { localName: "code" }, "elm-watch try-open"),
+          " in the terminal. Then restart elm-watch. ",
+          link,
+        ),
+      ];
 }
 
 function viewOverlayError(

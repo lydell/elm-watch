@@ -32,9 +32,7 @@ import {
   getOverlay,
   pressOverlayKey,
   run,
-  submitUiForm,
   switchCompilationMode,
-  typeInUiInput,
 } from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -385,14 +383,13 @@ describe("hot", () => {
           [[5] WebStorm]
           [[6] Rider]
           [[7] Other]
-          Editor URL:
-          <input value="" placeholder="">
-          [Use]
-          Example:
-          [pycharm://open?file={file}&line={line}&column={column0}] Placeholders: {file} {line} {column} {line0} {column0}
-          Or run a command, by setting an environment variable. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
+          To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
           # ~/.bashrc
+          # A URL ({file} {line} {column} {line0} {column0}):
+          export ELM_WATCH_OPEN_EDITOR='pycharm://open?file={file}&line={line}&column={column0}'
+          # Or a command ($file $line $column $line0 $column0):
           export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
+          Try it out by running elm-watch try-open in the terminal. Then restart elm-watch. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)
           </chooser>
         `);
         expect(openedUrls).toMatchInlineSnapshot(`
@@ -429,11 +426,9 @@ describe("hot", () => {
             pressOverlayKey("e");
             footers.push(grep(getOverlay(), /pressed|footer/));
             pressOverlayKey("7");
-            footers.push(grep(getOverlay(), /Other|URL|footer/));
-            // The URL field is focused, so digits are left for typing.
+            footers.push(grep(getOverlay(), /Other|another editor|footer/));
+            // The presets can still be chosen after showing “Other”.
             pressOverlayKey("1");
-            footers.push(grep(getOverlay(), /input/));
-            clickUiButton("[1] VS Code");
             await waitFor(() => readChosenEditor() === "vscode");
             return "Stop" as const;
           },
@@ -446,9 +441,8 @@ describe("hot", () => {
           [[5] WebStorm] (pressed)
           <footer>🚨 error 1/1 | [esc] cancel</footer>
           [[7] Other]
-          Editor URL:
+          To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
           <footer>🚨 error 1/1 | [esc] cancel</footer>
-          <input value="" placeholder="">
         `);
         expect(openedUrls).toMatchInlineSnapshot(`
           [
@@ -458,10 +452,57 @@ describe("hot", () => {
         `);
       });
 
-      test("custom URL", async () => {
-        let error = "";
-        let example = "";
-        let change = "";
+      test("env var set to a URL", async () => {
+        let overlay = "";
+
+        await run({
+          fixture,
+          args: [],
+          scripts: ["Main.js"],
+          keepElmStuffJson: true,
+          env: {
+            [ELM_WATCH_OPEN_EDITOR]:
+              "myeditor://open?file={file}&line={line0}&column={column0}",
+          },
+          init: (node) => {
+            window.Elm?.["Main"]?.init({ node });
+          },
+          onIdle: () => {
+            clickFirstErrorLocation();
+            // Can’t change editor, since it’s set by the env var.
+            pressOverlayKey("e");
+            overlay = getOverlay();
+            return "Stop" as const;
+          },
+        });
+
+        expect(openedUrls).toMatchInlineSnapshot(`
+          [
+            myeditor://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=9&column=30,
+          ]
+        `);
+        expect(grep(overlay, /footer|chooser/)).toMatchInlineSnapshot(
+          `<footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all</footer>`,
+        );
+        expect(readChosenEditor()).toBeUndefined();
+      });
+
+      test("env var set to an invalid URL", async () => {
+        const renders = await runFailClickErrorLocation({
+          env: { [ELM_WATCH_OPEN_EDITOR]: "myeditor://open?line={line}" },
+        });
+        expect(openedUrls).toEqual([]);
+        expect(grep(renders, /URL|placeholders/)).toMatchInlineSnapshot(`
+          Your ELM_WATCH_OPEN_EDITOR environment variable looks like a URL:
+          But it is not a valid URL for opening an editor: The URL must contain {file}.
+          These placeholders are replaced: {file} {line} {column} {line0} {column0}
+        `);
+      });
+
+      test("custom URL in stuff.json (from an earlier version) is ignored", async () => {
+        fixtureDir(fixture);
+        writeChosenEditor("myeditor://open?file={file}");
+        let chooser = "";
 
         await run({
           fixture,
@@ -472,47 +513,17 @@ describe("hot", () => {
           init: (node) => {
             window.Elm?.["Main"]?.init({ node });
           },
-          onIdle: async () => {
+          onIdle: () => {
             clickFirstErrorLocation();
-            clickUiButton("[7] Other");
-            clickUiButton(
-              "pycharm://open?file={file}&line={line}&column={column0}",
-            );
-            example = grep(getOverlay(), /input/);
-            typeInUiInput("https://example.com/{file}");
-            submitUiForm();
-            error = grep(getOverlay(), /input|URLs are not supported/);
-            typeInUiInput(
-              "myeditor://open?file={file}&line={line0}&column={column0}",
-            );
-            submitUiForm();
-            await waitFor(() => readChosenEditor() !== undefined);
-            pressOverlayKey("e");
-            change = grep(getOverlay(), /pressed|input/);
+            chooser = getOverlay();
             return "Stop" as const;
           },
         });
 
-        expect(example).toMatchInlineSnapshot(
-          `<input value="pycharm://open?file={file}&line={line}&column={column0}" placeholder="">`,
+        expect(openedUrls).toEqual([]);
+        expect(grep(chooser, /Which editor/)).toMatchInlineSnapshot(
+          `Which editor should I open this in?`,
         );
-        expect(error).toMatchInlineSnapshot(`
-          <input value="https://example.com/{file}" placeholder="" invalid>
-          https: URLs are not supported. Only URLs for opening apps, like myeditor://
-        `);
-        expect(change).toMatchInlineSnapshot(`
-          [[7] Other] (pressed)
-          <input value="myeditor://open?file={file}&line={line0}&column={column0}" placeholder="">
-          [Use] (pressed)
-        `);
-        expect(readChosenEditor()).toMatchInlineSnapshot(
-          `myeditor://open?file={file}&line={line0}&column={column0}`,
-        );
-        expect(openedUrls).toMatchInlineSnapshot(`
-          [
-            myeditor://open?file=/Users/you/project/tests/fixtures/hot/persisted-open-error-overlay/src/Main.elm&line=9&column=30,
-          ]
-        `);
       });
 
       test("editor from stuff.json", async () => {
@@ -569,8 +580,8 @@ describe("hot", () => {
           },
         });
 
-        expect(grep(chooser, /Or /)).toMatchInlineSnapshot(
-          `Or use the openEditor option to run a command. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)`,
+        expect(grep(chooser, /another editor/)).toMatchInlineSnapshot(
+          `To use another editor, use the openEditor option. [Clickable error locations](https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations)`,
         );
       });
     });

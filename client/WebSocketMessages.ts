@@ -1,6 +1,6 @@
 import * as Codec from "tiny-decoders";
 
-import { EditorString } from "../src/Editor.ts";
+import { EditorPresetId } from "../src/Editor.ts";
 import { NonEmptyArray } from "../src/NonEmptyArray.ts";
 import { AbsolutePath, CompilationMode } from "../src/Types.ts";
 
@@ -41,14 +41,22 @@ const OpenEditorError = Codec.taggedUnion("tag", [
 export type OpenEditorSetup = Codec.Infer<typeof OpenEditorSetup>;
 const OpenEditorSetup = Codec.taggedUnion("tag", [
   {
-    // Via the `ELM_WATCH_OPEN_EDITOR` environment variable, or the `openEditor`
-    // option. The browser sends `PressedOpenEditor` to the server.
+    // Via the `ELM_WATCH_OPEN_EDITOR` environment variable (set to a command),
+    // or the `openEditor` option. The browser sends `PressedOpenEditor` to the
+    // server.
     tag: Codec.tag("Server"),
   },
   {
-    // The browser opens a URL (see `Editor.ts`).
+    // Via the `ELM_WATCH_OPEN_EDITOR` environment variable set to a URL
+    // template (see `Editor.ts`). The browser opens the URL.
     tag: Codec.tag("Url"),
-    editor: EditorString,
+    template: Codec.string,
+  },
+  {
+    // Chosen in the browser UI or the terminal. The browser opens the
+    // preset’s URL, and the editor can be changed.
+    tag: Codec.tag("Preset"),
+    editor: EditorPresetId,
   },
   {
     // The browser lets the user choose an editor.
@@ -185,7 +193,7 @@ export const WebSocketToServerMessage = Codec.taggedUnion("tag", [
   {
     // Stored in elm-stuff/elm-watch/stuff.json. `null` forgets the choice.
     tag: Codec.tag("ChoseEditor"),
-    editor: Codec.nullOr(EditorString),
+    editor: Codec.nullOr(EditorPresetId),
   },
   {
     tag: Codec.tag("FocusedTab"),

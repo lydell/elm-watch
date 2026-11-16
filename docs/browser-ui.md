@@ -53,7 +53,7 @@ At the bottom of the overlay you can see which error and file you’re at, and w
 | ← → (or h l) | Previous/next error. |
 | ↑ ↓ (or k j) | Previous/next file. |
 | Enter (or o) | Open the error in your editor (see [Clickable error locations](#clickable-error-locations)). |
-| e | Change which editor to open errors in (if [chosen in the browser](#choose-your-editor-in-the-browser)). |
+| e | Change which editor to open errors in (if [chosen in the browser or the terminal](#choose-your-editor)). |
 | Space | Expand or collapse long code (see below). |
 | a | Show all errors at once (press again to go back to one at a time). |
 | Escape | Close the error overlay. |
@@ -68,16 +68,48 @@ When the status changes to 🚨, there’s a similar animation as for ✅ – a 
 
 In the error overlay you can click error locations (or press Enter) to open them in your editor! There are two ways of setting that up:
 
-- [Choose your editor in the browser](#choose-your-editor-in-the-browser). The easiest.
-- [Run a command](#run-a-command). Works with any editor, and doesn’t make the browser ask for permission.
+- [Choose your editor](#choose-your-editor) in the browser or the terminal. The easiest.
+- [Set the `ELM_WATCH_OPEN_EDITOR` environment variable](#elm_watch_open_editor) to a URL or a command. Works with any editor, in all your projects.
 
-### Choose your editor in the browser
+### Choose your editor
 
 The first time you click an error location (or press Enter), elm-watch asks which editor to use, right in the error overlay: VS Code, Cursor, Zed, IntelliJ IDEA, WebStorm or Rider. Click one, or press its number. The browser then opens the error location via a URL, such as `vscode://file/path/to/Main.elm:10:5`. The first time, the browser (and VS Code) asks if you want to open the editor – you can tick a box to not be asked again.
 
-The choice is stored in `elm-stuff/elm-watch/stuff.json`, so it is remembered for all browsers (but you need to choose again in other projects). To change it later, press e in the error overlay.
+The choice is stored in `elm-stuff/elm-watch/stuff.json`, so it is remembered for all browsers (but you need to choose again in other projects, or if you delete `elm-stuff/`). To change it later, press e in the error overlay.
 
-Using another editor? Choose “Other” (or press 7) and type a URL in the “Editor URL” field. Click the example below the field to start from it. These placeholders are replaced:
+You can choose your editor in the terminal too: Press Enter on an error (or e to change editor), and then the number of your editor. Pressing Enter on an error in the terminal opens the URL (via `open` on macOS, `xdg-open` on Linux and `rundll32` on Windows).
+
+Using another editor? Choose “Other” (or press 7) to see how to [set it up with `ELM_WATCH_OPEN_EDITOR`](#elm_watch_open_editor).
+
+Note that the browser opens the editor on the device you click on. If you test on your phone, clicking error locations there does nothing. Use [a command](#a-command) if you want that to work.
+
+### ELM_WATCH_OPEN_EDITOR
+
+Set the `ELM_WATCH_OPEN_EDITOR` environment variable to either [a URL](#a-url) or [a command](#a-command). If it starts like a URL (`something://`), it’s a URL. Otherwise it’s a command. It takes precedence over the editor chosen in the browser or the terminal.
+
+Here’s how to set it in different shells:
+
+| Shell | Config file | Code |
+| --- | --- | --- |
+| bash | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='...'` |
+| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='...'` |
+| fish | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR '...'` |
+| Windows | System Settings | Name: `ELM_WATCH_OPEN_EDITOR`, Value: `...` |
+
+(Feel free to do it in a different way if you have a preference. Try [direnv] if you want different editors in different projects.)
+
+Use single quotes: Both URLs (`{file}`) and commands (`$file`) contain characters that some shells would otherwise replace.
+
+To try it out, run `elm-watch try-open`. It opens the closest `package.json` in your editor, at the `"elm-watch"` line, and shows where the cursor should end up. That way you can check that both the line and the column are right (some editors count from 0). You can set the environment variable just for that command while experimenting:
+
+- bash/zsh/fish: `ELM_WATCH_OPEN_EDITOR='...' elm-watch try-open`
+- PowerShell: `$env:ELM_WATCH_OPEN_EDITOR='...'; elm-watch try-open`
+
+Remember to restart `elm-watch hot` after changing the environment variable.
+
+#### A URL
+
+The browser opens the URL, just like when you [choose your editor](#choose-your-editor). (From the terminal, the URL is opened via `open` on macOS, `xdg-open` on Linux and `rundll32` on Windows.) These placeholders are replaced:
 
 | Placeholder | Replaced with |
 | --- | --- |
@@ -87,31 +119,27 @@ Using another editor? Choose “Other” (or press 7) and type a URL in the “E
 
 For example, PyCharm (and probably other [JetBrains] IDEs): `pycharm://open?file={file}&line={line}&column={column0}` (JetBrains IDEs count columns from 0)
 
+The editors you can choose from use these URLs:
+
+| Editor | URL |
+| --- | --- |
+| VS Code | `vscode://file{file}:{line}:{column}` |
+| Cursor | `cursor://file{file}:{line}:{column}` |
+| Zed | `zed://file{file}:{line}:{column}` |
+| IntelliJ IDEA | `idea://open?file={file}&line={line}&column={column0}` |
+| WebStorm | `webstorm://open?file={file}&line={line}&column={column0}` |
+| Rider | `rider://open?file={file}&line={line}&column={column0}` |
+
 Only URLs for opening apps are allowed – not `http:`, `https:`, `file:`, `javascript:` and the like.
 
-You can choose your editor in the terminal too: Press Enter on an error (or e to change editor), and then the number of your editor. For “Other” (7), type the URL and press Enter (Escape goes back). Pressing Enter on an error in the terminal opens the URL (via `open` on macOS, `xdg-open` on Linux and `rundll32` on Windows).
+#### A command
 
-Note that the browser opens the editor on the device you click on. If you test on your phone, clicking error locations there does nothing. Use [a command](#run-a-command) if you want that to work.
-
-### Run a command
-
-Set the `ELM_WATCH_OPEN_EDITOR` environment variable to some shell script code. It takes precedence over the editor chosen in the browser.
+Set `ELM_WATCH_OPEN_EDITOR` to some shell script code.
 
 TL;DR examples:
 
 - bash/zsh with VSCode: `export ELM_WATCH_OPEN_EDITOR='code --goto "$file:$line:$column"'`
 - fish with Rider on macOS: `set -Ux ELM_WATCH_OPEN_EDITOR '/Applications/Rider.app/Contents/MacOS/rider --line "$line" --column "$column0" "$file"'`
-
-Here’s how to set it in different shells:
-
-| Shell | Config file | Code |
-| --- | --- | --- |
-| bash | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'` |
-| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'` |
-| fish | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR 'your-editor "$file:$line:$column"'` |
-| Windows | System Settings | Name: `ELM_WATCH_OPEN_EDITOR`, Value: `your-editor "%file%:%line%:%column%"` |
-
-(Feel free to do it in a different way if you have a preference. Try [direnv] if you want different editors in different projects.)
 
 And here are some commands for a few editors:
 
@@ -161,7 +189,7 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 
 ### With the JavaScript API
 
-If you use the [JavaScript API](../javascript-api/), [choosing your editor in the browser](#choose-your-editor-in-the-browser) works just the same. But the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. To run a command, pass the `openEditor` option instead. It can be either:
+If you use the [JavaScript API](../javascript-api/), [choosing your editor](#choose-your-editor) works just the same. But the `ELM_WATCH_OPEN_EDITOR` environment variable is ignored. To run a command, pass the `openEditor` option instead. It can be either:
 
 - `shellCommand('your-editor "$file:$line:$column"')`: Runs the command exactly like `ELM_WATCH_OPEN_EDITOR` does (see above), with `root` as the CWD.
 - A function, which is called with `{ file, line, column }` (same as the environment variables above, but `line` and `column` are numbers). If it throws (or returns a promise that rejects), the error is shown in the browser. Use this if you need to do something special, like translating file paths.

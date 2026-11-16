@@ -3,9 +3,10 @@ import * as Codec from "tiny-decoders";
 // Editors that can be opened via a URL, such as `vscode://file/path:1:2`.
 // This module is used both by the server and by the browser UI.
 //
-// The chosen editor is stored as a string in elm-stuff/elm-watch/stuff.json,
-// and sent as a string over the WebSocket: Either the ID of a preset, or a
-// custom URL template.
+// The editor chosen in the browser UI or the terminal is one of the presets.
+// Its ID is stored in elm-stuff/elm-watch/stuff.json, and sent over the
+// WebSocket. Other editors are set up with a URL template (or a command) in
+// the `ELM_WATCH_OPEN_EDITOR` environment variable.
 
 export type EditorPreset = {
   id: string;
@@ -13,8 +14,7 @@ export type EditorPreset = {
   template: string;
 };
 
-// The most common editors for Elm. Other editors can be used via a custom
-// URL template.
+// The most common editors for Elm.
 export const EDITOR_PRESETS: Array<EditorPreset> = [
   {
     id: "vscode",
@@ -48,10 +48,6 @@ export const EDITOR_PRESETS: Array<EditorPreset> = [
   },
 ];
 
-export type Editor =
-  | { tag: "Preset"; preset: EditorPreset }
-  | { tag: "Custom"; template: string };
-
 export type EditorLocation = {
   file: string;
   line: number;
@@ -70,9 +66,8 @@ export const EDITOR_PLACEHOLDERS = [
   "{column0}",
 ] as const;
 
-// Schemes for web pages and local files, rather than for apps. The URL is
-// opened by the browser (or by the OS from the terminal), and anyone who can
-// connect to elm-watch’s WebSocket can set it.
+// Schemes for web pages and local files, rather than for apps. Most likely a
+// mistake, since the URL should open an editor.
 const DISALLOWED_SCHEMES = new Set([
   "about",
   "blob",
@@ -88,6 +83,14 @@ const DISALLOWED_SCHEMES = new Set([
 ]);
 
 const SCHEME_REGEX = /^([a-z][a-z\d+.-]*):/i;
+
+// `ELM_WATCH_OPEN_EDITOR` is either a URL template or a command. Anything
+// starting like a URL is a URL – then `validateEditorUrlTemplate` can tell
+// what’s wrong with it, rather than trying to run it as a command. At least
+// two characters in the scheme, so that `C://…` is a Windows path.
+export function isEditorUrl(string: string): boolean {
+  return /^[a-z][a-z\d+.-]+:\/\//i.test(string);
+}
 
 // Returns an error message, or `undefined` if the template is valid.
 export function validateEditorUrlTemplate(
@@ -110,44 +113,20 @@ export function validateEditorUrlTemplate(
   return undefined;
 }
 
-export function parseEditor(string: string): Editor | undefined {
-  const preset = EDITOR_PRESETS.find((candidate) => candidate.id === string);
-  if (preset !== undefined) {
-    return { tag: "Preset", preset };
-  }
-  return validateEditorUrlTemplate(string) === undefined
-    ? { tag: "Custom", template: string }
-    : undefined;
+export function findPreset(id: string): EditorPreset | undefined {
+  return EDITOR_PRESETS.find((preset) => preset.id === id);
 }
 
-export function editorToString(editor: Editor): string {
-  switch (editor.tag) {
-    case "Preset":
-      return editor.preset.id;
-    case "Custom":
-      return editor.template;
-  }
-}
-
-export function editorTemplate(editor: Editor): string {
-  switch (editor.tag) {
-    case "Preset":
-      return editor.preset.template;
-    case "Custom":
-      return editor.template;
-  }
-}
-
-// A string that is either a preset ID or a valid URL template.
-export const EditorString = Codec.flatMap(Codec.string, {
+// The ID of a preset.
+export const EditorPresetId = Codec.flatMap(Codec.string, {
   decoder: (value) =>
-    parseEditor(value) === undefined
+    findPreset(value) === undefined
       ? {
           tag: "DecoderError",
           error: {
             tag: "custom",
             path: [],
-            message: "Expected an editor preset ID or a valid URL template",
+            message: "Expected an editor preset ID",
             got: value,
           },
         }
@@ -155,7 +134,7 @@ export const EditorString = Codec.flatMap(Codec.string, {
   encoder: (value) => value,
 });
 
-export function editorUrl(editor: Editor, location: EditorLocation): string {
+export function editorUrl(template: string, location: EditorLocation): string {
   const replacements: Record<(typeof EDITOR_PLACEHOLDERS)[number], string> = {
     "{file}": fileToUrlPath(location.file),
     "{line}": location.line.toString(),
@@ -163,7 +142,7 @@ export function editorUrl(editor: Editor, location: EditorLocation): string {
     "{line0}": Math.max(0, location.line - 1).toString(),
     "{column0}": Math.max(0, location.column - 1).toString(),
   };
-  return editorTemplate(editor).replace(
+  return template.replace(
     /\{(?:file|line|column|line0|column0)\}/g,
     (placeholder) => replacements[placeholder as keyof typeof replacements],
   );

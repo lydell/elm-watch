@@ -50,9 +50,6 @@ export type Terminal = {
   clearLastLines: (numLines: number) => void;
   moveCursor: (dx: number, dy: number) => void;
   setRawMode: (onExit: () => void, onData?: (data: string) => void) => void;
-  // The cursor is hidden while reading keypresses, except while typing in a
-  // text field. Clearing the screen hides it again.
-  showCursor: () => void;
   // Whether we read keypresses (see `setRawMode`). Requires both stdin and
   // stdout to be TTYs (`config.isTTY`).
   isRawMode: () => boolean;
@@ -216,10 +213,6 @@ export function makeTerminal({
       if (config.isTTY) {
         stdout.write(CLEAR);
         needsNewline = false;
-        if (listeningToStdin && !cursorHidden) {
-          stdout.write(HIDE_CURSOR);
-          cursorHidden = true;
-        }
       }
     },
     clearScreenDown(): void {
@@ -267,12 +260,6 @@ export function makeTerminal({
         // We only take keypresses, no typing, so the cursor is just noise.
         stdout.write(HIDE_CURSOR);
         cursorHidden = true;
-      }
-    },
-    showCursor() {
-      if (cursorHidden) {
-        stdout.write(SHOW_CURSOR);
-        cursorHidden = false;
       }
     },
     isRawMode() {

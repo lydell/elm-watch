@@ -329,20 +329,20 @@ describe("hot error view", () => {
         await waitFor(() => footer().includes("Which editor"));
         screens.push(footer());
         stdin.press("7");
-        await waitFor(() => footer().includes("Editor URL:"));
-        stdin.press("myeditor://");
-        stdin.press("\r");
-        await waitFor(() => footer().includes("must contain"));
+        await waitFor(() => footer().includes("Check this out"));
         screens.push(
+          // The hint is different on Windows.
           footer().replace(
-            '# System Settings > Environment Variables\nELM_WATCH_OPEN_EDITOR=your-editor "%file%:%line%:%column%"',
-            `# ~/.bashrc\nexport ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'`,
+            /# System Settings > Environment Variables\n[^]*?(?=\n\n)/,
+            [
+              "# ~/.bashrc",
+              "# A URL ({file} {line} {column} {line0} {column0}):",
+              "export ELM_WATCH_OPEN_EDITOR='pycharm://open?file={file}&line={line}&column={column0}'",
+              "# Or a command ($file $line $column $line0 $column0):",
+              `export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'`,
+            ].join("\n"),
           ),
         );
-        // Back to the presets.
-        stdin.press("\x1B");
-        await waitFor(() => !footer().includes("Editor URL:"));
-        screens.push(footer());
         stdin.press("\x1B");
         await waitFor(() => !footer().includes("Which editor"));
         screens.push(footer());
@@ -362,27 +362,21 @@ describe("hot error view", () => {
       🚨 error 1/1
 
       Which editor should I open this in?
-
-      Enter a URL that opens files in your editor.
-      Example: pycharm://open?file={file}&line={line}&column={column0}
-      Placeholders: {file} {line} {column} {line0} {column0}
-
-      Or set the ELM_WATCH_OPEN_EDITOR environment variable to a command:
-
-      # ~/.bashrc
-      export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
-
-      Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
-
-      ⧙The URL must contain {file}.⧘
-      ⧙[⧘⧙enter⧘⧙]⧘ use   ⧙[⧘⧙esc⧘⧙]⧘ back
-      Editor URL: myeditor://
-      --------------------------------------------------------------------------------
-      🚨 error 1/1
-
-      Which editor should I open this in?
       ⧙[⧘⧙1⧘⧙]⧘ VS Code   ⧙[⧘⧙2⧘⧙]⧘ Cursor   ⧙[⧘⧙3⧘⧙]⧘ Zed   ⧙[⧘⧙4⧘⧙]⧘ IntelliJ IDEA   ⧙[⧘⧙5⧘⧙]⧘ WebStorm
       ⧙[⧘⧙6⧘⧙]⧘ Rider   ⧙[⧘⧙7⧘⧙]⧘ Other
+
+      To use another editor, set the ELM_WATCH_OPEN_EDITOR environment variable to a URL or a command:
+
+      # ~/.bashrc
+      # A URL ({file} {line} {column} {line0} {column0}):
+      export ELM_WATCH_OPEN_EDITOR='pycharm://open?file={file}&line={line}&column={column0}'
+      # Or a command ($file $line $column $line0 $column0):
+      export ELM_WATCH_OPEN_EDITOR='your-editor "$file:$line:$column"'
+
+      Try it out by running: elm-watch try-open
+      Then restart elm-watch.
+
+      Check this out: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
 
       ⧙[⧘⧙esc⧘⧙]⧘ cancel
       --------------------------------------------------------------------------------
@@ -508,75 +502,6 @@ describe("hot error view", () => {
       ⧙[⧘⧙a⧘⧙]⧘ show all
     `);
   });
-
-  test.skipIf(IS_WINDOWS)(
-    "choose custom editor URL in the terminal",
-    async () => {
-      const dir = fixtureDir("error-view");
-      const stuffJsonPath = path.join(
-        dir,
-        "elm-stuff",
-        "elm-watch",
-        "stuff.json",
-      );
-
-      // Fake `open` (macOS) and `xdg-open` (Linux), so that no editor is opened.
-      const binDir = path.join(dir, "fake-open-bin");
-      const outputFile = path.join(dir, "opened-url.txt");
-      fs.rmSync(outputFile, { force: true });
-      fs.mkdirSync(binDir, { recursive: true });
-      for (const name of ["open", "xdg-open"]) {
-        const file = path.join(binDir, name);
-        fs.writeFileSync(
-          file,
-          `#!/usr/bin/env node\nimport * as fs from "node:fs";\nfs.writeFileSync(${JSON.stringify(outputFile)}, process.argv.slice(2).join(" "));\n`,
-        );
-        fs.chmodSync(file, 0o755);
-      }
-
-      const stdin = new KeyReadStream();
-
-      await run({
-        fixture: "error-view",
-        args: ["Other"],
-        scripts: ["Other.js"],
-        keepElmStuffJson: true,
-        env: { PATH: prependPATH(binDir) },
-        stdin,
-        init: () => {
-          // Do nothing.
-        },
-        onIdle: async ({ stdout }) => {
-          stdin.press("o");
-          await waitFor(() =>
-            clean(stdout.getOutput()).includes("Which editor"),
-          );
-          stdin.press("7");
-          await waitFor(() =>
-            clean(stdout.getOutput()).includes("Editor URL:"),
-          );
-          // Line editing works: Home, then type at the start.
-          stdin.press("editor://x?f={file}&l={line}");
-          stdin.press("\x1B[H");
-          stdin.press("my");
-          stdin.press("\r");
-          await waitFor(() => fs.existsSync(outputFile));
-          return "Stop" as const;
-        },
-      });
-
-      expect(clean(fs.readFileSync(outputFile, "utf8"))).toMatchInlineSnapshot(
-        `myeditor://x?f=/Users/you/project/tests/fixtures/hot/error-view/src/Other.elm&l=7`,
-      );
-      expect(
-        (
-          JSON.parse(fs.readFileSync(stuffJsonPath, "utf8")) as {
-            editor?: unknown;
-          }
-        ).editor,
-      ).toBe("myeditor://x?f={file}&l={line}");
-    },
-  );
 
   test("one-line info message for files not imported by any target", async () => {
     const fixture = "error-view";

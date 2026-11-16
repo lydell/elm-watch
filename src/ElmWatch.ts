@@ -11,6 +11,7 @@ import { decodeOptions } from "./Options.ts";
 import { absolutePathFromString } from "./PathHelpers.ts";
 import { run, runConfig, type RunResult } from "./Run.ts";
 import { type Terminal, makeTerminal } from "./Terminal.ts";
+import { tryOpen } from "./TryOpen.ts";
 import {
   type CliArg,
   type CreateServer,
@@ -80,6 +81,9 @@ export default async function elmWatchCli(
 
     case "init":
       return init(cwd, terminal, restArgs);
+
+    case "try-open":
+      return tryOpen(cwd, env, terminal, restArgs);
 
     case "make":
     case "hot": {

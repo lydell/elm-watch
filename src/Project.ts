@@ -8,7 +8,7 @@ import {
   getAllowedHostsFromEnv,
 } from "./AllowedHosts.ts";
 import type { Config, ConfigSource, OpenEditorFunction } from "./Config.ts";
-import { type Editor, parseEditor } from "./Editor.ts";
+import { type EditorPreset, findPreset, isEditorUrl } from "./Editor.ts";
 import * as ElmJson from "./ElmJson.ts";
 import type { ElmWatchStuffJson } from "./ElmWatchStuffJson.ts";
 import {
@@ -81,9 +81,9 @@ export type Project = {
   webSocketUrl: WebSocketUrl | undefined;
   allowedHosts: Array<AllowedHost>;
   openEditor: OpenEditor;
-  // Chosen in the browser UI, and stored in elm-stuff/elm-watch/stuff.json.
-  // Only used if `openEditor` is `NotSet`.
-  editor: Editor | undefined;
+  // Chosen in the browser UI or the terminal, and stored in
+  // elm-stuff/elm-watch/stuff.json. Only used if `openEditor` is `NotSet`.
+  editor: EditorPreset | undefined;
   errorReporter: ErrorReporter | undefined;
   // The external errors as of the last time the status lines were printed.
   // See `ExternalErrors.ts`.
@@ -92,6 +92,9 @@ export type Project = {
 
 export type OpenEditor =
   | { tag: "NotSet" }
+  // `ELM_WATCH_OPEN_EDITOR` set to a URL template (see Editor.ts). It might be
+  // invalid: Then the error is shown when trying to open something.
+  | { tag: "Url"; template: string }
   | { tag: "Command"; command: string; source: OpenEditorCommandSource }
   | { tag: "Function"; openEditor: OpenEditorFunction };
 
@@ -622,7 +625,9 @@ export function initProject({
     config.openEditor === undefined
       ? openEditorCommand === undefined
         ? { tag: "NotSet" }
-        : { tag: "Command", command: openEditorCommand, source: "Env" }
+        : isEditorUrl(openEditorCommand)
+          ? { tag: "Url", template: openEditorCommand }
+          : { tag: "Command", command: openEditorCommand, source: "Env" }
       : isShellCommand(config.openEditor)
         ? {
             tag: "Command",
@@ -672,7 +677,7 @@ export function initProject({
       editor:
         elmWatchStuffJson?.editor === undefined
           ? undefined
-          : parseEditor(elmWatchStuffJson.editor),
+          : findPreset(elmWatchStuffJson.editor),
       errorReporter: config.errorReporter,
       externalErrors: getSnapshot(config.errorReporter),
     },

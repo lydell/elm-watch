@@ -9,7 +9,7 @@ import type {
   WebSocketConnection,
   WebSocketConnectionRejectedReason,
 } from "./DevServer.ts";
-import { type Editor, parseEditor } from "./Editor.ts";
+import { type EditorPreset, findPreset } from "./Editor.ts";
 import * as Errors from "./Errors.ts";
 import type { ErrorTemplate } from "./Errors.ts";
 import type * as ErrorView from "./ErrorView.ts";
@@ -109,11 +109,6 @@ export type Msg =
       message: string;
     }
   | {
-      tag: "TextTyped";
-      date: Date;
-      text: string;
-    }
-  | {
       tag: "OutputRequested";
       date: Date;
       outputPath: OutputPath;
@@ -193,7 +188,7 @@ export type Cmd =
     }
   | {
       tag: "ChooseEditor";
-      editor: Editor | undefined;
+      editor: EditorPreset | undefined;
     }
   | {
       tag: "ClearScreen";
@@ -212,10 +207,6 @@ export type Cmd =
   | {
       tag: "HandleKeys";
       keys: NonEmptyArray<ErrorView.ErrorViewKey>;
-    }
-  | {
-      tag: "HandleText";
-      text: string;
     }
   | {
       tag: "InstallDependencies";
@@ -365,14 +356,6 @@ export function update(
         model,
         model.hotState.tag === "Idle"
           ? [{ tag: "HandleKeys", keys: msg.keys }]
-          : [],
-      ];
-
-    case "TextTyped":
-      return [
-        model,
-        model.hotState.tag === "Idle"
-          ? [{ tag: "HandleText", text: msg.text }]
           : [],
       ];
 
@@ -1351,7 +1334,7 @@ function onWebSocketToServerMessage(
           {
             tag: "ChooseEditor",
             editor:
-              message.editor === null ? undefined : parseEditor(message.editor),
+              message.editor === null ? undefined : findPreset(message.editor),
           },
         ],
       ];
