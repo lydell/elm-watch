@@ -690,7 +690,7 @@ export function createUi(): Ui {
         : findPreset(openEditor.preset);
     if (preset !== undefined) {
       openUrl(editorUrl(preset.template, location));
-    } else if (openEditor !== undefined && openEditor.env === null) {
+    } else if (openEditor?.env === null) {
       openEditorChooser(location);
     } else {
       openWithEnv(
