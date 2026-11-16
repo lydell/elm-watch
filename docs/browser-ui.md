@@ -91,11 +91,11 @@ The easiest way to get started is to run `elm-watch editor`. It explains how to 
 
 Here’s how to set it in different shells:
 
-| Shell | Config file | Code |
-| --- | --- | --- |
-| bash | `~/.bashrc` | `export ELM_WATCH_OPEN_EDITOR='...'` |
-| zsh | `~/.zshrc` | `export ELM_WATCH_OPEN_EDITOR='...'` |
-| fish | run it once | `set -Ux ELM_WATCH_OPEN_EDITOR '...'` |
+| Shell   | Config file     | Code                                        |
+| ------- | --------------- | ------------------------------------------- |
+| bash    | `~/.bashrc`     | `export ELM_WATCH_OPEN_EDITOR='...'`        |
+| zsh     | `~/.zshrc`      | `export ELM_WATCH_OPEN_EDITOR='...'`        |
+| fish    | run it once     | `set -Ux ELM_WATCH_OPEN_EDITOR '...'`       |
 | Windows | System Settings | Name: `ELM_WATCH_OPEN_EDITOR`, Value: `...` |
 
 (Feel free to do it in a different way if you have a preference. Try [direnv] if you want different editors in different projects.)
@@ -125,13 +125,13 @@ For example, PyCharm (and probably other [JetBrains] IDEs): `pycharm://open?file
 
 The editors you can choose from use these URLs:
 
-| Editor | URL |
-| --- | --- |
-| VS Code | `vscode://file{file}:{line}:{column}` |
-| Cursor | `cursor://file{file}:{line}:{column}` |
-| Zed | `zed://file{file}:{line}:{column}` |
-| IntelliJ IDEA | `idea://open?file={file}&line={line}&column={column0}` |
-| WebStorm | `webstorm://open?file={file}&line={line}&column={column0}` |
+| Editor        | URL                                                        |
+| ------------- | ---------------------------------------------------------- |
+| VS Code       | `vscode://file{file}:{line}:{column}`                      |
+| Cursor        | `cursor://file{file}:{line}:{column}`                      |
+| Zed           | `zed://file{file}:{line}:{column}`                         |
+| IntelliJ IDEA | `idea://open?file={file}&line={line}&column={column0}`     |
+| WebStorm      | `webstorm://open?file={file}&line={line}&column={column0}` |
 
 Only URLs for opening apps are allowed – not `http:`, `https:`, `file:`, `javascript:` and the like.
 
