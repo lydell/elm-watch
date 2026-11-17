@@ -1009,6 +1009,12 @@ const runCmd =
       }
 
       case "Restart": {
+        // A restart might have been waiting for running commands to finish.
+        // `exitGracefully` waits for them too, and then exits instead.
+        if (mutable.isExitingGracefully) {
+          return;
+        }
+
         // Outputs and port may have changed if elm-watch.json changes.
         const elmWatchJsonChanged = cmd.restartReasons.some((event) => {
           switch (event.tag) {

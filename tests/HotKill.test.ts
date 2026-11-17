@@ -14,6 +14,7 @@ import {
 import {
   cleanupAfterEachTest,
   fixtureDir,
+  nextMsg,
   run,
   sendSigterm,
 } from "./HotHelpers.ts";
@@ -171,6 +172,61 @@ describe("hot", () => {
       ⏳ Main: elm make
       ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm⧘
+    `);
+  });
+
+  test("SIGTERM while waiting to restart exits instead of restarting", async () => {
+    const fixture = "kill-elm";
+    const dir = fixtureDir(fixture);
+    const input = path.join(dir, "src", "Main.elm");
+    const elmJson = path.join(dir, "elm.json");
+    const lock = path.join(dir, "lock");
+    const readLock = (): string => fs.readFileSync(lock, "utf8");
+    fs.writeFileSync(lock, "");
+
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["main.js"],
+      isTTY: false,
+      bin: "slow-compile",
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: async ({ idle }) => {
+        switch (idle) {
+          case 1: {
+            fs.writeFileSync(lock, "Slow");
+            touch(input);
+            await waitFor(() => readLock() === "Started");
+            // A restart waits for Elm to finish.
+            const restarting = nextMsg(
+              (msg) => msg.tag === "SleepBeforeNextActionDone",
+            );
+            touch(elmJson);
+            await restarting;
+            sendSigterm();
+            fs.writeFileSync(lock, "Continue");
+            return "KeepGoing" as const;
+          }
+
+          default:
+            throw new Error("Expected elm-watch to exit after SIGTERM.");
+        }
+      },
+    });
+
+    expect(readLock()).toBe("Done");
+
+    expect(grep(terminal, /[⏳✅]/u)).toMatchInlineSnapshot(`
+      ⏳ Main: elm make (typecheck only)
+      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
+      ⏳ Main: elm make
+      ⏳ Main: interrupted
     `);
   });
 
