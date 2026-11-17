@@ -264,6 +264,29 @@ describe("getOutputActions", () => {
       `);
     });
 
+    test("outputs typechecked together count as one towards maxParallel", () => {
+      expect(
+        run({
+          project: makeProject({
+            maxParallel: 2,
+            elmJsons: {
+              a: [
+                ["A1", "typecheckOnly"],
+                ["A2", "typecheckOnly"],
+                ["A3", "typecheckOnly"],
+              ],
+              b: [["B", "dirty"]],
+            },
+          }),
+          prioritizedOutputs: priorities({ B: 1 }),
+        }),
+      ).toMatchInlineSnapshot(`
+        elm make: B (Dirty, priority 1)
+        without action: A1, A2, A3
+        executing: 1, interrupted: 0, errors: 0
+      `);
+    });
+
     // Each compiler has its own directory in elm-stuff/.
     test("different compilers for the same elm.json compile in parallel", () => {
       expect(

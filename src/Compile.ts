@@ -435,13 +435,16 @@ export function getOutputActions({
 
       switch (outputState.status.tag) {
         case "ElmMake":
-        case "ElmMakeTypecheckOnly":
-          numExecuting++;
+        case "ElmMakeTypecheckOnly": {
+          const key = busyKey({ elmJsonPath, compiler: outputState.compiler });
+          // Outputs typechecked together share one `elm make`.
+          if (!busyElmJsons.has(key)) {
+            numExecuting++;
+            busyElmJsons.add(key);
+          }
           outputsWithoutAction.push(output);
-          busyElmJsons.add(
-            busyKey({ elmJsonPath, compiler: outputState.compiler }),
-          );
           break;
+        }
 
         case "Postprocess":
           numExecuting++;
