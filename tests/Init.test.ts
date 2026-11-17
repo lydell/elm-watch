@@ -143,6 +143,17 @@ describe("init", () => {
     `);
   });
 
+  test("JavaScript API entrypoint already exists further up", async () => {
+    expect(await initFailHelper("existing-entrypoint/sub"))
+      .toMatchInlineSnapshot(`
+      You already use the JavaScript API (instead of ⧙elm-watch.json⧘):
+
+      /Users/you/project/tests/fixtures/init/existing-entrypoint/elm-watch.mjs
+
+      Documentation: https://lydell.github.io/elm-watch/javascript-api/
+    `);
+  });
+
   test("already exists as folder", async () => {
     const dir = copyFixture("init", "already-exists-as-folder");
     const stdout = new MemoryWriteStream();

@@ -6,6 +6,7 @@ import * as Errors from "./Errors.ts";
 import {
   ENTRYPOINT_NAMES,
   type EntrypointLanguage,
+  findClosestEntrypoint,
   generateEntrypoint,
 } from "./GenerateEntrypoint.ts";
 import { bold, toError } from "./Helpers.ts";
@@ -80,7 +81,7 @@ function initElmWatchJson(cwd: Cwd, terminal: Terminal): number {
     );
   }
 
-  const existingEntrypoint = findExistingEntrypoint(cwd);
+  const existingEntrypoint = findClosestEntrypoint(cwd);
 
   if (existingEntrypoint !== undefined) {
     terminal.writeToStderrMakesALotOfSenseHere(
@@ -295,7 +296,7 @@ function initEntrypoint(
       break;
   }
 
-  const existingEntrypoint = findExistingEntrypoint(dir);
+  const existingEntrypoint = findClosestEntrypoint(dir);
 
   if (existingEntrypoint !== undefined) {
     terminal.writeToStderrMakesALotOfSenseHere(
@@ -371,12 +372,6 @@ Documentation: ${JAVASCRIPT_API_DOCS_LINK}
     `.trim(),
   );
   return 0;
-}
-
-function findExistingEntrypoint(dir: AbsolutePath): AbsolutePath | undefined {
-  return Object.values(ENTRYPOINT_NAMES)
-    .map((name) => absolutePathFromString(dir, name))
-    .find((entrypointPath) => fs.existsSync(entrypointPath));
 }
 
 function alreadyUsingJavaScriptApi(existingEntrypoint: AbsolutePath): string {
