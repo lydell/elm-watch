@@ -22,29 +22,15 @@ them first.
   const existingObject =
     typeof existing === "object" && existing !== null ? existing : undefined;
 
+  // Only reading a missing property throws. Other targets loaded after this one
+  // merge their exports into `window.Elm`, which checks if properties exist
+  // and sets new ones.
   var __ELM_PROXY = new Proxy(existingObject ?? {}, {
     get(target, property, receiver) {
       const value = Reflect.get(target, property, receiver);
       if (value !== undefined) {
         return value;
       }
-      throw error;
-    },
-    getOwnPropertyDescriptor(target, property) {
-      const descriptor = Reflect.getOwnPropertyDescriptor(target, property);
-      if (descriptor !== undefined) {
-        return descriptor;
-      }
-      throw error;
-    },
-    has(target, property) {
-      const has = Reflect.has(target, property);
-      if (has) {
-        return true;
-      }
-      throw error;
-    },
-    ownKeys() {
       throw error;
     },
   });

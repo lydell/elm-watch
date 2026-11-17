@@ -168,6 +168,22 @@
             ],
             "output": "build/OutputsWithoutActionOther1.js"
         },
+        "ProxyMerge": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "inputs": [
+                "src/ProxyMerge.elm"
+            ],
+            "output": "build/ProxyMerge.js"
+        },
+        "ProxyMergeOther": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "inputs": [
+                "src/ProxyMergeOther1.elm"
+            ],
+            "output": "build/ProxyMergeOther.js"
+        },
         "MultipleTargets": {
             "type": "application",
             "elmJson": "elm.json",

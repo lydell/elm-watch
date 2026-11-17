@@ -611,4 +611,29 @@ describe("hot reloading", () => {
         - the message type in \`Elm.MultipleTargetsOther1\` changed in debug mode ("debug metadata" changed).
       `);
   });
+
+  test("Target loaded after a target with compile errors", async () => {
+    // `ProxyMerge` has a compile error, so its output is a proxy file. It sets
+    // `window.Elm` to a proxy, which `ProxyMergeOther` must be able to merge
+    // its exports into.
+    const { go } = runHotReload({
+      name: "ProxyMerge",
+      programType: "Html",
+      compilationMode: "standard",
+      includeProxyReloads: true,
+      extraScripts: ["ProxyMergeOther.js"],
+      extraElmWatchStuffJson: {
+        ProxyMergeOther: {
+          compilationMode: "standard",
+        },
+      },
+      init: (node) => window.Elm?.["ProxyMergeOther1"]?.init({ node }),
+    });
+
+    const { browserConsole, div, lastRender } = await go(() => "Stop");
+
+    expect(browserConsole).toMatchInlineSnapshot(`Proxy file reload!`);
+    expect(lastRender).toMatchInlineSnapshot(`▼ 🚨`);
+    expect(div.outerHTML).toMatchInlineSnapshot(`<div>ProxyMergeOther works</div>`);
+  });
 });
