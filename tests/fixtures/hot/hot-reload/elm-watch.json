@@ -112,14 +112,6 @@
             ],
             "output": "build/ChangeProgramType.js"
         },
-        "UserVarImpl": {
-            "type": "application",
-            "elmJson": "elm.json",
-            "inputs": [
-                "src/UserVarImpl.elm"
-            ],
-            "output": "build/UserVarImpl.js"
-        },
         "ViewFailsAfterHotReload": {
             "type": "application",
             "elmJson": "elm.json",

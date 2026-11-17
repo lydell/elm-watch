@@ -953,11 +953,19 @@ export function assertCompilationMode(compilationMode: CompilationMode): void {
 }
 
 export function assertDebugDisabled(): void {
+  assertDebugRadioDisabled(true);
+}
+
+export function assertDebugEnabled(): void {
+  assertDebugRadioDisabled(false);
+}
+
+function assertDebugRadioDisabled(disabled: boolean): void {
   expandUi();
   withShadowRoot((shadowRoot) => {
     const radio = shadowRoot.querySelector('input[type="radio"]');
     if (radio instanceof HTMLInputElement) {
-      expect(radio.disabled).toBe(true);
+      expect(radio.disabled).toBe(disabled);
     } else {
       throw new Error(`Could not find any radio button!`);
     }

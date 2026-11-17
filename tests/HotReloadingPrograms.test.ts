@@ -9,6 +9,7 @@ import {
 import {
   assertCompilationMode,
   assertDebugDisabled,
+  assertDebugEnabled,
   cleanupAfterEachTest,
   click,
   runHotReload,
@@ -49,7 +50,8 @@ describe("hot reloading", () => {
           return "KeepGoing";
         default:
           assertCompilationMode("optimize");
-          assertDebugDisabled();
+          // The program type is unknown in optimize mode.
+          assertDebugEnabled();
           assertInit(div);
           return "Stop";
       }

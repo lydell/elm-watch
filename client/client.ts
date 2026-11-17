@@ -196,6 +196,7 @@ type ElmWatchReturnDataInit = (
   arg: "__elmWatchReturnData",
 ) => ElmWatchReturnData;
 
+// In optimize mode, only `ports` exists (see `injectOptimize` in Inject.ts).
 type ElmApp = {
   ports?: Record<
     string,
@@ -1448,7 +1449,9 @@ const runCmd =
   };
 
 function runInitCmds(mutable: Mutable): void {
-  if (!mutable.shouldSkipInitCmds) {
+  // In optimize mode, the `Cmd`s from `init` are never skipped (see
+  // `injectOptimize` in Inject.ts).
+  if (!mutable.shouldSkipInitCmds || ORIGINAL_COMPILATION_MODE === "optimize") {
     return;
   }
   const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
@@ -1588,6 +1591,16 @@ function getDebugModeToggled(): Toggled {
   }
 
   const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
+
+  // In optimize mode, we don’t know the program types (see `injectOptimize` in
+  // Inject.ts). The debugger might be supported.
+  if (
+    ORIGINAL_COMPILATION_MODE === "optimize" &&
+    targetData !== undefined &&
+    targetData.initializedElmApps.size > 0
+  ) {
+    return { tag: "Enabled" };
+  }
 
   const programTypes: Array<ProgramType> =
     targetData === undefined

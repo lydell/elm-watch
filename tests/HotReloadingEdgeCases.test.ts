@@ -123,41 +123,6 @@ describe("hot reloading", () => {
     }
   });
 
-  test("User code with `var view = impl.title;` (optimize)", async () => {
-    const { replace, go } = runHotReload({
-      name: "UserVarImpl",
-      programType: "Element",
-      compilationMode: "optimize",
-    });
-
-    const { browserConsole } = await go(({ idle, div }) => {
-      switch (idle) {
-        case 1:
-          assert1(div);
-          replace((content) => content.replace(/-- /g, ""));
-          return "KeepGoing";
-        default:
-          assert2(div);
-          return "Stop";
-      }
-    });
-
-    expect(browserConsole).toMatchInlineSnapshot(`
-      elm-watch: I did a full page reload because hot reloading isn't supported in optimize mode.
-      (target: UserVarImpl)
-    `);
-
-    function assert1(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(`<div>titletitle</div>`);
-    }
-
-    function assert2(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(
-        `<div>titletitle hot reloaded</div>`,
-      );
-    }
-  });
-
   test("View fails after hot reload", async () => {
     const { replace, go } = runHotReload({
       name: "ViewFailsAfterHotReload",

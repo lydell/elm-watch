@@ -24,10 +24,6 @@ import {
 const REPLACEMENT_REGEX =
   /^(?:function (F|_Platform_initialize|_Platform_export|_Browser_application|_Scheduler_binding|_Scheduler_step)\(|var (_VirtualDom_init|\$elm\$browser\$Browser\$sandbox|_Platform_worker|_Browser_element|_Browser_document|_Debugger_element|_Debugger_document|_List_sortWith) =).*\r?\n?\{(?:.*\r?\n)*?\}\)?;?$/gm;
 
-// Some object properties are marked with `%`, like `%prop%`. They need to be
-// replaced with shorter names in `optimize` mode.
-const PLACEHOLDER_REGEX = /%(\w+)%/g;
-
 // Used both by `REPLACEMENTS` and by `injectElmHot`.
 const UTILS_EQ_ELM_WATCH_INTERNAL = `
 // This whole function was added by elm-watch.
@@ -156,8 +152,8 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 	var subscriptions;
 
 	function setUpdateAndSubscriptions() {
-		update = impl.%update% || impl._impl.%update%;
-		subscriptions = impl.%subscriptions% || impl._impl.%subscriptions%;
+		update = impl.update || impl._impl.update;
+		subscriptions = impl.subscriptions || impl._impl.subscriptions;
 		if (isDebug) {
 			update = $elm$browser$Debugger$Main$wrapUpdate(update);
 			subscriptions = $elm$browser$Debugger$Main$wrapSubs(subscriptions);
@@ -231,7 +227,7 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 		if (!_Utils_eq_elmWatchInternal(debugMetadata, newData.debugMetadata)) {
 			return reloadReasons.concat({ tag: "MessageTypeChangedInDebugMode" });
 		}
-		init = impl.%init% || impl._impl.%init%;
+		init = impl.init || impl._impl.init;
 		if (isDebug) {
 			init = A3($elm$browser$Debugger$Main$wrapInit, _Json_wrap(newData.debugMetadata), initPair.a.popout, init);
 		}
@@ -387,10 +383,10 @@ function _Browser_application(impl)
 	// var onUrlChange = impl.onUrlChange; // commented out by elm-watch
 	// var onUrlRequest = impl.onUrlRequest; // commented out by elm-watch
 	// var key = function() { key.a(onUrlChange(_Browser_getUrl())); }; // commented out by elm-watch
-	var key = function() { key.a(impl.%onUrlChange%(_Browser_getUrl())); }; // added by elm-watch
+	var key = function() { key.a(impl.onUrlChange(_Browser_getUrl())); }; // added by elm-watch
 
 	return _Browser_document({
-		%setup%: function(sendToApp)
+		setup: function(sendToApp)
 		{
 			key.a = sendToApp;
 			_Browser_window.addEventListener('popstate', key);
@@ -404,11 +400,11 @@ function _Browser_application(impl)
 					var href = domNode.href;
 					var curr = _Browser_getUrl();
 					var next = $elm$url$Url$fromString(href).a;
-					sendToApp(impl.%onUrlRequest%(
+					sendToApp(impl.onUrlRequest(
 						(next
-							&& curr.%protocol% === next.%protocol%
-							&& curr.%host% === next.%host%
-							&& curr.%port_%.a === next.%port_%.a
+							&& curr.protocol === next.protocol
+							&& curr.host === next.host
+							&& curr.port_.a === next.port_.a
 						)
 							? $elm$browser$Browser$Internal(next)
 							: $elm$browser$Browser$External(href)
@@ -416,15 +412,15 @@ function _Browser_application(impl)
 				}
 			});
 		},
-		%init%: function(flags)
+		init: function(flags)
 		{
 			// return A3(impl.init, flags, _Browser_getUrl(), key); // commented out by elm-watch
-			return A3(impl.%init%, flags, globalThis.__ELM_WATCH_INIT_URL, key); // added by elm-watch
+			return A3(impl.init, flags, globalThis.__ELM_WATCH_INIT_URL, key); // added by elm-watch
 		},
 		// view: impl.view, // commented out by elm-watch
 		// update: impl.update, // commented out by elm-watch
 		// subscriptions: impl.subscriptions // commented out by elm-watch
-		%view%: function(model) { return impl.%view%(model); }, // added by elm-watch
+		view: function(model) { return impl.view(model); }, // added by elm-watch
 		_impl: impl // added by elm-watch
 	});
 }
@@ -437,20 +433,20 @@ function _Browser_application(impl)
 var $elm$browser$Browser$sandbox = function (impl) {
 	return _Browser_element(
 		{
-			%init%: function (_v0) {
-				return _Utils_Tuple2(impl.%init%, $elm$core$Platform$Cmd$none);
+			init: function (_v0) {
+				return _Utils_Tuple2(impl.init, $elm$core$Platform$Cmd$none);
 			},
-			%subscriptions%: function (_v1) {
+			subscriptions: function (_v1) {
 				return $elm$core$Platform$Sub$none;
 			},
-			%update%: F2(
+			update: F2(
 				function (msg, model) {
 					return _Utils_Tuple2(
-						A2(impl.%update%, msg, model),
+						A2(impl.update, msg, model),
 						$elm$core$Platform$Cmd$none);
 				}),
 			// view: impl.view // commented out by elm-watch
-			%view%: function(model) { return impl.%view%(model); }, // added by elm-watch
+			view: function(model) { return impl.view(model); }, // added by elm-watch
 			_impl: impl // added by elm-watch
 		});
 };
@@ -473,7 +469,7 @@ var _Platform_worker = F4(function(impl, flagDecoder, debugMetadata, args)
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
-		impl.%init%,
+		impl.init,
 		// impl.update, // commented out by elm-watch
 		// impl.subscriptions, // commented out by elm-watch
 		impl, // added by elm-watch
@@ -492,7 +488,7 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
-		impl.%init%,
+		impl.init,
 		// impl.update, // commented out by elm-watch
 		// impl.subscriptions, // commented out by elm-watch
 		impl, // added by elm-watch
@@ -509,7 +505,7 @@ var _Browser_element = _Debugger_element || F4(function(impl, flagDecoder, debug
 			return _Browser_makeAnimator(initialModel, function(model)
 			{
 				// var nextNode = view(model); // commented out by elm-watch
-				var nextNode = impl.%view%(model); // added by elm-watch
+				var nextNode = impl.view(model); // added by elm-watch
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				domNode = _VirtualDom_applyPatches(domNode, currNode, patches, sendToApp);
 				currNode = nextNode;
@@ -529,12 +525,12 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 		debugMetadata, // added by elm-watch
 		flagDecoder,
 		args,
-		impl.%init%,
+		impl.init,
 		// impl.update, // commented out by elm-watch
 		// impl.subscriptions, // commented out by elm-watch
 		impl, // added by elm-watch
 		function(sendToApp, initialModel) {
-			var divertHrefToApp = impl.%setup% && impl.%setup%(sendToApp)
+			var divertHrefToApp = impl.setup && impl.setup(sendToApp)
 			// var view = impl.view; // commented out by elm-watch
 			var title = _VirtualDom_doc.title;
 			var bodyNode = _VirtualDom_doc.body;
@@ -543,20 +539,19 @@ var _Browser_document = _Debugger_document || F4(function(impl, flagDecoder, deb
 			{
 				_VirtualDom_divertHrefToApp = divertHrefToApp;
 				// var doc = view(model); // commented out by elm-watch
-				var doc = impl.%view%(model); // added by elm-watch
-				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.%body%);
+				var doc = impl.view(model); // added by elm-watch
+				var nextNode = _VirtualDom_node('body')(_List_Nil)(doc.body);
 				var patches = _VirtualDom_diff(currNode, nextNode);
 				bodyNode = _VirtualDom_applyPatches(bodyNode, currNode, patches, sendToApp);
 				currNode = nextNode;
 				_VirtualDom_divertHrefToApp = 0;
-				(title !== doc.%title%) && (_VirtualDom_doc.title = title = doc.%title%);
+				(title !== doc.title) && (_VirtualDom_doc.title = title = doc.title);
 			});
 		}
 	);
 });
   `.trim(),
 
-  // Note: Debugger code does not need to worry about optimize mode shortened record fields.
   _Debugger_element: `
 // This function was slightly modified by elm-watch.
 var _Debugger_element = F4(function(impl, flagDecoder, debugMetadata, args)
@@ -784,8 +779,6 @@ function _Scheduler_step(proc)
   // work with those after a hot reload. The “new” `List.compare` has references to new
   // `LT`, `GT` and `EQ` objects, while the model has references to old such objects,
   // which are equivalent but not the same object instances.
-  // In `optimize` mode, `LT`, `EQ` and `GT` are plain numbers instead (which don’t have `.$`),
-  // and the original code works fine for them, even after hot reloading.
   _List_sortWith: `
 // This function was slightly modified by elm-watch.
 var _List_sortWith = F2(function(f, xs)
@@ -793,15 +786,11 @@ var _List_sortWith = F2(function(f, xs)
 	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
 		var ord = A2(f, a, b);
 		// return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1; // commented out by elm-watch
-		return typeof ord === "number" // added by elm-watch
-			? (ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1) // added by elm-watch
-			: (ord.$ === $elm$core$Basics$EQ.$ ? 0 : ord.$ === $elm$core$Basics$LT.$ ? -1 : 1); // added by elm-watch
+		return ord.$ === $elm$core$Basics$EQ.$ ? 0 : ord.$ === $elm$core$Basics$LT.$ ? -1 : 1; // added by elm-watch
 	}));
 });
   `.trim(),
 };
-
-const REPLACEMENTS_WITHOUT_PLACEHOLDERS = updateReplacements({}, REPLACEMENTS);
 
 export function inject(
   compilationMode: CompilationMode,
@@ -810,22 +799,26 @@ export function inject(
 ): string {
   // Set in the replacements rather than with a separate pass over all of `code`.
   const targetNameDeclaration = `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`;
-  return usesElmHot(code)
-    ? injectElmHot(code, targetNameDeclaration)
-    : injectReplacements(compilationMode, code, targetNameDeclaration);
+  switch (compilationMode) {
+    case "debug":
+    case "standard":
+      return usesElmHot(code)
+        ? injectElmHot(code, targetNameDeclaration)
+        : injectReplacements(code, targetNameDeclaration);
+
+    case "optimize":
+      return injectOptimize(code, targetNameDeclaration);
+  }
 }
 
 function injectReplacements(
-  compilationMode: CompilationMode,
   code: string,
   targetNameDeclaration: string,
 ): string {
-  const replacements = getReplacements(compilationMode, code);
-
   return code.replace(
     REPLACEMENT_REGEX,
     (match, name1: string, name: string = name1) => {
-      const replacement = replacements[name];
+      const replacement = REPLACEMENTS[name];
       return replacement === undefined
         ? `${match} /* elm-watch ERROR: No replacement for function '${name}' was found! */`
         : keepForkChanges(
@@ -842,6 +835,28 @@ function injectReplacements(
   );
 }
 
+// There is no hot reloading in `--optimize` mode, only full page reloads. So
+// the only thing needed is registering with elm-watch, which keeps track of the
+// initialized apps. This works the same with and without `Elm.hot`.
+function injectOptimize(code: string, targetNameDeclaration: string): string {
+  return code.replace(ELM_HOT_PLATFORM_EXPORT_REGEX, (_, body: string) =>
+    `
+// added by elm-watch
+${targetNameDeclaration}
+
+// This function was changed by elm-watch.
+function _Platform_export(exports)
+{
+	// added by elm-watch
+	if (globalThis.__ELM_WATCH) {
+		globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports, undefined);
+	}
+
+${body}}
+`.trim(),
+  );
+}
+
 // The `hot-reload-stop` branches of lydell/core, lydell/browser and
 // lydell/virtual-dom (which Lamdera ships with) have built-in hot reloading via
 // `Elm.hot.reload(newScope)`. See `javascript-interface.md` in lydell/core.
@@ -855,9 +870,7 @@ function injectReplacements(
 // - `_Platform_initialize`: Support skipping the `Cmd`s from `init`.
 //
 // `Elm.hot` (and `init.hotReloadData`) only exist when not in `--optimize` mode.
-// In `--optimize` mode, elm-watch does a full page reload instead of hot reloading.
-// The definition of `Elm.hot` is part of the code in both modes (but commented
-// out in `--optimize` mode, where `_Platform_export` is a different function).
+// That doesn’t matter, since `injectOptimize` is used in `--optimize` mode.
 const ELM_HOT_REGEX =
   /^\t\tscope\['Elm'\] = Object\.defineProperty\(scope\['Elm'\] \|\| \{\}, 'hot', \{$/m;
 
@@ -875,9 +888,6 @@ const ELM_HOT_ENQUEUE_INIT_CMDS_REGEX =
 
 const ELM_HOT_APP_REGEX =
   /^\tvar app = \{\r?\n\t\tdetachView: detachView,\r?\n\t\tstop: stop\r?\n\t\};$/m;
-
-// `impl.setup` might be called `impl.x` in `--optimize` mode.
-const ELM_HOT_SETUP_REGEX = /^\s*var divertHrefToApp = impl\.([\w$]+)/m;
 
 export function usesElmHot(code: string): boolean {
   return ELM_HOT_REGEX.test(code);
@@ -934,8 +944,6 @@ ${UTILS_EQ_ELM_WATCH_INTERNAL}
 `.trim(),
     )
     .replace(ELM_HOT_INIT_REGEX, (match, name: string) => {
-      // The `impl.setup` line (if any) is within `match`.
-      const [, setup = "setup"] = ELM_HOT_SETUP_REGEX.exec(match) ?? [];
       const programType = ELM_HOT_PROGRAM_TYPES[name] ?? "undefined";
       const elmWatchData =
         name === "_VirtualDom_init"
@@ -949,7 +957,7 @@ ${UTILS_EQ_ELM_WATCH_INTERNAL}
 		debugMetadata: debugMetadata
 	}`;
       return `${match}	// added by elm-watch
-	init.elmWatch = ${elmWatchData.replace(/%setup%/g, setup)};
+	init.elmWatch = ${elmWatchData};
 
 `;
     });
@@ -1054,8 +1062,8 @@ const ELM_HOT_PROGRAM_TYPES: Record<string, string> = {
   // the two. See “Change program type” in HotReloadingElmHot.test.ts.
   _Browser_element: `'Browser.element'`,
   _Debugger_element: `'Browser.element'`,
-  _Browser_document: `impl.%setup% ? 'Browser.application' : 'Browser.document'`,
-  _Debugger_document: `impl.%setup% ? 'Browser.application' : 'Browser.document'`,
+  _Browser_document: `impl.setup ? 'Browser.application' : 'Browser.document'`,
+  _Debugger_document: `impl.setup ? 'Browser.application' : 'Browser.document'`,
 };
 
 // The replacements are based on elm/browser. lydell/browser@safe (see
@@ -1106,106 +1114,6 @@ function keepForkChanges(
     }
   }
   return result;
-}
-
-function getReplacements(
-  compilationMode: CompilationMode,
-  code: string,
-): Record<string, string> {
-  switch (compilationMode) {
-    case "debug":
-    case "standard":
-      return REPLACEMENTS_WITHOUT_PLACEHOLDERS;
-
-    case "optimize":
-      return updateReplacements(getOptimizeModeRecordNames(code), REPLACEMENTS);
-  }
-}
-
-// `.init` might be called `.G` in optimize mode. This figures out the shortened
-// names needed for hot reloading.
-function getOptimizeModeRecordNames(code: string): Record<string, string> {
-  const match1 =
-    /^\s*impl\.([\w$]+),\s*impl\.([\w$]+),\s*impl\.([\w$]+),/m.exec(code);
-  const match2 = /^\s*var divertHrefToApp = impl\.([\w$]+)/m.exec(code);
-  const match3 =
-    /^\s*var nextNode = _VirtualDom_node\('body'\)\(_List_Nil\)\(doc\.([\w$]+)\);/m.exec(
-      code,
-    );
-  const match4 = /^\s*\(title !== doc\.([\w$]+)\)/m.exec(code);
-  const match5 =
-    /^\s*&& curr\.([\w$]+) .*\s*&& curr\.([\w$]+) .*\s*&& curr\.([\w$]+)\..*/m.exec(
-      code,
-    );
-
-  const [
-    ,
-    init = "init_missing",
-    update = "update_missing",
-    subscriptions = "subscriptions_missing",
-  ] = match1 ?? [];
-
-  const [, setup = "setup_missing"] = match2 ?? [];
-
-  const [, body = "body_missing"] = match3 ?? [];
-
-  const [, title = "title_missing"] = match4 ?? [];
-
-  const [
-    ,
-    protocol = "protocol_missing",
-    host = "host_missing",
-    port_ = "port__missing",
-  ] = match5 ?? [];
-
-  // Things like `var view = impl.view;`. Only look inside the functions we
-  // replace, since the user’s code can contain `var view = impl.title;` too.
-  const extra = Object.fromEntries(
-    Array.from(code.matchAll(REPLACEMENT_REGEX)).flatMap(([functionCode]) =>
-      Array.from(
-        functionCode.matchAll(/^\s*var ([\w$]+) = impl\.([\w$]+);/gm),
-        ([, from = "from_missing", to = "to_missing"]): [string, string] => [
-          from,
-          to,
-        ],
-      ),
-    ),
-  );
-
-  return {
-    ...extra,
-    init,
-    update,
-    subscriptions,
-    setup,
-    body,
-    title,
-    protocol,
-    host,
-    port_,
-  };
-}
-
-function updateReplacements(
-  optimizeModeRecordNames: Record<string, string>,
-  replacements: Record<string, string>,
-): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(replacements).map(([key, value]) => [
-      key,
-      updateString(optimizeModeRecordNames, value),
-    ]),
-  );
-}
-
-function updateString(
-  optimizeModeRecordNames: Record<string, string>,
-  string: string,
-): string {
-  return string.replace(
-    PLACEHOLDER_REGEX,
-    (_, name: string) => optimizeModeRecordNames[name] ?? name,
-  );
 }
 
 export function proxyFile(
