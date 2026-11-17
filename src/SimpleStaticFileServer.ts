@@ -127,6 +127,9 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
             font-family: system-ui, sans-serif;
             padding: clamp(0.5rem, 3vw, 2rem);
           }
+          body {
+            max-width: 46rem;
+          }
           h1 {
             margin-top: 0;
           }
