@@ -263,7 +263,9 @@ function printWebSocketConnectionRejectedReason(
     case "HostNotAllowed":
       return printRejectedHost("Host header", reason.rejectedHost);
     case "OriginNotAllowed":
-      return printRejectedHost("origin", reason.rejectedHost);
+      return reason.rejectedOrigin.tag === "NullOrigin"
+        ? `pages opened via file:// (and sandboxed iframes) cannot connect – open the page via http:// instead, for example using elm-watch's server (see ${ALLOWED_HOSTS_DOCS_LINK})`
+        : printRejectedHost("origin", reason.rejectedOrigin);
     case "WrongToken":
       return "invalid security token";
   }

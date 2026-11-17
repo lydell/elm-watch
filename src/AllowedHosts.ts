@@ -125,15 +125,22 @@ export function checkHostHeader(
     : checkHostname(allowedHosts, hostname);
 }
 
+export type RejectedOrigin = RejectedHost | { tag: "NullOrigin" };
+
 export function checkOriginHeader(
   allowedHosts: ReadonlyArray<AllowedHost>,
   origin: string | undefined,
-): HostCheckResult {
-  // No `Origin` means the request does not come from a browser. Browsers send
-  // `Origin: null` for `file://` pages, for example. Allow both: Neither can be
-  // used by a web site to connect.
-  if (origin === undefined || origin === "null") {
+): { tag: "Allowed" } | RejectedOrigin {
+  // No `Origin` means the request does not come from a browser (browsers always
+  // send it for WebSockets).
+  if (origin === undefined) {
     return { tag: "Allowed" };
+  }
+  // Browsers send `Origin: null` for `file://` pages, but also for sandboxed
+  // iframes, which any web site can create. There is no way to tell them apart,
+  // so `file://` pages are not supported.
+  if (origin === "null") {
+    return { tag: "NullOrigin" };
   }
   let url;
   try {

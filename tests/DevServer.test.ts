@@ -174,7 +174,6 @@ describe("DevServer", () => {
   test("WebSocket: Host and Origin headers", async () => {
     await withServer(["dev.example.com"], async ({ connect, rejections }) => {
       expect(await connect({})).toMatchInlineSnapshot(`open`);
-      expect(await connect({ Origin: "null" })).toMatchInlineSnapshot(`open`);
       expect(
         await connect({
           Host: "localhost:8000",
@@ -201,6 +200,10 @@ describe("DevServer", () => {
       expect(
         await connect({ Host: "localhost:8000", Origin: "not a url" }),
       ).toMatchInlineSnapshot(`403 Origin not allowed`);
+      // file:// pages and sandboxed iframes.
+      expect(
+        await connect({ Host: "localhost:8000", Origin: "null" }),
+      ).toMatchInlineSnapshot(`403 Origin not allowed`);
 
       expect(rejections).toMatchInlineSnapshot(`
         [
@@ -218,7 +221,7 @@ describe("DevServer", () => {
           {
             origin: https://evil.com,
             reason: {
-              rejectedHost: {
+              rejectedOrigin: {
                 hostname: evil.com,
                 tag: NotAllowed,
               },
@@ -229,9 +232,19 @@ describe("DevServer", () => {
           {
             origin: not a url,
             reason: {
-              rejectedHost: {
+              rejectedOrigin: {
                 tag: Invalid,
                 value: not a url,
+              },
+              tag: OriginNotAllowed,
+            },
+            tag: WebSocketConnectionRejected,
+          },
+          {
+            origin: null,
+            reason: {
+              rejectedOrigin: {
+                tag: NullOrigin,
               },
               tag: OriginNotAllowed,
             },

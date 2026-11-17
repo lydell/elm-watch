@@ -241,6 +241,8 @@ Or set the `ELM_WATCH_ALLOWED_HOSTS` environment variable (comma separated). It 
 ELM_WATCH_ALLOWED_HOSTS=my-name.ngrok.dev elm-watch hot
 ```
 
+Pages opened via `file://` can’t connect to elm-watch’s WebSocket. Browsers send `Origin: null` for them, but also for sandboxed iframes, which any web site can create. elm-watch can’t tell them apart, so it rejects them all. Open your page via `http://` instead, for example using elm-watch’s [simple static file server](#server).
+
 With the [JavaScript API](../javascript-api/), environment variables like `ELM_WATCH_ALLOWED_HOSTS` are ignored. Read them yourself instead:
 
 ```js

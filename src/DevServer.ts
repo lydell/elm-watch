@@ -12,6 +12,7 @@ import {
   checkHostHeader,
   checkOriginHeader,
   type RejectedHost,
+  type RejectedOrigin,
 } from "./AllowedHosts.ts";
 import type { ConfigSource } from "./Config.ts";
 import { toError } from "./Helpers.ts";
@@ -106,7 +107,7 @@ export type WebSocketConnectionRejectedReason =
     }
   | {
       tag: "OriginNotAllowed";
-      rejectedHost: RejectedHost;
+      rejectedOrigin: RejectedOrigin;
     }
   | {
       tag: "WrongToken";
@@ -283,7 +284,7 @@ export class DevServer {
           this.dispatch({
             tag: "WebSocketConnectionRejected",
             origin,
-            reason: { tag: "OriginNotAllowed", rejectedHost: originCheck },
+            reason: { tag: "OriginNotAllowed", rejectedOrigin: originCheck },
           });
           return;
         }

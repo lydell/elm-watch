@@ -203,7 +203,6 @@ describe("AllowedHosts", () => {
     test("allowed", () => {
       for (const origin of [
         undefined,
-        "null",
         "http://localhost:3000",
         "https://foo.localhost",
         "http://my-macbook.local:9001",
@@ -230,6 +229,12 @@ describe("AllowedHosts", () => {
           hostname,
         });
       }
+    });
+
+    test("null (file:// pages and sandboxed iframes)", () => {
+      expect(checkOriginHeader(allowedHosts, "null")).toStrictEqual({
+        tag: "NullOrigin",
+      });
     });
 
     test("invalid", () => {
