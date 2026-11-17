@@ -16,15 +16,11 @@ describe("hot reloading", () => {
   test.each([
     ["Element", "standard"],
     ["Element", "debug"],
-    ["Element", "optimize"],
     ["Document", "standard"],
     ["Document", "debug"],
-    ["Document", "optimize"],
     ["Application", "standard"],
     ["Application", "debug"],
-    ["Application", "optimize"],
     ["Worker", "standard"],
-    ["Worker", "optimize"],
   ] as const)("Port change: %s / %s", async (programType, compilationMode) => {
     const { replace, sendToElm, lastValueFromElm, go } = runHotReload({
       name: "PortChange",

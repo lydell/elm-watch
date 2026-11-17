@@ -47,16 +47,10 @@ describe("hot reloading", () => {
         case 3:
           switchCompilationMode("optimize");
           return "KeepGoing";
-        case 4:
+        default:
           assertCompilationMode("optimize");
           assertDebugDisabled();
           assertInit(div);
-          replace((content) =>
-            content.replace("hot reload", "simple text change"),
-          );
-          return "KeepGoing";
-        default:
-          assertHotReload(div);
           return "Stop";
       }
     });
@@ -148,10 +142,8 @@ describe("hot reloading", () => {
   test.each([
     ["Sandbox", "standard"],
     ["Sandbox", "debug"],
-    ["Sandbox", "optimize"],
     ["Element", "standard"],
     ["Element", "debug"],
-    ["Element", "optimize"],
   ] as const)(
     "update window.Elm for next init: %s / %s",
     async (programType, compilationMode) => {
@@ -239,7 +231,7 @@ describe("hot reloading", () => {
     },
   );
 
-  test.each(["standard", "debug", "optimize"] as const)(
+  test.each(["standard", "debug"] as const)(
     "Application URL messages change: %s",
     async (compilationMode) => {
       const { replace, go } = runHotReload({

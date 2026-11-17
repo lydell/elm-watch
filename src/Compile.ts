@@ -351,7 +351,6 @@ type NeedsPostprocessOutputAction = {
   priority: number;
   code: string;
   elmCompiledTimestamp: number;
-  recordFields: Set<string> | undefined;
 };
 
 type QueueForElmMakeOutputAction = {
@@ -452,7 +451,6 @@ export function getOutputActions({
             priority: priority ?? 0,
             code: outputState.status.code,
             elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
-            recordFields: outputState.status.recordFields,
           });
           break;
 
@@ -753,10 +751,6 @@ export type HandleOutputActionResult =
       elmCompiledTimestamp: number;
     }
   | {
-      tag: "FullyCompiledJSButRecordFieldsChanged";
-      outputPath: OutputPath;
-    }
-  | {
       tag: "Nothing";
     };
 
@@ -847,7 +841,6 @@ export async function handleOutputAction({
         postprocess: action.postprocess,
         code: action.code,
         elmCompiledTimestamp: action.elmCompiledTimestamp,
-        recordFields: action.recordFields,
       });
 
     case "QueueForElmMake":
@@ -1072,7 +1065,6 @@ async function onCompileSuccess(
             postprocess,
             code,
             elmCompiledTimestamp,
-            recordFields: undefined,
           });
           updateStatusLineHelper();
           return { tag: "Nothing" };
@@ -1106,10 +1098,6 @@ async function onCompileSuccess(
         return { tag: "Nothing" };
       }
 
-      const recordFields = Inject.getRecordFields(
-        outputState.compilationMode,
-        code,
-      );
       const newCode = Inject.inject(
         outputState.compilationMode,
         code,
@@ -1158,12 +1146,7 @@ async function onCompileSuccess(
               outputState,
             };
           }
-          const recordFieldsChanged = Inject.recordFieldsChanged(
-            outputState.recordFields,
-            recordFields,
-          );
           const fileSize = Buffer.byteLength(newCode);
-          outputState.recordFields = recordFields;
           outputState.setStatus({
             tag: "Success",
             elmFileSize: fileSize,
@@ -1171,18 +1154,13 @@ async function onCompileSuccess(
             elmCompiledTimestamp,
           });
           updateStatusLineHelper();
-          return recordFieldsChanged
-            ? {
-                tag: "FullyCompiledJSButRecordFieldsChanged",
-                outputPath,
-              }
-            : {
-                tag: "FullyCompiledJS",
-                outputPath,
-                outputState,
-                code: newCode,
-                elmCompiledTimestamp,
-              };
+          return {
+            tag: "FullyCompiledJS",
+            outputPath,
+            outputState,
+            code: newCode,
+            elmCompiledTimestamp,
+          };
         }
 
         case "Postprocess": {
@@ -1191,7 +1169,6 @@ async function onCompileSuccess(
             postprocess,
             code: newCode,
             elmCompiledTimestamp,
-            recordFields,
           });
           updateStatusLineHelper();
           return { tag: "Nothing" };
@@ -1251,7 +1228,6 @@ async function postprocessHelper({
   postprocess,
   code,
   elmCompiledTimestamp,
-  recordFields,
 }: {
   terminal: Terminal;
   runMode: RunModeWithExtraData;
@@ -1263,7 +1239,6 @@ async function postprocessHelper({
   postprocess: PostprocessToRun;
   code: string;
   elmCompiledTimestamp: number;
-  recordFields: Set<string> | undefined;
 }): Promise<HandleOutputActionResult> {
   const updateStatusLineHelper = (): void => {
     updateStatusLine({
@@ -1339,11 +1314,6 @@ async function postprocessHelper({
           outputState,
         };
       }
-      const recordFieldsChanged = Inject.recordFieldsChanged(
-        outputState.recordFields,
-        recordFields,
-      );
-      outputState.recordFields = recordFields;
       outputState.setStatus({
         tag: "Success",
         elmFileSize: Buffer.byteLength(code),
@@ -1351,18 +1321,13 @@ async function postprocessHelper({
         elmCompiledTimestamp,
       });
       updateStatusLineHelper();
-      return recordFieldsChanged
-        ? {
-            tag: "FullyCompiledJSButRecordFieldsChanged",
-            outputPath,
-          }
-        : {
-            tag: "FullyCompiledJS",
-            outputPath,
-            outputState,
-            code: postprocessResult.code,
-            elmCompiledTimestamp,
-          };
+      return {
+        tag: "FullyCompiledJS",
+        outputPath,
+        outputState,
+        code: postprocessResult.code,
+        elmCompiledTimestamp,
+      };
     }
 
     default:

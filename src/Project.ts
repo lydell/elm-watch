@@ -203,10 +203,6 @@ export class OutputState extends TargetState {
 
   allRelatedElmFilePaths = new Set<AbsolutePath>();
 
-  // We only calculate `recordFields` in optimize mode. Having `| undefined`
-  // makes that more clear.
-  recordFields: Set<string> | undefined = undefined;
-
   constructor(
     inputs: NonEmptyArray<InputPath>,
     postprocess: Postprocess,
@@ -272,7 +268,6 @@ export type OutputStatus =
       postprocess: PostprocessToRun;
       code: string;
       elmCompiledTimestamp: number;
-      recordFields: Set<string> | undefined;
     }
   | {
       tag: "Success";

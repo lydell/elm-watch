@@ -605,7 +605,8 @@ function elmHotReload(
 ): Array<ReloadReasonWithModuleName> {
   const { hot } = targetData.elm;
 
-  // Optimize mode.
+  // `Elm.hot` only exists when not in optimize mode, and code compiled in
+  // optimize mode is never hot reloaded. This is just in case.
   if (hot === undefined || newElm.hot === undefined) {
     return Object.keys(newInitData).map((moduleName) => ({
       tag: "ElmHotUnavailable",

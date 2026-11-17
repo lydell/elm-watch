@@ -961,19 +961,19 @@ function handleOutputActionResultToCmd(
       return {
         tag: "WebSocketSendToOutput",
         outputPath: handleOutputActionResult.outputPath,
-        message: {
-          tag: "SuccessfullyCompiled",
-          code: handleOutputActionResult.code,
-          elmCompiledTimestamp: handleOutputActionResult.elmCompiledTimestamp,
-          compilationMode: handleOutputActionResult.outputState.compilationMode,
-        },
-      };
-
-    case "FullyCompiledJSButRecordFieldsChanged":
-      return {
-        tag: "WebSocketSendToOutput",
-        outputPath: handleOutputActionResult.outputPath,
-        message: { tag: "SuccessfullyCompiledButRecordFieldsChanged" },
+        // There’s no hot reloading in optimize mode, only full page reloads,
+        // so there’s no need to send the code.
+        message:
+          handleOutputActionResult.outputState.compilationMode === "optimize"
+            ? { tag: "SuccessfullyCompiledInOptimizeMode" }
+            : {
+                tag: "SuccessfullyCompiled",
+                code: handleOutputActionResult.code,
+                elmCompiledTimestamp:
+                  handleOutputActionResult.elmCompiledTimestamp,
+                compilationMode:
+                  handleOutputActionResult.outputState.compilationMode,
+              },
       };
 
     case "Nothing":

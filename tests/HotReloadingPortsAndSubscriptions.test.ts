@@ -4,7 +4,6 @@ import { afterEach, describe, expect, onTestFinished, test } from "vitest";
 
 import {
   onlyErrorMessages,
-  removeIndents,
   stringSnapshotSerializer,
   touch,
   waitOneFrame,
@@ -25,13 +24,10 @@ describe("hot reloading", () => {
   test.each([
     ["Element", "standard"],
     ["Element", "debug"],
-    ["Element", "optimize"],
     ["Document", "standard"],
     ["Document", "debug"],
-    ["Document", "optimize"],
     ["Application", "standard"],
     ["Application", "debug"],
-    ["Application", "optimize"],
   ] as const)(
     "Add subscription: %s / %s",
     async (programType, compilationMode) => {
@@ -50,33 +46,12 @@ describe("hot reloading", () => {
             );
             return "KeepGoing";
           default:
-            if (compilationMode === "optimize") {
-              await assertReloadForOptimize(main);
-            } else {
-              await assertHotReload(main);
-            }
+            await assertHotReload(main);
             return "Stop";
         }
       });
 
-      if (compilationMode === "optimize") {
-        assertBrowserConsoleOptimize();
-      } else {
-        assertBrowserConsole();
-      }
-
-      function assertBrowserConsole(): void {
-        expect(browserConsole).toStrictEqual("");
-      }
-
-      function assertBrowserConsoleOptimize(): void {
-        expect(browserConsole).toStrictEqual(
-          removeIndents(`
-            elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time.
-            (target: AddSubscription)
-          `),
-        );
-      }
+      expect(browserConsole).toStrictEqual("");
 
       async function assertInit(main: HTMLElement): Promise<void> {
         expect(main.outerHTML).toStrictEqual(`<main>0</main>`);
@@ -92,14 +67,6 @@ describe("hot reloading", () => {
         main.click();
         await waitOneFrame();
         expect(main.outerHTML).toStrictEqual(`<main>8</main>`);
-      }
-
-      async function assertReloadForOptimize(main: HTMLElement): Promise<void> {
-        expect(main.outerHTML).toStrictEqual(`<main>0</main>`);
-
-        main.click();
-        await waitOneFrame();
-        expect(main.outerHTML).toStrictEqual(`<main>9</main>`);
       }
     },
   );

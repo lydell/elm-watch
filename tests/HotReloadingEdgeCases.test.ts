@@ -142,7 +142,10 @@ describe("hot reloading", () => {
       }
     });
 
-    expect(browserConsole).toMatchInlineSnapshot(``);
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because hot reloading isn't supported in optimize mode.
+      (target: UserVarImpl)
+    `);
 
     function assert1(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>titletitle</div>`);

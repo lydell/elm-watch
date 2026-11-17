@@ -581,23 +581,12 @@ function onWebSocketToClientMessage(
 
     case "SuccessfullyCompiled":
       return msg.compilationMode !== config.originalCompilationMode
-        ? [
-            {
-              ...model,
-              status: {
-                tag: "WaitingForReload",
-                date,
-                reasons:
-                  config.originalCompilationMode === "proxy"
-                    ? []
-                    : [
-                        `compilation mode changed from ${config.originalCompilationMode} to ${msg.compilationMode}.`,
-                      ],
-              },
-              compilationMode: msg.compilationMode,
-            },
-            [],
-          ]
+        ? compilationModeChanged(
+            date,
+            config.originalCompilationMode,
+            msg.compilationMode,
+            model,
+          )
         : [
             {
               ...model,
@@ -607,21 +596,51 @@ function onWebSocketToClientMessage(
             [{ tag: "Eval", code: msg.code }],
           ];
 
-    case "SuccessfullyCompiledButRecordFieldsChanged":
-      return [
-        {
-          ...model,
-          status: {
-            tag: "WaitingForReload",
+    case "SuccessfullyCompiledInOptimizeMode":
+      return config.originalCompilationMode !== "optimize"
+        ? compilationModeChanged(
             date,
-            reasons: [
-              `record field mangling in optimize mode was different than last time.`,
-            ],
-          },
-        },
-        [],
-      ];
+            config.originalCompilationMode,
+            "optimize",
+            model,
+          )
+        : [
+            {
+              ...model,
+              status: {
+                tag: "WaitingForReload",
+                date,
+                reasons: [`hot reloading isn't supported in optimize mode.`],
+              },
+            },
+            [],
+          ];
   }
+}
+
+function compilationModeChanged(
+  date: Date,
+  originalCompilationMode: CompilationModeWithProxy,
+  compilationMode: CompilationModeWithProxy,
+  model: Model,
+): [Model, Array<Cmd>] {
+  return [
+    {
+      ...model,
+      status: {
+        tag: "WaitingForReload",
+        date,
+        reasons:
+          originalCompilationMode === "proxy"
+            ? []
+            : [
+                `compilation mode changed from ${originalCompilationMode} to ${compilationMode}.`,
+              ],
+      },
+      compilationMode,
+    },
+    [],
+  ];
 }
 
 function statusChanged(
@@ -811,7 +830,7 @@ function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
         ? `\`${reason.moduleName}\` now uses built-in hot reloading (\`Elm.hot\`), for example because the compiler changed.`
         : `\`${reason.moduleName}\` no longer uses built-in hot reloading (\`Elm.hot\`), for example because the compiler changed.`;
     case "ElmHotUnavailable":
-      return `\`${reason.moduleName}\` uses built-in hot reloading (\`Elm.hot\`), which isn't available. It only exists when not in optimize mode, and when elm/core, elm/browser and elm/virtual-dom all support it.`;
+      return `\`${reason.moduleName}\` uses built-in hot reloading (\`Elm.hot\`), which isn't available. It only exists when elm/core, elm/browser and elm/virtual-dom all support it.`;
     case "FlagsTypeChanged":
       return `the flags type in \`${reason.moduleName}\` changed and now the passed flags aren't correct anymore. The idea is to try to run with new flags!\nThis is the error:\n${reason.jsonErrorMessage}`;
     case "HotReloadCaughtError":

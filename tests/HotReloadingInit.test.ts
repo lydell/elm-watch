@@ -13,7 +13,7 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 describe("hot reloading", () => {
   afterEach(cleanupAfterEachTest);
 
-  test.each(["standard", "debug", "optimize"] as const)(
+  test.each(["standard", "debug"] as const)(
     "Add Msg: %s",
     async (compilationMode) => {
       const { replace, go } = runHotReload({
@@ -110,39 +110,6 @@ describe("hot reloading", () => {
 
     function assert2(div: HTMLDivElement): void {
       expect(div.outerHTML).toMatchInlineSnapshot(`<div>init_tweaked</div>`);
-    }
-  });
-
-  test("Init tweak value in third constructor (optimize)", async () => {
-    const { replace, go } = runHotReload({
-      name: "InitTweakThirdConstructor",
-      programType: "Element",
-      compilationMode: "optimize",
-    });
-
-    const { browserConsole } = await go(({ idle, div }) => {
-      switch (idle) {
-        case 1:
-          assert1(div);
-          replace((content) => content.replace(/-- /g, ""));
-          return "KeepGoing";
-        default:
-          assert2(div);
-          return "Stop";
-      }
-    });
-
-    expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because \`Elm.InitTweakThirdConstructor.init\` returned something different than last time. Let's start fresh!
-        (target: InitTweakThirdConstructor)
-      `);
-
-    function assert1(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(`<div>123</div>`);
-    }
-
-    function assert2(div: HTMLDivElement): void {
-      expect(div.outerHTML).toMatchInlineSnapshot(`<div>124</div>`);
     }
   });
 

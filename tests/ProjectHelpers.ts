@@ -77,7 +77,6 @@ export const S = {
     postprocess: { tag: "Postprocess", postprocessFunction: () => "" },
     code: "",
     elmCompiledTimestamp: 0,
-    recordFields: undefined,
   },
   interrupted: { tag: "Interrupted" },
   error: {

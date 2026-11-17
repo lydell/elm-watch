@@ -163,7 +163,7 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
     ...SuccessfullyCompiledFields,
   },
   {
-    tag: Codec.tag("SuccessfullyCompiledButRecordFieldsChanged"),
+    tag: Codec.tag("SuccessfullyCompiledInOptimizeMode"),
   },
 ]);
 

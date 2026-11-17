@@ -156,7 +156,7 @@ describe("hot reloading with Elm.hot", () => {
     });
 
     expect(browserConsole).toMatchInlineSnapshot(`
-      elm-watch: I did a full page reload because \`Elm.DomAndMsgChange\` uses built-in hot reloading (\`Elm.hot\`), which isn't available. It only exists when not in optimize mode, and when elm/core, elm/browser and elm/virtual-dom all support it.
+      elm-watch: I did a full page reload because hot reloading isn't supported in optimize mode.
       (target: DomAndMsgChange)
     `);
   });

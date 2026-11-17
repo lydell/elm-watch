@@ -97,9 +97,7 @@ function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack)
 		// Tasks made with \`_Scheduler_binding\` (\`$: 2\`) get their kill function (\`.c\`) set
 		// when run. A top-level task that has been run might have a function, \`undefined\` or
 		// \`null\` there. Ignore it, since we consider all functions to be equal anyway.
-		// In optimize mode, a custom type’s third variant also has \`$: 2\`, but its
-		// arguments start at \`.a\`.
-		if (x.$ === 2 && key === 'c' && !('a' in x)) {
+		if (x.$ === 2 && key === 'c') {
 			continue;
 		}
 		if (!_Utils_eqHelp_elmWatchInternal(x[key], y[key], depth + 1, stack)) {
@@ -1279,53 +1277,4 @@ export function versionedIdentifier(
     webSocketConnection: webSocketConnectionToPrimitive(webSocketConnection),
     webSocketToken,
   })}\n`;
-}
-
-// Matches string literals, multiline comments, singleline comments and `.foo`.
-// We’re only interested in `.foo` – but only outside strings and comments.
-// Copied from: https://github.com/lydell/js-tokens/blob/15439aa6c3a66afa852c3549f8f57076935ead1f/index.coffee
-const RECORD_FIELD_REGEX =
-  /(['"])(?:(?!\1)[^\\\n\r]|\\(?:\r\n|[^]))*(\1)?|\/\*(?:[^*]|\*(?!\/))*(\*\/)?|\/\/.*|\.[\w$]{1,4}\b/g;
-
-export function getRecordFields(
-  compilationMode: CompilationMode,
-  code: string,
-): Set<string> | undefined {
-  switch (compilationMode) {
-    case "debug":
-    case "standard":
-      return undefined;
-
-    // If the set of accessed record field names changes in optimize mode, we cannot hot reload.
-    case "optimize": {
-      const matches = code.match(RECORD_FIELD_REGEX) ?? [];
-      return new Set(matches.filter((string) => string.startsWith(".")));
-    }
-  }
-}
-
-// Only one scenario counts as changed:
-// We had a set of record fields (optimize mode), and then got a different set
-// of record fields (also in optimize mode). Mode changes (which results in
-// either side being `undefined`) does not count.
-// Limitation: Elm gives the shortest names to the most used fields (counting
-// the whole program, including packages). If two fields swap names (because
-// one of them got used more), the set stays the same, and so does everything
-// else we could look at in the code: The most used field still has the same
-// name. If the swapped fields are in the return value of `init`, the init
-// check in the browser catches it and reloads the page. Otherwise, the
-// existing model ends up with the values of the two fields swapped.
-export function recordFieldsChanged(
-  oldSet: Set<string> | undefined,
-  newSet: Set<string> | undefined,
-): boolean {
-  return !(
-    oldSet === undefined ||
-    newSet === undefined ||
-    compareRecordFieldsHelper(oldSet) === compareRecordFieldsHelper(newSet)
-  );
-}
-
-function compareRecordFieldsHelper(set: Set<string>): string {
-  return Array.from(set).sort().join(",");
 }

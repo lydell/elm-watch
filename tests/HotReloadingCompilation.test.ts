@@ -218,7 +218,7 @@ describe("hot reloading", () => {
     `);
   });
 
-  test("Changed record fields in optimize with postprocess", async () => {
+  test("optimize mode with postprocess does a full page reload", async () => {
     const { replace, go } = runHotReload({
       fixture: "hot-reload-postprocess",
       useElmWatchFunction: true,
@@ -241,7 +241,7 @@ describe("hot reloading", () => {
     });
 
     expect(browserConsole).toMatchInlineSnapshot(`
-        elm-watch: I did a full page reload because record field mangling in optimize mode was different than last time.
+        elm-watch: I did a full page reload because hot reloading isn't supported in optimize mode.
         (target: ChangedRecordFields)
       `);
 

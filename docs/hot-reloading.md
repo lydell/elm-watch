@@ -20,6 +20,8 @@ Some exciting elm-watch hot reloading features:
 - **Complete coverage.** elm-watch supports hot reloading all `Program` types and does as good as it can with all types of changes: `init` (and flags), `update`, `view`, `subscriptions`, `ports`.
 - **Clever prioritization.** Working on three Elm apps simultaneously? elm-watch compiles the one you interacted with most recently first. Apps that you don’t work on aren’t compiled at all – just type checked, which is much faster!
 
+In `--optimize` mode, elm-watch always reloads the page instead of hot reloading. That mode is for trying out what you’ll ship, not for developing.
+
 That said, hot reloading is essentially a hack. But a pretty good one. As long as hot reloading isn’t built into Elm itself, it’s always going to be a hack and not 100 % perfect:
 
 - Changes to `Model`. Hot reloading is all about running new code with the previous state. That only works if the previous state is compatible – otherwise your `update` and `view` might throw errors. Elm actually has a way to tell if `Msg` has changed, as part of the Import/Export feature in the debugger. If hot reloading were built into Elm, the same could be used to diff the `Model`. elm-watch instead tries to detect that by running the updated `init` function. If it returns something different than last time it can mean:
@@ -37,8 +39,6 @@ That said, hot reloading is essentially a hack. But a pretty good one. As long a
 ## The Lamdera compiler
 
 When you compile with the [Lamdera compiler](../elm-watch.json/#lamdera-compiler) (`"compiler": "lamdera"`), the compiled code has hot reloading built in (`Elm.hot`), in Lamdera’s versions of elm/core, elm/browser and elm/virtual-dom. Then elm-watch uses that instead of replacing functions in the compiled JavaScript, and only adds a few small patches. elm-watch still decides when a full page reload is needed, in the same way as described above.
-
-In `--optimize` mode, the compiled code has no `Elm.hot`, so elm-watch reloads the page instead of hot reloading.
 
 ## How it works
 
