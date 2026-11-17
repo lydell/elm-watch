@@ -18,7 +18,7 @@ import {
   fixtureDir,
   getOverlay,
   getOverlayAnnouncement,
-  getPanelColors,
+  getTerminalColors,
   hideErrors,
   hideUi,
   isOverlayVisible,
@@ -548,8 +548,8 @@ describe("hot reloading", () => {
       `);
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>NEEDS DOUBLE QUOTES</span><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -566,8 +566,8 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>NEEDS DOUBLE QUOTES</span><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -584,8 +584,8 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/2   file 1/2 | [_→] error | [_↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>NEEDS DOUBLE QUOTES</span><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -602,8 +602,8 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/3   file 1/3 | [_→] error | [_↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Shared.elm<span>:1:25</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>UNKNOWN EXPORT</span><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
@@ -612,8 +612,8 @@ describe("hot reloading", () => {
         <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Shared.elm<span>:1:25</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>UNKNOWN EXPORT</span><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
@@ -622,8 +622,8 @@ describe("hot reloading", () => {
         <footer>🚨 error 2/3   file 2/3 | [←→] error | [↑↓] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>NEEDS DOUBLE QUOTES</span><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -637,13 +637,13 @@ describe("hot reloading", () => {
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></div>
         --------------------------------------------------------------------------------
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="1"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Shared.elm<span>:1:25</span></button></span></div>
+        <div id="1"><div><span>UNKNOWN EXPORT</span><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
         Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></div>
         --------------------------------------------------------------------------------
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="2"><div><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/AppOtherHelpers.elm<span>:3:7</span></button></span></div>
+        <div id="2"><div><span>PROBLEM IN TYPE ANNOTATION</span><span></span><span><button>src/AppOtherHelpers.elm<span>:3:7</span></button></span></div>
         <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
 
         3| text := "AppOther"
@@ -705,8 +705,8 @@ describe("hot reloading", () => {
       expect(visibility).toStrictEqual([true, false, true, false, true]);
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/App.elm<span>:7:19</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/App.elm<span>:7:19</span></button></span></div>
         <pre>I cannot do addition with <span style="color: rgb(229, 229, 16)">String</span> values like this one:
 
         7| main = Html.text (AppHelpers.text + Shared.text)
@@ -718,12 +718,12 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
         ================================================================================
-        <overlay hidden style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
+        <overlay hidden>
 
         </overlay>
         ================================================================================
-        <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">SYNTAX PROBLEM</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/App.elm<span>:1:2</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>SYNTAX PROBLEM</span><span></span><span><button>src/App.elm<span>:1:2</span></button></span></div>
         <pre>I got stuck here:
 
         1|  App exposing (main)
@@ -773,8 +773,8 @@ describe("hot reloading", () => {
       });
 
       expect(overlay).toMatchInlineSnapshot(`
-        <overlay visible style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51); --backgroundColor: #aabbcc;">
-        <div style="background-color: rgb(170, 187, 204); color: rgb(17, 34, 51);" id="0"><div><span style="background-color: rgb(170, 187, 204);">TYPE MISMATCH</span><span></span><span style="background-color: rgb(170, 187, 204);"><button>src/App.elm<span>:7:19</span></button></span></div>
+        <overlay visible>
+        <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/App.elm<span>:7:19</span></button></span></div>
         <pre>I cannot do addition with <span style="color: #333333">String</span> values like this one:
 
         7| main = Html.text (AppHelpers.text + Shared.text)
@@ -788,7 +788,7 @@ describe("hot reloading", () => {
       `);
     });
 
-    test("terminal theme for the panel", async () => {
+    test("terminal theme for the overlay and panel", async () => {
       const { replace, go } = runHotReload({
         fixture,
         name: "App",
@@ -797,7 +797,7 @@ describe("hot reloading", () => {
         stdin: new TerminalColorReadStream(),
       });
 
-      let panelColors = "(not set)";
+      let terminalColors = "(not set)";
 
       // The colors are sent when connecting, without waiting for errors.
       await go(({ idle }) => {
@@ -807,7 +807,7 @@ describe("hot reloading", () => {
             return "KeepGoing";
 
           case 2:
-            panelColors = getPanelColors();
+            terminalColors = getTerminalColors();
             return "Stop";
 
           default:
@@ -815,12 +815,12 @@ describe("hot reloading", () => {
         }
       });
 
-      expect(panelColors).toMatchInlineSnapshot(
-        `--fg: #112233; --bg: #aabbcc; color-scheme: light;`,
+      expect(terminalColors).toMatchInlineSnapshot(
+        `--fg: #112233; --bg: #aabbcc; --color-scheme: light;`,
       );
     });
 
-    test("panel follows terminal theme changes when focusing the tab", async () => {
+    test("terminal theme changes are picked up when focusing the tab", async () => {
       const stdin = new TerminalColorReadStream();
       const { go } = runHotReload({
         fixture,
@@ -833,33 +833,33 @@ describe("hot reloading", () => {
         },
       });
 
-      const panelColors: Array<string> = [];
+      const terminalColors: Array<string> = [];
 
       await go(async () => {
-        await waitFor(() => getPanelColors() !== "");
-        panelColors.push(getPanelColors());
+        await waitFor(() => getTerminalColors() !== "");
+        terminalColors.push(getTerminalColors());
         // Switch the terminal to a dark theme, and go back to the browser.
         stdin.foreground = "eeee/eeee/eeee";
         stdin.background = "1111/1111/1111";
         window.dispatchEvent(new Event("focus"));
         // Don’t wait for the test timeout if the colors are never updated.
         await Promise.race([
-          waitFor(() => getPanelColors() !== panelColors[0]),
+          waitFor(() => getTerminalColors() !== terminalColors[0]),
           wait(2000),
         ]);
-        panelColors.push(getPanelColors());
+        terminalColors.push(getTerminalColors());
         return "Stop" as const;
       });
 
-      expect(panelColors).toMatchInlineSnapshot(`
+      expect(terminalColors).toMatchInlineSnapshot(`
         [
-          --fg: #112233; --bg: #aabbcc; color-scheme: light;,
-          --fg: #eeeeee; --bg: #111111; color-scheme: dark;,
+          --fg: #112233; --bg: #aabbcc; --color-scheme: light;,
+          --fg: #eeeeee; --bg: #111111; --color-scheme: dark;,
         ]
       `);
     });
 
-    test("system colors for the panel if the terminal doesn’t respond", async () => {
+    test("default theme if the terminal doesn’t respond", async () => {
       const { replace, go } = runHotReload({
         fixture,
         name: "App",
@@ -868,10 +868,9 @@ describe("hot reloading", () => {
         isTTY: false,
       });
 
-      let panelColors = "(not set)";
+      let terminalColors = "(not set)";
 
-      // The overlay falls back to a default theme, but the panel uses the
-      // system colors.
+      // Both the overlay and the panel use the default theme.
       await go(({ idle }) => {
         switch (idle) {
           case 1:
@@ -879,7 +878,7 @@ describe("hot reloading", () => {
             return "KeepGoing";
 
           case 2:
-            panelColors = getPanelColors();
+            terminalColors = getTerminalColors();
             return "Stop";
 
           default:
@@ -887,7 +886,7 @@ describe("hot reloading", () => {
         }
       });
 
-      expect(panelColors).toMatchInlineSnapshot(``);
+      expect(terminalColors).toMatchInlineSnapshot(`--fg: rgb(204, 204, 204); --bg: rgb(32, 30, 30); --color-scheme: dark;`);
     });
   });
 });

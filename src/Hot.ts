@@ -838,19 +838,13 @@ const runCmd =
         return;
 
       case "WebSocketSendTerminalColors":
-        // Not via `webSocketSend`, since the order doesn’t matter: Other
-        // messages shouldn’t wait for the terminal to respond.
-        Theme.getColorsFromTerminal(terminal)
-          .then((colors) => {
-            if (
-              colors !== undefined &&
-              cmd.webSocket.readyState === cmd.webSocket.OPEN
-            ) {
-              webSocketSendNow(cmd.webSocket, {
-                tag: "TerminalColors",
-                foregroundColor: colors.foreground,
-                backgroundColor: colors.background,
-              });
+        // Not via `webSocketSend`, since other messages shouldn’t wait for the
+        // terminal to respond. Error messages are preceded by the colors
+        // anyway (see `terminalColorsMessage`).
+        Theme.getThemeFromTerminal(terminal)
+          .then((theme) => {
+            if (cmd.webSocket.readyState === cmd.webSocket.OPEN) {
+              webSocketSendNow(cmd.webSocket, terminalColorsMessage(theme));
             }
           })
           .catch(rejectPromise);
@@ -1102,7 +1096,10 @@ const runCmd =
         return;
 
       case "WebSocketSendCompileErrorToOutput": {
-        const message = Theme.getThemeFromTerminal(terminal).then(
+        const themePromise = Theme.getThemeFromTerminal(terminal);
+        themePromise.catch(rejectPromise);
+        const colorsMessage = themePromise.then(terminalColorsMessage);
+        const message = themePromise.then(
           (theme): WebSocketToClientMessage => ({
             tag: "StatusChanged",
             status: {
@@ -1116,15 +1113,15 @@ const runCmd =
                   terminal.config.pathsRelativeTo,
                 ),
               ),
-              foregroundColor: theme.foreground,
-              backgroundColor: theme.background,
             },
           }),
         );
         message.catch(rejectPromise);
         if (cmd.webSocket === undefined) {
+          webSocketSendToOutput(mutable, cmd.outputPath, colorsMessage);
           webSocketSendToOutput(mutable, cmd.outputPath, message);
         } else {
+          webSocketSend(cmd.webSocket, colorsMessage);
           webSocketSend(cmd.webSocket, message);
         }
         return;
@@ -1407,25 +1404,45 @@ function sendExternalErrors(
         ),
       ),
     })),
-    foregroundColor: theme.foreground,
-    backgroundColor: theme.background,
   });
   // Without errors, the colors don’t matter, so don’t make other messages wait.
-  let message: WebSocketToClientMessage | Promise<WebSocketToClientMessage>;
+  const messages: Array<
+    WebSocketToClientMessage | Promise<WebSocketToClientMessage>
+  > = [];
   if (isNonEmptyArray(sources)) {
-    const promise = Theme.getThemeFromTerminal(terminal).then(toMessage);
-    promise.catch(rejectPromise);
-    message = promise;
+    const themePromise = Theme.getThemeFromTerminal(terminal);
+    themePromise.catch(rejectPromise);
+    messages.push(
+      themePromise.then(terminalColorsMessage),
+      themePromise.then(toMessage),
+    );
   } else {
-    message = toMessage(Theme.DEFAULT_THEME);
+    messages.push(toMessage(Theme.DEFAULT_THEME));
   }
-  if (webSocket === undefined) {
-    for (const connection of mutable.devServer.getConnections()) {
-      webSocketSend(connection.webSocket, message);
+  const webSockets =
+    webSocket === undefined
+      ? Array.from(
+          mutable.devServer.getConnections(),
+          (connection) => connection.webSocket,
+        )
+      : [webSocket];
+  for (const theWebSocket of webSockets) {
+    for (const message of messages) {
+      webSocketSend(theWebSocket, message);
     }
-  } else {
-    webSocketSend(webSocket, message);
   }
+}
+
+// The overlay and the browser UI panel both use these colors. They are sent
+// when connecting and when the tab is focused, and before every error message
+// (which contain colors from the theme’s palette), so the overlay always has
+// colors matching the errors.
+function terminalColorsMessage(theme: Theme.Theme): WebSocketToClientMessage {
+  return {
+    tag: "TerminalColors",
+    foregroundColor: theme.foreground,
+    backgroundColor: theme.background,
+  };
 }
 
 function webSocketSendToOutput(

@@ -157,7 +157,7 @@ export type Model = {
   elmCompiledTimestampBeforeReload: number | undefined;
   // Received when connecting. `undefined` until then.
   openEditor: OpenEditorSetup | undefined;
-  // Received when connecting, if the terminal responded with its colors.
+  // Received when connecting (and later). `undefined` until then.
   terminalColors: TerminalColors | undefined;
 };
 
@@ -528,11 +528,7 @@ function onWebSocketToClientMessage(
             tag: "UpdateExternalErrors",
             sources: msg.sources.map(({ source, errors }) => ({
               source,
-              errors: toOverlayErrors(
-                errors,
-                msg.foregroundColor,
-                msg.backgroundColor,
-              ),
+              errors: toOverlayErrors(errors),
             })),
             // We just got a message, so we are connected.
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
@@ -730,11 +726,7 @@ function statusChanged(
             tag: "CompileError",
             date,
             sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-            errors: toOverlayErrors(
-              status.errors,
-              status.foregroundColor,
-              status.backgroundColor,
-            ),
+            errors: toOverlayErrors(status.errors),
           },
           compilationMode: status.compilationMode,
         },
@@ -764,8 +756,6 @@ function statusChanged(
 
 function toOverlayErrors(
   errors: Array<CompileError>,
-  foregroundColor: string,
-  backgroundColor: string,
 ): Map<string, OverlayError> {
   return new Map(
     errors.map((error) => {
@@ -774,8 +764,6 @@ function toOverlayErrors(
         location: error.location,
         htmlContent: error.htmlContent,
         htmlContentCollapsed: error.htmlContentCollapsed,
-        foregroundColor,
-        backgroundColor,
       };
       const id = Codec.JSON.stringify(Codec.unknown, overlayError);
       return [id, overlayError];

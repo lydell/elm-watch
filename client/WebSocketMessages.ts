@@ -92,8 +92,6 @@ const StatusChange = Codec.taggedUnion("tag", [
     tag: Codec.tag("CompileError"),
     compilationMode: CompilationMode,
     errors: Codec.array(CompileError),
-    foregroundColor: Codec.string,
-    backgroundColor: Codec.string,
   },
   {
     tag: Codec.tag("TargetError"),
@@ -132,8 +130,6 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
         errors: Codec.array(CompileError),
       }),
     ),
-    foregroundColor: Codec.string,
-    backgroundColor: Codec.string,
   },
   {
     tag: Codec.tag("FocusedTabAcknowledged"),
@@ -162,8 +158,9 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
     status: StatusChange,
   },
   {
-    // Sent when connecting and when the tab is focused, if the terminal
-    // responded with its colors. Used for the browser UI panel.
+    // The terminal colors (or the default theme’s, if the terminal didn’t
+    // respond), for the error overlay and the browser UI panel. Sent when
+    // connecting, when the tab is focused, and before errors.
     tag: Codec.tag("TerminalColors"),
     foregroundColor: Codec.string,
     backgroundColor: Codec.string,

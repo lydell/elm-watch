@@ -220,8 +220,6 @@ const compileError: WebSocketToClientMessage = {
         htmlContent: "Oops",
       },
     ],
-    foregroundColor: "white",
-    backgroundColor: "black",
   },
 };
 

@@ -801,13 +801,13 @@ export function isOverlayVisible(): boolean {
   return visible;
 }
 
-// The terminal colors and color scheme set on the root (excluding the position).
-export function getPanelColors(): string {
-  let result = "(Root not found)";
+// The terminal colors and color scheme, shared by the overlay and the panel.
+export function getTerminalColors(): string {
+  let result = "(Top layer not found)";
   withShadowRoot((shadowRoot) => {
-    const root = shadowRoot.querySelector(".root");
-    if (root instanceof HTMLElement) {
-      result = root.style.cssText.replace(/--y: [^;]*;\s*/, "");
+    const topLayer = shadowRoot.querySelector(".topLayer");
+    if (topLayer instanceof HTMLElement) {
+      result = topLayer.style.cssText;
     }
   });
   return result;
@@ -844,9 +844,7 @@ export function getOverlay(): string {
           return clone.outerHTML.replace("<pre>", "\n<pre>");
         })
         .join(`\n${"-".repeat(80)}\n`);
-      result = `<overlay ${overlay.hidden !== false ? "hidden" : "visible"} style="${
-        overlay.getAttribute("style") ?? ""
-      }">\n${children}\n</overlay>`;
+      result = `<overlay ${overlay.hidden !== false ? "hidden" : "visible"}>\n${children}\n</overlay>`;
     }
   });
   return clean(result);

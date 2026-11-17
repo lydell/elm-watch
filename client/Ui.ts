@@ -66,8 +66,6 @@ export type OverlayError = {
   htmlContent: string;
   // Only set if there are long code excerpts to collapse.
   htmlContentCollapsed: string | undefined;
-  foregroundColor: string;
-  backgroundColor: string;
 };
 
 // Errors from outside elm-watch (such as from esbuild), from the `errors`
@@ -455,17 +453,6 @@ export function createUi(): Ui {
       overlaySelection === undefined
         ? undefined
         : getSelectedError(overlaySelection, [group]);
-    const firstError = group.files[0]?.errors[0]?.error;
-
-    if (firstError !== undefined) {
-      overlay.style.backgroundColor = firstError.backgroundColor;
-      overlay.style.color = firstError.foregroundColor;
-      overlay.style.setProperty(
-        "--backgroundColor",
-        firstError.backgroundColor,
-      );
-    }
-
     // Restore focus after re-creating the key hint buttons, so that keyboard
     // users don’t lose their place. If the focus isn’t visible (such as after
     // clicking a button), focus the overlay instead: Focusing a button from
@@ -816,7 +803,7 @@ export function createUi(): Ui {
   const render = (): void => {
     const snapshots = getSnapshots();
     setTerminalColors(
-      root,
+      topLayer,
       snapshots.find((snapshot) => snapshot.terminalColors !== undefined)
         ?.terminalColors,
     );
@@ -1847,6 +1834,11 @@ supported by browsers, for browsers without popover support.
   pointer-events: none;
   z-index: 2147483647;
   direction: ltr;
+  /* The terminal colors, for both the overlay and the panel. Until we know
+     them (see \`setTerminalColors\`), the system colors. */
+  --fg: CanvasText;
+  --bg: Canvas;
+  --color-scheme: light dark;
 }
 
 [hidden] {
@@ -1863,6 +1855,9 @@ supported by browsers, for browsers without popover support.
   flex-direction: column;
   user-select: text;
   pointer-events: auto;
+  color-scheme: var(--color-scheme);
+  background-color: var(--bg);
+  color: var(--fg);
 }
 
 .${CLASS.overlay} > * {
@@ -1901,7 +1896,7 @@ supported by browsers, for browsers without popover support.
   background: none;
   color: inherit;
   cursor: pointer;
-  filter: drop-shadow(0 0 2px var(--backgroundColor));
+  filter: drop-shadow(0 0 2px var(--bg));
 }
 
 /* Hug the icon rather than the whole (large) hit area. */
@@ -1947,6 +1942,8 @@ supported by browsers, for browsers without popover support.
 .${CLASS.errorTitle},
 .${CLASS.errorTitleLocation} {
   display: inline-block;
+  /* Cover the border line behind. */
+  background-color: var(--bg);
   font-weight: bold;
   --padding: 1ch;
   padding: 0 var(--padding);
@@ -2123,10 +2120,7 @@ supported by browsers, for browsers without popover support.
 
 .${CLASS.root} {
   all: initial;
-  color-scheme: light dark;
-  /* Set to the terminal colors, if known (see \`setTerminalColors\`). */
-  --fg: CanvasText;
-  --bg: Canvas;
+  color-scheme: var(--color-scheme);
   --muted: color-mix(in srgb, var(--fg) 60%, var(--bg));
   --border-thickness: 0.125em;
   --border: 1px solid var(--muted);
@@ -3616,24 +3610,11 @@ function viewOverlayError(
     HTMLDivElement,
     {
       className: CLASS.overlayError,
-      style: {
-        backgroundColor: error.backgroundColor,
-        color: error.foregroundColor,
-      },
     },
     h(
       HTMLDivElement,
       { className: CLASS.overlayErrorHeader },
-      h(
-        HTMLSpanElement,
-        {
-          className: CLASS.errorTitle,
-          style: {
-            backgroundColor: error.backgroundColor,
-          },
-        },
-        error.title,
-      ),
+      h(HTMLSpanElement, { className: CLASS.errorTitle }, error.title),
       error.location === undefined
         ? undefined
         : h(HTMLSpanElement, { className: CLASS.errorTitleSpacer }),
@@ -3641,12 +3622,7 @@ function viewOverlayError(
         ? undefined
         : h(
             HTMLSpanElement,
-            {
-              className: CLASS.errorTitleLocation,
-              style: {
-                backgroundColor: error.backgroundColor,
-              },
-            },
+            { className: CLASS.errorTitleLocation },
             viewErrorLocation(
               item.sendKey !== undefined,
               error.location,
@@ -3843,27 +3819,35 @@ function viewErrorLocationButton(
     : h(HTMLSpanElement, {}, ...children);
 }
 
-// The panel uses the terminal colors, like the overlay. If the terminal didn’t
-// respond with its colors, the system colors are used instead.
+// The overlay and the panel use the terminal colors (or the default theme’s,
+// if the terminal didn’t respond). Until the server has told us, they use the
+// system colors.
 function setTerminalColors(
-  root: HTMLElement,
+  topLayer: HTMLElement,
   terminalColors: TerminalColors | undefined,
 ): void {
-  if (terminalColors === undefined) {
-    root.style.removeProperty("--fg");
-    root.style.removeProperty("--bg");
-    root.style.removeProperty("color-scheme");
-    return;
-  }
-  const { foregroundColor, backgroundColor } = terminalColors;
-  root.style.setProperty("--fg", foregroundColor);
-  root.style.setProperty("--bg", backgroundColor);
+  const colorScheme =
+    terminalColors === undefined
+      ? undefined
+      : getColorScheme(
+          terminalColors.foregroundColor,
+          terminalColors.backgroundColor,
+        );
+  setOrRemoveProperty(topLayer, "--fg", terminalColors?.foregroundColor);
+  setOrRemoveProperty(topLayer, "--bg", terminalColors?.backgroundColor);
   // Makes scrollbars etc. light or dark like the terminal theme.
-  const colorScheme = getColorScheme(foregroundColor, backgroundColor);
-  if (colorScheme === undefined) {
-    root.style.removeProperty("color-scheme");
+  setOrRemoveProperty(topLayer, "--color-scheme", colorScheme);
+}
+
+function setOrRemoveProperty(
+  element: HTMLElement,
+  name: string,
+  value: string | undefined,
+): void {
+  if (value === undefined) {
+    element.style.removeProperty(name);
   } else {
-    root.style.colorScheme = colorScheme;
+    element.style.setProperty(name, value);
   }
 }
 
