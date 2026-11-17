@@ -2,6 +2,7 @@ import * as path from "path";
 import * as url from "url";
 
 import * as Compile from "./Compile.ts";
+import type { ConfigSource } from "./Config.ts";
 import { ANY_COMPILER_DIR_REGEX } from "./ElmStuffRecovery.ts";
 import {
   type LatestEvent,
@@ -160,6 +161,26 @@ export function classifyWatcherEvent(
       return undefined;
     }
   }
+}
+
+// Whether a restart reason might mean that elm-watch.json changed, so that the
+// dev server options and the targets might have changed. Besides events for
+// elm-watch.json files, `classifyWatcherEvent` restarts for events for a
+// directory containing the current elm-watch.json (it might have been
+// replaced).
+export function mightChangeElmWatchJson(
+  configSource: ConfigSource,
+  event: LatestEvent,
+): boolean {
+  if (event.tag !== "WatcherEvent" || event.file.tag !== "AbsolutePath") {
+    return false;
+  }
+  const { absolutePath } = event.file;
+  return (
+    path.basename(absolutePath) === "elm-watch.json" ||
+    (configSource.tag === "ElmWatchJson" &&
+      configSource.elmWatchJsonPath.startsWith(absolutePath + path.sep))
+  );
 }
 
 // Removing just the compiler’s directory, like elm-stuff/0.19.1/ (or

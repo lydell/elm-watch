@@ -69,6 +69,7 @@ import {
   type WebSocketToken,
 } from "./Types.ts";
 import * as Watcher from "./Watcher.ts";
+import { mightChangeElmWatchJson } from "./WatcherEvents.ts";
 import { makeWatcherProbe, type WatcherProbe } from "./WatcherProbe.ts";
 import {
   getConnectionOutputPath,
@@ -1016,17 +1017,9 @@ const runCmd =
         }
 
         // Outputs and port may have changed if elm-watch.json changes.
-        const elmWatchJsonChanged = cmd.restartReasons.some((event) => {
-          switch (event.tag) {
-            case "WatcherEvent":
-              return (
-                event.file.tag === "AbsolutePath" &&
-                path.basename(event.file.absolutePath) === "elm-watch.json"
-              );
-            default:
-              return false;
-          }
-        });
+        const elmWatchJsonChanged = cmd.restartReasons.some((event) =>
+          mightChangeElmWatchJson(mutable.project.configSource, event),
+        );
         closeAll(terminal, mutable);
         // Connected browsers reconnect when the server is closed, which makes
         // them get the status of their target in the new elm-watch.json.

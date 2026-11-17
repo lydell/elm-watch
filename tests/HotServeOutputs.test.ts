@@ -4,7 +4,7 @@ import type { AddressInfo } from "net";
 import * as path from "path";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { elmWatch } from "../src/ElmWatch.ts";
+import elmWatchCli, { elmWatch } from "../src/ElmWatch.ts";
 import type { HotTestHooks } from "../src/Hot.ts";
 import type { Msg } from "../src/HotUpdate.ts";
 import type { CreateServer } from "../src/Types.ts";
@@ -308,6 +308,70 @@ describe("serving outputs in hot mode", () => {
     kill = undefined;
     expect(terminal()).toContain("stuff.json");
     expect(isListening()).toBe(false);
+  });
+
+  // elm-watch.json can change without an event for it: When the directory
+  // containing it is replaced, there is only an event for the directory. The
+  // server must still be replaced, since its options (like the port) might
+  // have changed.
+  test("server is replaced when the directory of elm-watch.json is replaced", async () => {
+    const dir = copyFixture("hot", "elm-json-above-elm-watch-json");
+    const example = path.join(dir, "example");
+    const servers: Array<http.Server> = [];
+    let isIdle = false;
+    let numRunsStarted = 0;
+    let watcherIsReady = false;
+
+    const hotTestHooks: HotTestHooks = {
+      kill: undefined,
+      onUpdate: (_msg, idle) => {
+        isIdle = idle;
+      },
+      onWatcherReadyChange: (isReady) => {
+        watcherIsReady = isReady;
+        if (!isReady) {
+          numRunsStarted++;
+        }
+      },
+    };
+
+    const stdout = new CursorWriteStream();
+    const stderr = new MemoryWriteStream();
+    stdout.isTTY = false;
+    stderr.isTTY = false;
+
+    const done = elmWatchCli(["hot"], {
+      cwd: example,
+      env: { ...process.env, ...TEST_ENV },
+      stdin: new SilentReadStream(),
+      stdout,
+      stderr,
+      createServer: ({ onRequest, onUpgrade }) => {
+        const server = http.createServer(onRequest).on("upgrade", onUpgrade);
+        servers.push(server);
+        return server;
+      },
+      logDebug,
+      hotTestHooks,
+    });
+
+    kill = async () => {
+      await waitFor(() => isIdle);
+      await hotTestHooks.kill?.();
+      await done;
+      expect(stderr.content).toBe("");
+    };
+
+    await waitFor(() => isIdle && watcherIsReady);
+    const replacement = path.join(dir, "replacement");
+    fs.cpSync(example, replacement, { recursive: true });
+    fs.renameSync(example, path.join(dir, "old"));
+    fs.renameSync(replacement, example);
+    await waitFor(() => numRunsStarted === 2 && isIdle && watcherIsReady);
+
+    expect(servers).toHaveLength(2);
+    expect(servers[0]?.listening).toBe(false);
+    expect(servers[1]?.listening).toBe(true);
   });
 
   test("other files are served as usual", async () => {
