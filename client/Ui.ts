@@ -2154,6 +2154,13 @@ supported by browsers, for browsers without popover support.
   outline-offset: 0.25em;
 }
 
+/* The panel is focused when the focused element disappears or is disabled
+   (see \`renderPanel\`). Like for the overlay, an outline around the whole
+   panel is just noise. */
+.${CLASS.root} .${CLASS.panel}:focus-visible {
+  outline: none;
+}
+
 .${CLASS.toggleButton} {
   pointer-events: auto;
   position: absolute;
