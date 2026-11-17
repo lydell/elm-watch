@@ -6,7 +6,7 @@ Each folder is a small, standalone project showing one way of using elm-watch.
 
 | Example | What it shows |
 | --- | --- |
-| [minimal](./minimal/) | The bare minimum: `elm-watch.json` and an HTML file that you open straight in the browser. No server needed. |
+| [minimal](./minimal/) | The bare minimum: `elm-watch.json` and an HTML file, served by elm-watch’s server. |
 | [javascript-api](./javascript-api/) | `elm-watch.mjs` (from `elm-watch init --javascript`) instead of `elm-watch.json`. |
 | [lamdera-compiler](./lamdera-compiler/) | Compiling a vanilla Elm app with the Lamdera compiler (`"compiler": "lamdera"`), for its improvements like built-in hot reloading. |
 
