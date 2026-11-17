@@ -2908,7 +2908,8 @@ function viewStatusDetails(
         ),
       ];
 
-    case "FileProtocol":
+    case "FileProtocol": {
+      const serverUrl = webSocketUrlToServerUrl(info.webSocketUrl);
       return [
         h(
           HTMLParagraphElement,
@@ -2918,19 +2919,11 @@ function viewStatusDetails(
         h(
           HTMLParagraphElement,
           {},
-          "Open the page via http:// instead, for example using ",
-          h(
-            HTMLAnchorElement,
-            {
-              href: "https://lydell.github.io/elm-watch/server/",
-              target: "_blank",
-              rel: "noreferrer",
-            },
-            "elm-watch’s server",
-          ),
-          ".",
+          "Open the page via a local server instead, for example elm-watch’s: ",
+          h(HTMLAnchorElement, { href: serverUrl }, serverUrl),
         ),
       ];
+    }
 
     case "SleepingBeforeReconnect":
       return [
@@ -3107,6 +3100,13 @@ function viewOpenEditorError(message: string): HTMLElement {
     ),
     h(HTMLPreElement, {}, message),
   );
+}
+
+// elm-watch’s HTTP server is on the same host and port as its WebSocket.
+function webSocketUrlToServerUrl(webSocketUrl: URL): string {
+  const url = new URL(webSocketUrl);
+  url.protocol = webSocketUrl.protocol === "wss:" ? "https:" : "http:";
+  return url.origin;
 }
 
 function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
