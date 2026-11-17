@@ -94,7 +94,7 @@ export async function run(
       );
 
     case "ElmWatchJsonNotFound":
-      terminal.errorTemplate(Errors.elmWatchJsonNotFound(cwd, args));
+      terminal.errorTemplate(Errors.elmWatchJsonNotFound(cwd));
       return { tag: "Exit", exitCode: 1 };
 
     case "Parsed": {
@@ -104,10 +104,8 @@ export async function run(
         case "UnknownFlags":
           terminal.errorTemplate(
             Errors.unknownFlags(
-              cwd,
               parseResult.elmWatchJsonPath,
               runMode,
-              args,
               parseArgsResult.unknownFlags,
             ),
           );

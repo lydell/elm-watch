@@ -401,45 +401,12 @@ describe("errors", () => {
       `);
   });
 
-  test("elm-watch.json not found and suggest JSON from args", async () => {
-    expect(
-      await runAbsolute(path.parse(import.meta.dirname).root, [
-        "make",
-        "src/Game.elm",
-        "--output",
-        "dist/game.js",
-      ]),
-    ).toMatchInlineSnapshot(`
-      ⧙── elm-watch.json NOT FOUND ────────────────────────────────────────────────────⧘
-
-      I read inputs, outputs and options from ⧙elm-watch.json⧘.
-
-      ⧙But I couldn't find one!⧘
-
-      You need to create one with JSON like this:
-
-      {
-          "targets": {
-              "My target name": {
-                  "type": "application",
-                  "elmJson": "elm.json",
-                  "inputs": [
-                      "src/Game.elm"
-                  ],
-                  "output": "dist/game.js"
-              }
-          }
-      }
-    `);
-  });
-
-  describe("suggest JSON from args", () => {
-    test("with typical `elm make`-like args", async () => {
+  describe("unexpected flags", () => {
+    test("--output, like elm make", async () => {
       expect(
         await run("valid", [
           "make",
           "src/App.elm",
-          "src/Admin.elm",
           "--output",
           "bundle.js",
           "--debug",
@@ -455,30 +422,14 @@ describe("errors", () => {
 
         Try removing those extra flags!
 
-        It looks like your arguments might fit in an ⧙elm make⧘ command.
-        If so, you could try moving them to the ⧙elm-watch.json⧘ I found here:
+        Unlike ⧙elm make⧘, inputs and outputs are not passed as arguments.
+        They go in the ⧙elm-watch.json⧘ I found here:
 
         /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
-
-        For example, you could add some JSON like this:
-
-        {
-            "targets": {
-                "My target name": {
-                    "type": "application",
-                    "elmJson": "elm.json",
-                    "inputs": [
-                        "src/App.elm",
-                        "src/Admin.elm"
-                    ],
-                    "output": "bundle.js"
-                }
-            }
-        }
       `);
     });
 
-    test("no suggesting for unknown flags", async () => {
+    test("other flags", async () => {
       expect(
         await run("valid", ["make", "src/App.elm", "--loglevel=silent", "-f"]),
       ).toMatchInlineSnapshot(`
@@ -490,90 +441,6 @@ describe("errors", () => {
 
         --loglevel=silent
         -f
-
-        Try removing those extra flags!
-      `);
-    });
-
-    test("suggested inputs are relative to elm-watch.json, not cwd", async () => {
-      expect(
-        await run("valid/src", [
-          "hot",
-          "src/App.elm",
-          "../lib/Admin.elm",
-          "--output=dist/main.js",
-        ]),
-      ).toMatchInlineSnapshot(`
-        ⧙── UNEXPECTED FLAGS ────────────────────────────────────────────────────────────⧘
-
-        The ⧙hot⧘ command only accepts no flags at all.
-
-        But you provided these flag-looking args:
-
-        --output=dist/main.js
-
-        Try removing those extra flags!
-
-        It looks like your arguments might fit in an ⧙elm make⧘ command.
-        If so, you could try moving them to the ⧙elm-watch.json⧘ I found here:
-
-        /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
-
-        For example, you could add some JSON like this:
-
-        {
-            "targets": {
-                "My target name": {
-                    "type": "application",
-                    "elmJson": "elm.json",
-                    "inputs": [
-                        "src/src/App.elm",
-                        "lib/Admin.elm"
-                    ],
-                    "output": "dist/main.js"
-                }
-            }
-        }
-      `);
-    });
-
-    test("--output=/dev/null should not be suggested as an output", async () => {
-      expect(await run("valid", ["make", "MyMain.elm", "--output=/dev/null"]))
-        .toMatchInlineSnapshot(`
-          ⧙── UNEXPECTED FLAGS ────────────────────────────────────────────────────────────⧘
-
-          The ⧙make⧘ command only accepts the flags ⧙--debug⧘ and ⧙--optimize⧘.
-
-          But you provided these flag-looking args:
-
-          --output=/dev/null
-
-          Try removing those extra flags!
-        `);
-    });
-
-    test("ignore invalid stuff", async () => {
-      expect(
-        await run("valid", [
-          "make",
-          "src/app.elm",
-          "--output",
-          ".js",
-          "--output=.js",
-          "ignored.js",
-          "--docs",
-          "docs.json",
-        ]),
-      ).toMatchInlineSnapshot(`
-        ⧙── UNEXPECTED FLAGS ────────────────────────────────────────────────────────────⧘
-
-        The ⧙make⧘ command only accepts the flags ⧙--debug⧘ and ⧙--optimize⧘.
-
-        But you provided these flag-looking args:
-
-        --output
-        --output=.js
-        --docs
 
         Try removing those extra flags!
       `);

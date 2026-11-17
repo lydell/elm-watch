@@ -436,14 +436,10 @@ ${printJsonError(error)}
 `;
 }
 
-export function elmWatchJsonNotFound(
-  cwd: Cwd,
-  args: Array<CliArg>,
-): ErrorTemplate {
+export function elmWatchJsonNotFound(cwd: Cwd): ErrorTemplate {
   const example = ElmWatchJson.example(
     cwd,
     markAsElmWatchJsonPath(absolutePathFromString(cwd, "elm-watch.json")),
-    ElmWatchJson.parseArgsLikeElmMake(args),
   );
 
   return fancyError("elm-watch.json NOT FOUND", { tag: "NoLocation" })`
@@ -473,27 +469,18 @@ ${bold("--debug")} and ${bold("--optimize")} cannot be used at the same time.
 }
 
 export function unknownFlags(
-  cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
   runMode: RunMode,
-  args: Array<CliArg>,
   theUnknownFlags: NonEmptyArray<CliArg>,
 ): ErrorTemplate {
-  const elmMakeParsed = ElmWatchJson.parseArgsLikeElmMake(args);
-
-  const extra =
-    elmMakeParsed.output !== undefined
-      ? template`
-It looks like your arguments might fit in an ${bold("elm make")} command.
-If so, you could try moving them to the ${elmWatchJson} I found here:
+  const extra = theUnknownFlags.some((flag) => flag.startsWith("--output"))
+    ? template`
+Unlike ${bold("elm make")}, inputs and outputs are not passed as arguments.
+They go in the ${elmWatchJson} I found here:
 
 ${text(elmWatchJsonPath)}
-
-For example, you could add some JSON like this:
-
-${text(ElmWatchJson.example(cwd, elmWatchJsonPath, elmMakeParsed))}
   `
-      : text("");
+    : text("");
 
   return fancyError("UNEXPECTED FLAGS", { tag: "NoLocation" })`
 ${printRunModeArgsHelp(runMode)}

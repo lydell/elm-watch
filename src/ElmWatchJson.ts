@@ -7,11 +7,7 @@ import type { Config, Target as ConfigTarget } from "./Config.ts";
 import { readElmJsonType, readSourceDirectories } from "./ElmJson.ts";
 import { Host } from "./Host.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
-import {
-  isNonEmptyArray,
-  mapNonEmptyArray,
-  NonEmptyArray,
-} from "./NonEmptyArray.ts";
+import { isNonEmptyArray, NonEmptyArray } from "./NonEmptyArray.ts";
 import { MODULE_NAME_PART } from "./Parser.ts";
 import {
   absoluteDirname,
@@ -22,7 +18,6 @@ import {
 import { Port } from "./Port.ts";
 import {
   type AbsolutePath,
-  type CliArg,
   Compiler,
   type Cwd,
   type ElmJsonPath,
@@ -470,14 +465,10 @@ function toConfig(
   };
 }
 
-export function example(
-  cwd: Cwd,
-  elmWatchJsonPath: ElmWatchJsonPath,
-  elmMakeParsed: ElmMakeParsed,
-): string {
+export function example(cwd: Cwd, elmWatchJsonPath: ElmWatchJsonPath): string {
   return Codec.JSON.stringify(
     ElmWatchJson,
-    exampleJson(cwd, elmWatchJsonPath, elmMakeParsed),
+    exampleJson(cwd, elmWatchJsonPath),
     4,
   );
 }
@@ -494,10 +485,7 @@ export function initJson(
   elmWatchJsonPath: ElmWatchJsonPath,
 ): { json: Pick<ElmWatchJson, "targets">; discoveredInputs: Array<string> } {
   const fallback = {
-    json: exampleJson(cwd, elmWatchJsonPath, {
-      elmFiles: [],
-      output: undefined,
-    }),
+    json: exampleJson(cwd, elmWatchJsonPath),
     discoveredInputs: [],
   };
 
@@ -600,17 +588,8 @@ function findElmFilesWithMain(dir: AbsolutePath): Array<AbsolutePath> {
 function exampleJson(
   cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
-  elmMakeParsed: ElmMakeParsed,
 ): Pick<ElmWatchJson, "targets"> {
-  const { elmFiles, output = "build/main.js" } = elmMakeParsed;
-
-  const [firstElmFile] = elmFiles;
-  const elmJsonPath = findClosest(
-    "elm.json",
-    firstElmFile === undefined
-      ? cwd
-      : absoluteDirname(absolutePathFromString(cwd, firstElmFile)),
-  );
+  const elmJsonPath = findClosest("elm.json", cwd);
   const elmJson =
     elmJsonPath === undefined
       ? "elm.json"
@@ -620,7 +599,6 @@ function exampleJson(
 
   if (
     elmJsonPath !== undefined &&
-    !isNonEmptyArray(elmFiles) &&
     isPackageElmJson(markAsElmJsonPath(elmJsonPath))
   ) {
     return {
@@ -635,17 +613,8 @@ function exampleJson(
       "My target name": {
         type: "application",
         elmJson,
-        inputs: isNonEmptyArray(elmFiles)
-          ? mapNonEmptyArray(elmFiles, (file) =>
-              toUnixPath(
-                path.relative(
-                  path.dirname(elmWatchJsonPath),
-                  path.resolve(cwd, file),
-                ),
-              ),
-            )
-          : ["src/Main.elm"],
-        output,
+        inputs: ["src/Main.elm"],
+        output: "build/main.js",
       },
     },
   };
@@ -653,50 +622,4 @@ function exampleJson(
 
 function toUnixPath(filePath: string): string {
   return IS_WINDOWS ? filePath.split(path.sep).join(path.posix.sep) : filePath;
-}
-
-type ElmMakeParsed = {
-  elmFiles: Array<string>;
-  output: string | undefined;
-};
-
-type IntermediateElmMakeParsed = ElmMakeParsed & { justSawOutputFlag: boolean };
-
-export function parseArgsLikeElmMake(args: Array<CliArg>): ElmMakeParsed {
-  return args.reduce<IntermediateElmMakeParsed>(
-    (passedParsed, arg): IntermediateElmMakeParsed => {
-      const parsed = { ...passedParsed, justSawOutputFlag: false };
-      switch (arg) {
-        case "--debug":
-        case "--optimize":
-          return parsed;
-
-        case "--output":
-          return { ...parsed, justSawOutputFlag: true };
-
-        default: {
-          if (passedParsed.justSawOutputFlag) {
-            return isValidOutputName(arg) ? { ...parsed, output: arg } : parsed;
-          }
-
-          const outputPrefix = "--output=";
-          if (arg.startsWith(outputPrefix)) {
-            const file = arg.slice(outputPrefix.length);
-            return isValidOutputName(file)
-              ? { ...parsed, output: file }
-              : parsed;
-          }
-
-          return isValidInputName(arg)
-            ? { ...parsed, elmFiles: parsed.elmFiles.concat(arg) }
-            : parsed;
-        }
-      }
-    },
-    {
-      elmFiles: [],
-      output: undefined,
-      justSawOutputFlag: false,
-    },
-  );
 }
