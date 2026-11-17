@@ -231,6 +231,32 @@ describe("watch", () => {
     fs.writeFileSync(d("src", "Main.elm"), "");
     await expect.poll(eventLines, POLL).toContain("src/Main.elm");
   });
+
+  // On Linux, inotify watches the directory itself, not the path. If the
+  // directory is replaced before we get to handle the event, the old watcher
+  // keeps watching the removed directory. For recursive watchers, moving the
+  // directory away doesn’t even result in an event.
+  describe.each(["SourceDirectory", "Shallow"] as const)(
+    "%s that is replaced quickly",
+    (tag) => {
+      test.each(["removed", "moved away"] as const)("%s", async (how) => {
+        fs.mkdirSync(d("src", "Sub"), { recursive: true });
+        await start([{ tag, dir: p(d("src")) }]);
+
+        if (how === "removed") {
+          fs.rmSync(d("src"), { recursive: true });
+        } else {
+          fs.renameSync(d("src"), d("src.old"));
+        }
+        fs.mkdirSync(d("src"));
+        await expect.poll(eventLines, POLL).toContain("src");
+        await waitForWatcherStart();
+
+        fs.writeFileSync(d("src", "Main.elm"), "");
+        await expect.poll(eventLines, POLL).toContain("src/Main.elm");
+      });
+    },
+  );
 });
 
 describe("makeDuplicateEventFilter", () => {

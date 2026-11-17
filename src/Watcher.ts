@@ -17,6 +17,12 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 //   event for the directory itself, not one per file inside it. So every
 //   reported path must be treated as a potential directory. (On Linux, moving
 //   a directory in also reports everything inside it.)
+// - On Linux, inotify watches the directory itself, not the path. If a watched
+//   directory is replaced (removed or moved away, and created again) before we
+//   handle the event, the old watcher keeps watching the old directory. Moving
+//   the directory away doesn’t even result in an event for recursive watchers.
+//   So we check if the directory is still the same, and also watch its parent
+//   (except on macOS, where FSEvents watches paths).
 // - Watching a path that does not exist throws. Watched directories (such as
 //   source directories in elm.json) might not exist (yet), so we watch the
 //   closest existing ancestor until they do.
@@ -60,7 +66,11 @@ export function isIgnoredStaticFile(filename: string): boolean {
 }
 
 type RootState =
-  | { tag: "Watching"; fsWatcher: fs.FSWatcher }
+  | {
+      tag: "Watching";
+      fsWatcher: fs.FSWatcher;
+      parentWatcher: fs.FSWatcher | undefined;
+    }
   | { tag: "WaitingForRoot"; fsWatcher: fs.FSWatcher | undefined };
 
 export function watch(
@@ -79,7 +89,11 @@ export function watch(
   };
 
   const closeRoot = (root: AbsolutePath): void => {
-    rootStates.get(root)?.fsWatcher?.close();
+    const rootState = rootStates.get(root);
+    rootState?.fsWatcher?.close();
+    if (rootState?.tag === "Watching") {
+      rootState.parentWatcher?.close();
+    }
     rootStates.delete(root);
   };
 
@@ -87,6 +101,19 @@ export function watch(
     const root = watchDir.dir;
     closeRoot(root);
     const ignore = ignoreFunctions[watchDir.tag];
+    // Before `fs.watch`: If the root is replaced in between, the first event
+    // makes us start over.
+    const identity = getIdentity(root);
+    const isReplaced = (): boolean => getIdentity(root) !== identity;
+    const onReplaced = (): void => {
+      // Everything inside the root might have changed, so reporting the root
+      // is enough. `waitForRoot` reports it if it exists (again).
+      const removed = !fs.existsSync(root);
+      waitForRoot(watchDir);
+      if (removed) {
+        report(root);
+      }
+    };
     let fsWatcher: fs.FSWatcher;
     try {
       // `ignore` was added in Node.js 24.14.0 (and is missing in our version
@@ -101,11 +128,8 @@ export function watch(
           !path.isAbsolute(filename) && ignore(filename),
       };
       fsWatcher = fs.watch(root, options, (eventType, filename) => {
-        if (!fs.existsSync(root)) {
-          // The root itself was removed. Everything inside it is gone too, so
-          // reporting the root is enough.
-          waitForRoot(watchDir);
-          report(root);
+        if (isReplaced()) {
+          onReplaced();
         } else if (filename === null) {
           // The OS did not tell us what changed (for example, because of
           // an event queue overflow). Report the whole root.
@@ -148,7 +172,15 @@ export function watch(
         report(root);
       }
     });
-    rootStates.set(root, { tag: "Watching", fsWatcher });
+    rootStates.set(root, {
+      tag: "Watching",
+      fsWatcher,
+      parentWatcher: watchParent(root, () => {
+        if (isReplaced()) {
+          onReplaced();
+        }
+      }),
+    });
   };
 
   const waitForRoot = (watchDir: WatchDir): void => {
@@ -206,6 +238,47 @@ export function watch(
       }
     },
   };
+}
+
+// Calls `onEvent` for events about `root` in its parent directory. Returns
+// `undefined` if the parent can’t be watched: The watcher of the root itself
+// still notices most changes to the root.
+function watchParent(
+  root: AbsolutePath,
+  onEvent: () => void,
+): fs.FSWatcher | undefined {
+  const parent = path.dirname(root);
+  // macOS (FSEvents) watches paths, so it doesn’t need this. There, watching a
+  // directory also gets (and filters out) events for everything inside it,
+  // which could be a lot for a parent directory.
+  if (process.platform === "darwin" || parent === root) {
+    return undefined;
+  }
+  const basename = path.basename(root);
+  try {
+    const parentWatcher = fs.watch(parent, (_, filename) => {
+      if (filename === null || filename === basename) {
+        onEvent();
+      }
+    });
+    parentWatcher.on("error", () => {
+      parentWatcher.close();
+    });
+    return parentWatcher;
+  } catch {
+    return undefined;
+  }
+}
+
+// Identifies a directory, so we can tell if it has been replaced by another one
+// at the same path. `undefined` if it does not exist.
+function getIdentity(absolutePath: AbsolutePath): string | undefined {
+  try {
+    const stats = fs.statSync(absolutePath, { throwIfNoEntry: false });
+    return stats === undefined ? undefined : `${stats.dev}:${stats.ino}`;
+  } catch {
+    return undefined;
+  }
 }
 
 // Watching the same thing twice would result in duplicate events.
