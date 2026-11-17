@@ -171,6 +171,34 @@ describe("classifyWatcherEvent", () => {
     );
   });
 
+  test("static files directory containing source directories", () => {
+    // Like `"serve": "."`.
+    const withStaticFiles: Project = {
+      ...project,
+      staticFilesDir: markAsStaticFilesDir(projectPath("/project")),
+    };
+    expect(classify(withStaticFiles, "changed", "/project/style.css")).toBe(
+      "static file: /style.css",
+    );
+    // Directory events still affect targets.
+    expect(classify(withStaticFiles, "changed", "/project/src")).toBe(
+      "dirty: One, Two",
+    );
+    expect(classify(withStaticFiles, "removed", "/project/app")).toBe(
+      "restart",
+    );
+    expect(classify(withStaticFiles, "changed", "/project/pkg")).toBe(
+      "restart",
+    );
+    expect(classify(withStaticFiles, "changed", "/project/pkg/src")).toBe(
+      "dirty: Pkg",
+    );
+    // Other directories are static files.
+    expect(classify(withStaticFiles, "changed", "/project/other")).toBe(
+      "static file: /other",
+    );
+  });
+
   test("other files", () => {
     expect(classify(project, "changed", "/project/README.md")).toBe("ignored");
   });

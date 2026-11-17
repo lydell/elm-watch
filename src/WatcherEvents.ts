@@ -109,9 +109,21 @@ export function classifyWatcherEvent(
           return undefined;
       }
 
-    default:
+    default: {
       if (eventName === "removed" && isElmStuffCompilerDir(absolutePath)) {
         return restart(makeWatcherEvent(eventName, absolutePath));
+      }
+
+      // A directory might have been moved, added or removed. We only get an
+      // event for the directory itself, not for every file inside it. This
+      // goes first, since the static files directory might contain source
+      // directories (such as with `"serve": "."`).
+      const directoryResult = onDirectoryWatcherEvent(
+        project,
+        makeWatcherEvent(eventName, absolutePath),
+      );
+      if (directoryResult !== undefined) {
+        return directoryResult;
       }
 
       if (project.staticFilesDir !== undefined) {
@@ -143,12 +155,8 @@ export function classifyWatcherEvent(
         }
       }
 
-      // A directory might have been moved, added or removed. We only get an
-      // event for the directory itself, not for every file inside it.
-      return onDirectoryWatcherEvent(
-        project,
-        makeWatcherEvent(eventName, absolutePath),
-      );
+      return undefined;
+    }
   }
 }
 
