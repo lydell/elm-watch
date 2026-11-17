@@ -14,7 +14,7 @@ import {
 import {
   cleanupAfterEachTest,
   fixtureDir,
-  nextMsg,
+  nextWatcherEventHandled,
   run,
   sendSigterm,
 } from "./HotHelpers.ts";
@@ -200,9 +200,7 @@ describe("hot", () => {
             touch(input);
             await waitFor(() => readLock() === "Started");
             // A restart waits for Elm to finish.
-            const restarting = nextMsg(
-              (msg) => msg.tag === "SleepBeforeNextActionDone",
-            );
+            const restarting = nextWatcherEventHandled(elmJson);
             touch(elmJson);
             await restarting;
             sendSigterm();
