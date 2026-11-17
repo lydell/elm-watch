@@ -1184,7 +1184,6 @@ function onDevServerMsg(
           result.tag === "Success"
             ? {
                 tag: "Output",
-                elmJsonPath: result.elmJsonPath,
                 outputPath: result.outputPath,
                 outputState: result.outputState,
               }

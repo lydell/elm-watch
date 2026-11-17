@@ -60,7 +60,6 @@ type WebSocketMessageReceivedOutput =
   | OutputPathError
   | {
       tag: "Output";
-      elmJsonPath: ElmJsonPath;
       outputPath: OutputPath;
       outputState: OutputState;
     };
