@@ -811,6 +811,13 @@ File size: ${fsSize} bytes`,
           });
         }
       });
+      // If the client disconnects (like when seeking in a video, or reloading
+      // during a large download), `.pipe` stops reading, but does not close
+      // the file. (After a successful response, the stream has already closed
+      // it, so then this does nothing.)
+      response.on("close", () => {
+        readStream.destroy();
+      });
       readStream.pipe(response, { end: true });
       return;
     }

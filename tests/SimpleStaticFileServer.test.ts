@@ -7,7 +7,7 @@ import * as net from "net";
 import * as os from "os";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { ConfigSource } from "../src/Config.ts";
 import { DevServer } from "../src/DevServer.ts";
@@ -28,6 +28,21 @@ import {
 import { fixtureDir, run } from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
+
+// Lets tests get hold of the read streams that `serveStatic` creates.
+const readStreams = vi.hoisted((): Array<fs.ReadStream> => []);
+
+vi.mock("fs", async (importOriginal) => {
+  const original = await importOriginal<typeof fs>();
+  return {
+    ...original,
+    createReadStream: (...args: Parameters<typeof fs.createReadStream>) => {
+      const readStream = original.createReadStream(...args);
+      readStreams.push(readStream);
+      return readStream;
+    },
+  };
+});
 
 type Get = (urlPath: string, options?: http.RequestOptions) => Promise<string>;
 
@@ -1142,6 +1157,34 @@ describe("SimpleStaticFileServer", () => {
             -->
             <p>index</p>
           `);
+        },
+      );
+    });
+
+    test("closes the file when the client disconnects", async () => {
+      await withServer(
+        (dir) => {
+          // Big enough to not be sent all at once.
+          fs.writeFileSync(path.join(dir, "big.txt"), "x".repeat(10_000_000));
+        },
+        async (_get, port) => {
+          readStreams.length = 0;
+          await new Promise<void>((resolve, reject) => {
+            const request = http.get(
+              `http://127.0.0.1:${port}/big.txt`,
+              (response) => {
+                response.once("data", () => {
+                  request.destroy();
+                  resolve();
+                });
+              },
+            );
+            request.on("error", reject);
+          });
+          expect(readStreams).toHaveLength(1);
+          await vi.waitFor(() => {
+            expect(readStreams[0]?.closed).toBe(true);
+          });
         },
       );
     });
