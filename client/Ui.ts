@@ -896,6 +896,8 @@ export function createUi(): Ui {
       activeElement === panel
         ? "panel"
         : (activeElement?.getAttribute(DATA_FOCUS_KEY) ?? undefined);
+    // Only the targets scroll (between the header and the footer).
+    const scrollTop = panel.querySelector(`.${CLASS.targets}`)?.scrollTop ?? 0;
 
     panel.replaceChildren(
       ...viewPanel({
@@ -922,6 +924,11 @@ export function createUi(): Ui {
         dispatch: dispatchToTarget,
       }),
     );
+
+    const targets = panel.querySelector(`.${CLASS.targets}`);
+    if (targets !== null) {
+      targets.scrollTop = scrollTop;
+    }
 
     if (focusKey !== undefined && focusKey !== "panel") {
       const element = Array.from(
@@ -1784,6 +1791,11 @@ const TOUCH_SIZE = "44px";
 const OVERLAY_CLOSE_BUTTON_SIZE = "48px";
 
 const CSS = `
+/* Custom properties are not reset by \`all: initial\` below. */
+:host {
+  --monospace: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
 input,
 button,
 select,
@@ -1891,7 +1903,7 @@ supported by browsers, for browsers without popover support.
 
 .${CLASS.overlay},
 .${CLASS.overlay} pre {
-  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+  font-family: var(--monospace);
 }
 
 .${CLASS.overlayError} {
@@ -2099,12 +2111,11 @@ supported by browsers, for browsers without popover support.
 .${CLASS.root} {
   all: initial;
   color-scheme: light dark;
-  --muted: color-mix(in srgb, CanvasText 62%, Canvas);
-  --border: color-mix(in srgb, CanvasText 18%, Canvas);
-  --border-strong: color-mix(in srgb, CanvasText 45%, Canvas);
-  --subtle: color-mix(in srgb, CanvasText 6%, Canvas);
-  --hover: color-mix(in srgb, CanvasText 11%, Canvas);
-  --focus: light-dark(#0b57d0, #a8c7fa);
+  --fg: CanvasText;
+  --bg: Canvas;
+  --muted: color-mix(in srgb, var(--fg) 60%, var(--bg));
+  --border-thickness: 0.125em;
+  --border: 1px solid var(--muted);
   --edge-top: max(env(safe-area-inset-top), var(--gap));
   --edge-bottom: max(env(safe-area-inset-bottom), var(--gap));
   --edge-left: max(env(safe-area-inset-left), var(--gap));
@@ -2115,13 +2126,18 @@ supported by browsers, for browsers without popover support.
   inset: 0;
   /* The root covers the whole window. Only its children are clickable. */
   pointer-events: none;
-  color: CanvasText;
-  font: 13px/1.4 system-ui, sans-serif;
+  color: var(--fg);
+  font-family: var(--monospace);
+  /* Like the overlay: The browser’s default font size, so that it can be
+     changed in the browser settings. */
+  font-size: medium;
+  line-height: 1.4;
 }
 
+/* Like in the overlay. */
 .${CLASS.root} :focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline: var(--border-thickness) solid currentColor;
+  outline-offset: 0.25em;
 }
 
 .${CLASS.toggleButton} {
@@ -2290,15 +2306,25 @@ default popover styles.
   color: inherit;
   box-sizing: border-box;
   width: max-content;
-  max-width: min(30rem, 100% - var(--edge-left) - var(--edge-right));
+  max-width: min(60ch, 100% - var(--edge-left) - var(--edge-right));
   max-height: calc(100% - var(--top) - ${TOGGLE_SIZE} - var(--gap) - var(--edge-bottom));
-  overflow: auto;
-  overscroll-behavior: contain;
-  background-color: Canvas;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  /* Only the targets scroll, not the header and footer. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--bg);
+  border: var(--border);
+  border-radius: 0;
+  /* Stand out a bit more from the page behind. */
+  box-shadow: 0 0.125em 0.75em rgb(0 0 0 / 0.25);
   outline: none;
   transition: opacity 0.12s;
+}
+
+/* \`display: flex\` above overrides the default popover styles for closed
+   popovers. (The \`popover\` attribute is only set if supported.) */
+.${CLASS.panel}[popover]:not(:popover-open) {
+  display: none;
 }
 
 .${CLASS.rootRight} .${CLASS.panel} {
@@ -2328,37 +2354,50 @@ focus might be inside the panel and must not be lost.
 .${CLASS.header} {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 6px 6px 12px;
-  border-bottom: 1px solid var(--border);
+  gap: 2ch;
+  padding: 0.5ch 0.5ch 0.5ch 1ch;
+  border-bottom: var(--border);
 }
 
 .${CLASS.title} {
   flex: 1;
   margin: 0;
   font-size: inherit;
-  font-weight: 600;
+  font-weight: bold;
   white-space: nowrap;
 }
 
 .${CLASS.version} {
   color: var(--muted);
   font-weight: normal;
-  font-variant-numeric: tabular-nums;
 }
 
+/* Like the key hints in the overlay: [Show errors] */
 .${CLASS.button} {
   appearance: none;
-  padding: 3px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background-color: var(--subtle);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
   cursor: pointer;
   white-space: nowrap;
 }
 
+.${CLASS.button}::before,
+.${CLASS.button}::after {
+  color: var(--muted);
+}
+
+.${CLASS.button}::before {
+  content: "[";
+}
+
+.${CLASS.button}::after {
+  content: "]";
+}
+
 .${CLASS.button}:hover {
-  background-color: var(--hover);
+  text-decoration: underline;
 }
 
 .${CLASS.iconButton} {
@@ -2369,75 +2408,82 @@ focus might be inside the panel and must not be lost.
   height: 28px;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 0;
   background: none;
   color: var(--muted);
   cursor: pointer;
 }
 
 .${CLASS.iconButton}:hover {
-  background-color: var(--hover);
-  color: CanvasText;
+  color: var(--fg);
+}
+
+.${CLASS.iconButton}:focus-visible {
+  outline-offset: -4px;
 }
 
 .${CLASS.targets} {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .${CLASS.target} {
-  padding: 10px 12px;
+  padding: 1ch;
 }
 
 .${CLASS.target} + .${CLASS.target} {
-  border-top: 1px solid var(--border);
+  border-top: var(--border);
 }
 
+/* The emoji is on the same line as the target name. */
 .${CLASS.row} {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: baseline;
+  gap: 1ch;
 }
 
 .${CLASS.rowIcon} {
-  width: 20px;
-  font-size: 16px;
+  width: 2ch;
   text-align: center;
 }
 
 .${CLASS.rowText} {
-  flex: 1 1 10em;
+  flex: 1 1 20ch;
   display: grid;
   min-width: 0;
 }
 
 .${CLASS.targetName} {
-  font-weight: 600;
+  font-weight: bold;
   overflow-wrap: anywhere;
 }
 
 .${CLASS.statusLine} {
   color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
+  font-size: 0.8125em;
 }
 
+/* Like menus in terminal UIs: The selected mode is in reverse video. */
 .${CLASS.modes} {
   justify-self: start;
   display: inline-flex;
-  gap: 2px;
-  margin: 0;
+  flex-wrap: wrap;
+  gap: 0 1ch;
+  /* Align the text (rather than the padding) of the first mode with the
+     text above. */
+  margin: 0 0 0 -1ch;
   min-inline-size: 0;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
+  padding: 0;
+  border: none;
 }
 
 .${CLASS.modes} label {
   position: relative;
-  padding: 2px 8px;
-  border-radius: 5px;
+  padding: 0 1ch;
   color: var(--muted);
   cursor: pointer;
   user-select: none;
@@ -2445,17 +2491,19 @@ focus might be inside the panel and must not be lost.
 }
 
 .${CLASS.modes} label:hover {
-  color: CanvasText;
+  color: var(--fg);
+  text-decoration: underline;
 }
 
 .${CLASS.modes} label:has(:checked) {
-  color: CanvasText;
-  background-color: var(--subtle);
-  outline: 1px solid var(--border-strong);
+  background-color: var(--fg);
+  color: var(--bg);
+  text-decoration: none;
 }
 
 .${CLASS.modes} label:has(:focus-visible) {
-  outline: 2px solid var(--focus);
+  outline: var(--border-thickness) solid var(--fg);
+  outline-offset: 0.125em;
 }
 
 .${CLASS.modes} label:has(:disabled) {
@@ -2465,10 +2513,11 @@ focus might be inside the panel and must not be lost.
 
 .${CLASS.modes} label:has(:disabled):hover {
   color: var(--muted);
+  text-decoration: none;
 }
 
 .${CLASS.modes} label:has(:checked:disabled):hover {
-  color: CanvasText;
+  color: var(--bg);
 }
 
 .${CLASS.modes} input {
@@ -2481,21 +2530,25 @@ focus might be inside the panel and must not be lost.
 
 .${CLASS.details} {
   display: grid;
-  gap: 6px;
-  margin: 6px 0 0 30px;
+  gap: 1ch;
+  margin: 1ch 0 0 3ch;
+}
+
+/* Smaller than the header and the target names. Set on the children, so that
+   the \`ch\` based indentation of the details matches the target names. */
+.${CLASS.details} > * {
+  font-size: 0.8125em;
 }
 
 .${CLASS.note} {
   color: var(--muted);
-  font-size: 12px;
 }
 
 .${CLASS.details} pre {
   margin: 0;
-  padding-left: 8px;
-  border-left: 3px solid var(--border);
-  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-  font-size: 12px;
+  padding-left: 1ch;
+  border-left: var(--border-thickness) solid var(--muted);
+  font-family: inherit;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -2508,13 +2561,13 @@ focus might be inside the panel and must not be lost.
   justify-self: start;
 }
 
-
 .${CLASS.footer} {
   margin: 0;
-  padding: 8px 12px;
-  border-top: 1px solid var(--border);
+  /* Line up with the header, whose \`ch\` is larger due to the font size. */
+  padding: 0.5ch calc(1ch / 0.8125);
+  border-top: var(--border);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 0.8125em;
 }
 
 .${CLASS.visuallyHidden} {
