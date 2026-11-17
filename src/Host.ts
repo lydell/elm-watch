@@ -1,3 +1,4 @@
+import type * as os from "os";
 import * as Codec from "tiny-decoders";
 
 import { ELM_WATCH_HOST, type Env, getEnvValue } from "./Env.ts";
@@ -38,4 +39,45 @@ export function resolveHost(
 export function getHostFromEnv(env: Env): Host | undefined {
   const string = getEnvValue(env, ELM_WATCH_HOST);
   return string === undefined ? undefined : markAsHost(string);
+}
+
+// The IPv4 addresses to print as links when listening on all interfaces.
+// Network and broadcast addresses (host bits all zeros or all ones) can’t be
+// connected to, so skip them. For example, OrbStack gives the Mac
+// 192.168.215.0/24 on one of its bridges. /31 and /32 subnets have no network
+// or broadcast addresses.
+export function getNetworkIps(
+  interfaces: NodeJS.Dict<Array<os.NetworkInterfaceInfo>>,
+): Array<string> {
+  return Object.values(interfaces)
+    .flatMap((addresses = []) =>
+      addresses.filter(
+        (address) =>
+          address.family === "IPv4" &&
+          !address.internal &&
+          !isNetworkOrBroadcastAddress(address.address, address.netmask),
+      ),
+    )
+    .map(({ address }) => address);
+}
+
+function isNetworkOrBroadcastAddress(
+  address: string,
+  netmask: string,
+): boolean {
+  const ip = ipv4ToNumber(address);
+  const mask = ipv4ToNumber(netmask);
+  if (ip === undefined || mask === undefined || mask >>> 0 >= 0xfffffffe) {
+    return false;
+  }
+  const hostBits = ip & ~mask;
+  return hostBits === 0 || hostBits === ~mask;
+}
+
+function ipv4ToNumber(ip: string): number | undefined {
+  const parts = ip.split(".").map(Number);
+  return parts.length === 4 &&
+    parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255)
+    ? parts.reduce((acc, part) => (acc << 8) | part, 0)
+    : undefined;
 }

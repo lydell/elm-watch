@@ -23,7 +23,7 @@ import * as ErrorSelection from "./ErrorSelection.ts";
 import * as ErrorView from "./ErrorView.ts";
 import * as ExternalErrors from "./ExternalErrors.ts";
 import { dim, silentlyReadIntEnvValue, toError } from "./Helpers.ts";
-import type { Host } from "./Host.ts";
+import { getNetworkIps, type Host } from "./Host.ts";
 import {
   type Cmd,
   getNextActionSleepMs,
@@ -1443,13 +1443,7 @@ function printServerLinks(devServer: DevServer, host: Host): string {
     return `${protocol}://${hostname}:${port}`;
   }
 
-  const networkIps = Object.values(os.networkInterfaces())
-    .flatMap((addresses = []) =>
-      addresses.filter(
-        (address) => address.family === "IPv4" && !address.internal,
-      ),
-    )
-    .map(({ address }) => address);
+  const networkIps = getNetworkIps(os.networkInterfaces());
 
   return `${protocol}://localhost:${port}${networkIps
     .map((ip) => `   ${dim("network:")} ${protocol}://${ip}:${port}`)
