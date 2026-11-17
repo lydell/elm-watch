@@ -23,17 +23,6 @@ import {
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
-// Moving a directory into a watched directory results in a watcher event for
-// the directory itself. On Linux, there are also events for everything inside:
-// Node.js adds watchers for the new directory and reports what it finds.
-// Turn `changed src/Dir/Text.elm +1 more` back into `changed src/Dir`.
-function withoutLinuxMoveInEvents(string: string, dir: string): string {
-  return string.replace(
-    new RegExp(`⧙changed ${dir}/[^⧘]+ \\+\\d+ more⧘`, "g"),
-    `⧙changed ${dir}⧘`,
-  );
-}
-
 describe("hot", () => {
   afterEach(cleanupAfterEachTest);
 
@@ -192,12 +181,7 @@ describe("hot", () => {
       your elm.json to make sure all the packages you need are listed there!
     `);
 
-    expect(
-      withoutLinuxMoveInEvents(
-        grep(terminal, / {3}⧙(?:changed|removed) /),
-        "src/Dir",
-      ),
-    ).toMatchInlineSnapshot(`
+    expect(grep(terminal, / {3}⧙(?:changed|removed) /)).toMatchInlineSnapshot(`
       🚨 ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙removed src/Dir⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Dir⧘
     `);
@@ -248,12 +232,7 @@ describe("hot", () => {
       Is something misspelled? Or do you need to create them?
     `);
 
-    expect(
-      withoutLinuxMoveInEvents(
-        grep(terminal, / {3}⧙(?:changed|removed) /),
-        "src/Other",
-      ),
-    ).toMatchInlineSnapshot(`
+    expect(grep(terminal, / {3}⧙(?:changed|removed) /)).toMatchInlineSnapshot(`
       🚨 ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙removed src/Other⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Other⧘
     `);

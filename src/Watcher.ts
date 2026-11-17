@@ -1,4 +1,5 @@
 import * as crypto from "crypto";
+import { EventEmitter } from "events";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -15,8 +16,7 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 //   if it exists. (Except for one Windows quirk, see `isDirectoryChange`.)
 // - Moving a directory into or out of a watched directory results in a single
 //   event for the directory itself, not one per file inside it. So every
-//   reported path must be treated as a potential directory. (On Linux, moving
-//   a directory in also reports everything inside it.)
+//   reported path must be treated as a potential directory.
 // - On Linux, inotify watches the directory itself, not the path. If a watched
 //   directory is replaced (removed or moved away, and created again) before we
 //   handle the event, the old watcher keeps watching the old directory. Moving
@@ -24,7 +24,10 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 //   So on Linux we also watch the parent directory, and start over on any
 //   event about the watched directory there. (Comparing inode numbers is not
 //   enough: ext4 reuses the inode number for a directory that is removed and
-//   created again.)
+//   created again.) Node.js’ recursive watching on Linux (one inotify watcher
+//   per directory) has the same problem for directories inside the watched
+//   directory: https://github.com/nodejs/node/issues/67329 So on Linux we do
+//   that ourselves instead, see `watchTreeOnLinux`.
 // - Watching a path that does not exist throws. Watched directories (such as
 //   source directories in elm.json) might not exist (yet), so we watch the
 //   closest existing ancestor until they do.
@@ -67,10 +70,16 @@ export function isIgnoredStaticFile(filename: string): boolean {
   return /(?:^|[/\\])(?:elm-stuff|node_modules)[/\\]/.test(filename);
 }
 
+// `fs.FSWatcher` or the result of `watchTreeOnLinux`.
+type WatcherHandle = {
+  close: () => void;
+  on: (eventName: "error", listener: (error: Error) => void) => unknown;
+};
+
 type RootState =
   | {
       tag: "Watching";
-      fsWatcher: fs.FSWatcher;
+      fsWatcher: WatcherHandle;
       parentWatcher: fs.FSWatcher | undefined;
     }
   | { tag: "WaitingForRoot"; fsWatcher: fs.FSWatcher | undefined };
@@ -117,7 +126,7 @@ export function watch(
         report(root);
       }
     };
-    let fsWatcher: fs.FSWatcher;
+    let fsWatcher: WatcherHandle;
     try {
       // `ignore` was added in Node.js 24.14.0 (and is missing in our version
       // of @types/node). Older versions ignore the option, so we filter in the
@@ -130,7 +139,7 @@ export function watch(
         ignore: (filename: string) =>
           !path.isAbsolute(filename) && ignore(filename),
       };
-      fsWatcher = fs.watch(root, options, (eventType, filename) => {
+      const listener = (eventType: string, filename: string | null): void => {
         if (isReplaced()) {
           onReplaced();
         } else if (filename === null) {
@@ -151,7 +160,11 @@ export function watch(
               : absolutePath,
           );
         }
-      });
+      };
+      fsWatcher =
+        options.recursive && process.platform === "linux"
+          ? watchTreeOnLinux(root, ignore, listener)
+          : fs.watch(root, options, listener);
     } catch (unknownError) {
       const error = toError(unknownError);
       if (isMissingError(error)) {
@@ -237,6 +250,198 @@ export function watch(
       }
     },
   };
+}
+
+// Like `fs.watch(root, { recursive: true }, listener)` on Linux, but handles
+// directories that are replaced quickly (see the top of this file). Watches
+// every directory inside `root` (that isn’t ignored) non-recursively. On Linux,
+// a directory gets events about its entries being created, removed, moved or
+// getting new attributes – but not when something inside an entry changes. So
+// an event about a watched directory in its parent means that it might have
+// been replaced: Start over watching it. Throws like `fs.watch` if `root` can’t
+// be watched.
+function watchTreeOnLinux(
+  root: AbsolutePath,
+  // Takes a path relative to `root`.
+  ignore: (filename: string) => boolean,
+  listener: (eventType: string, filename: string | null) => void,
+): WatcherHandle {
+  const watchers = new Map<string, fs.FSWatcher>();
+  const emitter = new EventEmitter<{ error: [Error] }>();
+  let closed = false;
+
+  const isIgnoredDirectory = (dir: string): boolean =>
+    // Use a dummy file name to check if the directory itself is ignored.
+    ignore(path.join(path.relative(root, dir), "x"));
+
+  const closeTree = (dir: string): void => {
+    const prefix = dir + path.sep;
+    for (const [watchedDir, watcher] of watchers) {
+      if (watchedDir === dir || watchedDir.startsWith(prefix)) {
+        watcher.close();
+        watchers.delete(watchedDir);
+      }
+    }
+  };
+
+  const onSubdirectoryError = (error: NodeJS.ErrnoException): void => {
+    // The directory was removed just now (the parent gets an event about
+    // that), or we aren’t allowed to read it (nothing to watch). Other errors,
+    // such as running out of inotify watchers, are reported.
+    if (
+      !isMissingError(error) &&
+      error.code !== "EACCES" &&
+      error.code !== "EPERM"
+    ) {
+      emitter.emit("error", error);
+    }
+  };
+
+  // Like Node.js: Watch the target of a symlink (non-recursively), and report
+  // any change there as a change of the symlink.
+  const watchSymlink = (link: string): void => {
+    if (closed || watchers.has(link)) {
+      return;
+    }
+    let watcher: fs.FSWatcher;
+    try {
+      watcher = fs.watch(link, (eventType) => {
+        if (!closed) {
+          listener(eventType, path.relative(root, link));
+        }
+      });
+    } catch {
+      // Broken link, or not allowed.
+      return;
+    }
+    watcher.on("error", () => {
+      closeTree(link);
+    });
+    watchers.set(link, watcher);
+  };
+
+  // Watches `dir` and all directories inside it (except ignored ones).
+  const watchTree = (dir: string): void => {
+    if (closed || watchers.has(dir)) {
+      return;
+    }
+    let watcher: fs.FSWatcher;
+    try {
+      // Before reading the directory, so that nothing created in between is
+      // missed.
+      watcher = fs.watch(dir, (eventType, name) => {
+        onEvent(dir, eventType, name);
+      });
+    } catch (unknownError) {
+      if (dir === root) {
+        throw unknownError;
+      }
+      onSubdirectoryError(toError(unknownError));
+      return;
+    }
+    watcher.on("error", (error) => {
+      if (dir === root) {
+        emitter.emit("error", error);
+      } else {
+        closeTree(dir);
+        onSubdirectoryError(error);
+      }
+    });
+    watchers.set(dir, watcher);
+    let entries: Array<fs.Dirent>;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      // Removed or unreadable. The parent gets an event if it was removed.
+      return;
+    }
+    for (const entry of entries) {
+      watchEntry(path.join(dir, entry.name), entry);
+    }
+  };
+
+  const onEvent = (
+    dir: string,
+    eventType: string,
+    name: string | null,
+  ): void => {
+    if (closed) {
+      return;
+    }
+    if (name === null) {
+      // The OS did not tell us what changed. Start over with the whole
+      // directory, then report it.
+      closeTree(dir);
+      watchTree(dir);
+      listener(eventType, dir === root ? null : path.relative(root, dir));
+      return;
+    }
+    const absolutePath = path.join(dir, name);
+    if (
+      dir !== root &&
+      name === path.basename(dir) &&
+      !fs.existsSync(absolutePath)
+    ) {
+      // An event about `dir` itself (such as it being removed). Its parent
+      // gets an event too, which takes care of it. (Events about the root
+      // itself are handled by the listener.)
+      return;
+    }
+    const stats = lstat(absolutePath);
+    if (
+      watchers.has(absolutePath) ||
+      stats?.isDirectory() === true ||
+      stats?.isSymbolicLink() === true
+    ) {
+      // A directory (or symlink) was created, removed, moved or replaced.
+      // Start over with it before reporting it, so that changes inside it
+      // right after the event aren’t missed.
+      closeTree(absolutePath);
+      if (stats !== undefined) {
+        watchEntry(absolutePath, stats);
+      }
+    }
+    listener(eventType, path.relative(root, absolutePath));
+  };
+
+  // `isDirectory` is false for symlinks, so we don’t descend into them (which
+  // could result in cycles).
+  const watchEntry = (
+    absolutePath: string,
+    entry: fs.Dirent | fs.Stats,
+  ): void => {
+    if (entry.isDirectory()) {
+      if (!isIgnoredDirectory(absolutePath)) {
+        watchTree(absolutePath);
+      }
+    } else if (
+      entry.isSymbolicLink() &&
+      !ignore(path.relative(root, absolutePath))
+    ) {
+      watchSymlink(absolutePath);
+    }
+  };
+
+  watchTree(root);
+
+  return {
+    close: () => {
+      closed = true;
+      for (const watcher of watchers.values()) {
+        watcher.close();
+      }
+      watchers.clear();
+    },
+    on: (eventName, errorListener) => emitter.on(eventName, errorListener),
+  };
+}
+
+function lstat(absolutePath: string): fs.Stats | undefined {
+  try {
+    return fs.lstatSync(absolutePath, { throwIfNoEntry: false });
+  } catch {
+    return undefined;
+  }
 }
 
 // On Linux, calls `onEvent` for events about `root` in its parent directory:

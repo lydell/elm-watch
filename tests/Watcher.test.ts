@@ -257,6 +257,51 @@ describe("watch", () => {
       });
     },
   );
+
+  // Like Node.js’ own recursive watching on Linux: Changes in the target of a
+  // symlink (not recursively) are reported as changes of the symlink. (On
+  // macOS, FSEvents does not report changes behind symlinks at all.)
+  test.runIf(process.platform === "linux")("symlinks", async () => {
+    fs.mkdirSync(d("src"));
+    fs.mkdirSync(d("shared"));
+    fs.writeFileSync(d("Real.elm"), "");
+    fs.symlinkSync(d("shared"), d("src", "Shared"));
+    fs.symlinkSync(d("Real.elm"), d("src", "Link.elm"));
+    await start([sourceDirectory("src")]);
+
+    fs.writeFileSync(d("shared", "A.elm"), "");
+    await expect.poll(eventLines, POLL).toContain("src/Shared");
+
+    fs.writeFileSync(d("Real.elm"), "changed");
+    await expect.poll(eventLines, POLL).toContain("src/Link.elm");
+  });
+
+  // Node.js’ own recursive watching on Linux has the same problem for
+  // directories inside the watched directory:
+  // https://github.com/nodejs/node/issues/67329
+  describe.each(["SourceDirectory", "StaticFilesDir"] as const)(
+    "%s with a subdirectory that is replaced quickly",
+    (tag) => {
+      test.each(["removed", "moved away"] as const)("%s", async (how) => {
+        fs.mkdirSync(d("src", "Gen", "Deep"), { recursive: true });
+        await start([{ tag, dir: p(d("src")) }]);
+
+        if (how === "removed") {
+          fs.rmSync(d("src", "Gen"), { recursive: true });
+        } else {
+          fs.renameSync(d("src", "Gen"), d("Gen.old"));
+        }
+        fs.mkdirSync(d("src", "Gen", "Deep"), { recursive: true });
+        await expect.poll(eventLines, POLL).toContain("src/Gen");
+        await waitForWatcherStart();
+
+        fs.writeFileSync(d("src", "Gen", "A.elm"), "");
+        fs.writeFileSync(d("src", "Gen", "Deep", "B.elm"), "");
+        await expect.poll(eventLines, POLL).toContain("src/Gen/A.elm");
+        await expect.poll(eventLines, POLL).toContain("src/Gen/Deep/B.elm");
+      });
+    },
+  );
 });
 
 describe("makeDuplicateEventFilter", () => {
