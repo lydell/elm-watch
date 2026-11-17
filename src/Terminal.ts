@@ -9,6 +9,7 @@ import {
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
   type Env,
   getEnvValue,
+  INIT_CWD,
   NO_COLOR,
   TERM_PROGRAM,
   WT_SESSION,
@@ -27,7 +28,8 @@ import {
   type WriteStream,
 } from "./Helpers.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
-import type { GetNow } from "./Types.ts";
+import { absolutePathFromString } from "./PathHelpers.ts";
+import type { AbsolutePath, GetNow } from "./Types.ts";
 
 export const DEFAULT_COLUMNS = 80;
 
@@ -74,9 +76,14 @@ export type TerminalConfig = {
   mockedTimings: boolean;
   columns: number;
   rows: number;
+  // Paths in errors are shown relative to this: The directory of your shell
+  // (`INIT_CWD` when run via an npm script). Terminals like iTerm2 can then
+  // open them when clicked.
+  pathsRelativeTo: AbsolutePath;
 };
 
 export function makeTerminal({
+  cwd,
   env,
   getNow,
   stdin,
@@ -84,6 +91,7 @@ export function makeTerminal({
   stderr,
   logDebug,
 }: {
+  cwd: AbsolutePath;
   env: Env;
   getNow: GetNow;
   stdin: ReadStream;
@@ -177,6 +185,10 @@ export function makeTerminal({
       // worry about.
       return stdout.rows ?? Infinity;
     },
+    pathsRelativeTo: absolutePathFromString(
+      cwd,
+      getEnvValue(env, INIT_CWD) ?? ".",
+    ),
   };
 
   return {

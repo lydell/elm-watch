@@ -13,7 +13,11 @@ import {
 } from "../src/HotUpdate.ts";
 import type { Project } from "../src/Project.ts";
 import type { TerminalConfig } from "../src/Terminal.ts";
-import { type AbsolutePath, markAsTargetName } from "../src/Types.ts";
+import {
+  type AbsolutePath,
+  markAsAbsolutePath,
+  markAsTargetName,
+} from "../src/Types.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 import {
   elmFilePath,
@@ -42,6 +46,7 @@ const terminalConfig: TerminalConfig = {
   mockedTimings: true,
   columns: 80,
   rows: 24,
+  pathsRelativeTo: markAsAbsolutePath("/"),
 };
 
 const date = new Date(0);

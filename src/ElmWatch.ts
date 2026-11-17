@@ -51,7 +51,11 @@ export default async function elmWatchCli(
   }: Options = {},
 ): Promise<number> {
   const getNow: GetNow = () => new Date();
+  const cwd: Cwd = markAsCwd(
+    absolutePathFromString(markAsAbsolutePath(process.cwd()), cwdString),
+  );
   const terminal = makeTerminal({
+    cwd,
     env,
     getNow,
     stdin,
@@ -59,9 +63,6 @@ export default async function elmWatchCli(
     stderr,
     logDebug,
   });
-  const cwd: Cwd = markAsCwd(
-    absolutePathFromString(markAsAbsolutePath(process.cwd()), cwdString),
-  );
 
   const isHelp = args.some(
     (arg) => arg === "-h" || arg === "-help" || arg === "--help",
@@ -130,6 +131,7 @@ export async function elmWatch(options: unknown): Promise<number> {
 
   const getNow: GetNow = () => new Date();
   const terminal = makeTerminal({
+    cwd: markAsAbsolutePath(process.cwd()),
     env,
     getNow,
     stdin,

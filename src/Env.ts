@@ -8,6 +8,12 @@ export function getEnvValue(env: Env, name: string): string | undefined {
   return value === "" ? undefined : value;
 }
 
+// Set by npm (and similar tools) when running scripts: The directory the script
+// was run from. npm runs scripts in the package directory, so the current
+// directory of elm-watch is not necessarily the one of your shell.
+// Type: Absolute path.
+export const INIT_CWD = "INIT_CWD";
+
 // Disable colored output.
 // Type: Check if non-empty and ignore value (https://no-color.org/).
 export const NO_COLOR = "NO_COLOR";

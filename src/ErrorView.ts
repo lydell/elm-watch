@@ -15,7 +15,6 @@ import {
 } from "./ErrorSelection.ts";
 import { bold, dim, removeColor } from "./Helpers.ts";
 import type { TerminalConfig } from "./Terminal.ts";
-import type { AbsolutePath } from "./Types.ts";
 
 // In the terminal, errors are shown one at a time, and you navigate between
 // them with the keyboard. See ErrorSelection.ts for which error is selected.
@@ -132,7 +131,6 @@ export function makeErrorViewTarget(
 // showing all errors (see `renderShowAll`).
 export function render({
   terminalConfig,
-  root,
   expanded,
   selection,
   targets,
@@ -141,8 +139,6 @@ export function render({
   editor,
 }: {
   terminalConfig: TerminalConfig;
-  // Error locations are shown relative to this.
-  root: AbsolutePath;
   expanded: boolean;
   selection: Selection;
   targets: Array<ErrorViewTarget>;
@@ -198,7 +194,10 @@ export function render({
       error.template,
       terminalConfig.columns,
       terminalConfig.noColor,
-      { collapse: !expanded, root },
+      {
+        collapse: !expanded,
+        pathsRelativeTo: terminalConfig.pathsRelativeTo,
+      },
     ),
     "",
     ...noticeLines,

@@ -15,7 +15,7 @@ import type { HotTestHooks } from "../src/Hot.ts";
 import type { Msg } from "../src/HotUpdate.ts";
 import { markAsPort } from "../src/Port.ts";
 import { makeTerminal } from "../src/Terminal.ts";
-import type { CompilationMode } from "../src/Types.ts";
+import { type CompilationMode, markAsAbsolutePath } from "../src/Types.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   badElmBinEnv,
@@ -417,6 +417,7 @@ export async function run({
           };
 
     window.__ELM_WATCH.LOG_DEBUG = makeTerminal({
+      cwd: markAsAbsolutePath(dir),
       env: {},
       getNow: () => new Date(),
       stdin: process.stdin,

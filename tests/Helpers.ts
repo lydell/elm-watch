@@ -16,6 +16,7 @@ import {
   __ELM_WATCH_QUERY_TERMINAL_TIMEOUT_MS,
   __ELM_WATCH_WEBSOCKET_EVENT_SLEEP_MS,
   ELM_WATCH_OPEN_EDITOR,
+  INIT_CWD,
   type Env,
   WT_SESSION,
 } from "../src/Env.ts";
@@ -45,6 +46,8 @@ export function readFile(filePath: string): string {
 
 export const TEST_ENV = {
   [ELM_WATCH_OPEN_EDITOR]: undefined,
+  // Set when running the tests via npm.
+  [INIT_CWD]: undefined,
   [__ELM_WATCH_LOADING_MESSAGE_DELAY]: "0",
   [__ELM_WATCH_MAX_PARALLEL]: "2",
   [__ELM_WATCH_MOCKED_TIMINGS]: "",

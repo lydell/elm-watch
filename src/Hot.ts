@@ -1094,7 +1094,7 @@ const runCmd =
                   errorTemplate,
                   theme,
                   terminal.config.noColor,
-                  mutable.project.root,
+                  terminal.config.pathsRelativeTo,
                 ),
               ),
               foregroundColor: theme.foreground,
@@ -1384,7 +1384,7 @@ function sendExternalErrors(
           errorTemplate,
           theme,
           terminal.config.noColor,
-          mutable.project.root,
+          terminal.config.pathsRelativeTo,
         ),
       ),
     })),
@@ -1574,7 +1574,6 @@ function renderErrorView(
           })
         : ErrorView.render({
             terminalConfig: terminal.config,
-            root: mutable.project.root,
             expanded: errorView.expanded,
             selection,
             targets,

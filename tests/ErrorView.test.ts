@@ -283,6 +283,7 @@ describe("render", () => {
     mockedTimings: true,
     columns: 80,
     rows: 24,
+    pathsRelativeTo: markAsAbsolutePath(path.resolve("/project")),
   };
 
   const noEditor: ErrorViewEditor = {
@@ -299,7 +300,6 @@ describe("render", () => {
   ): string {
     const output = render({
       terminalConfig,
-      root: markAsAbsolutePath("/"),
       expanded: false,
       selection,
       targets,
@@ -353,7 +353,6 @@ describe("render", () => {
     }
     const output = render({
       terminalConfig,
-      root: markAsAbsolutePath("/"),
       expanded: false,
       selection: start(targets),
       targets,
@@ -377,7 +376,6 @@ describe("render", () => {
     const chooser = (editor: Partial<ErrorViewEditor>): string => {
       const output = render({
         terminalConfig,
-        root: markAsAbsolutePath("/"),
         expanded: false,
         selection: start(targets),
         targets,
@@ -437,7 +435,6 @@ describe("render", () => {
     const chooser = (current: ErrorViewEditor["current"]): string => {
       const output = render({
         terminalConfig,
-        root: markAsAbsolutePath("/"),
         expanded: false,
         selection: start(targets),
         targets,
@@ -481,7 +478,6 @@ describe("render", () => {
     ];
     const output = render({
       terminalConfig: { ...terminalConfig, columns: 40 },
-      root: markAsAbsolutePath("/"),
       expanded: false,
       selection: start(targets),
       targets,
@@ -507,7 +503,6 @@ describe("render", () => {
     ];
     const output = render({
       terminalConfig: { ...terminalConfig, columns },
-      root: markAsAbsolutePath(path.resolve("/project")),
       expanded: false,
       selection: start(targets),
       targets,
@@ -522,7 +517,7 @@ describe("render", () => {
       .replace(/\x1B\[0m\x1B\[2m(.*?)\x1B\[0m/g, "~$1~");
   }
 
-  test("the location is on the title line, relative to the root", () => {
+  test("the location is on the title line, relative to the shell’s directory", () => {
     const file = (relative: string): AbsolutePath =>
       markAsAbsolutePath(path.resolve("/project", relative));
     expect(

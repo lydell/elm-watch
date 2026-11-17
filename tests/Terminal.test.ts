@@ -1,9 +1,11 @@
+import * as path from "path";
 import { describe, expect, test } from "vitest";
 
-import { NO_COLOR, TERM_PROGRAM, WT_SESSION } from "../src/Env.ts";
+import { INIT_CWD, NO_COLOR, TERM_PROGRAM, WT_SESSION } from "../src/Env.ts";
 import { BEGIN_SYNC_UPDATE, END_SYNC_UPDATE } from "../src/Helpers.ts";
 import { IS_WINDOWS } from "../src/IsWindows.ts";
 import { type Terminal, makeTerminal } from "../src/Terminal.ts";
+import { markAsAbsolutePath } from "../src/Types.ts";
 import { MemoryWriteStream, SilentReadStream } from "./Helpers.ts";
 
 function makeTestTerminal({
@@ -18,6 +20,7 @@ function makeTestTerminal({
   stderr?: MemoryWriteStream;
 }): Terminal {
   return makeTerminal({
+    cwd: markAsAbsolutePath(process.cwd()),
     env,
     getNow: () => new Date(),
     stdin,
@@ -62,6 +65,27 @@ function setup(
 }
 
 describe("Terminal", () => {
+  test("paths in errors are relative to INIT_CWD, if set", () => {
+    const cwd = markAsAbsolutePath(path.resolve("/project"));
+    const make = (env: Record<string, string>): string =>
+      makeTerminal({
+        cwd,
+        env,
+        getNow: () => new Date(),
+        stdin: new SilentReadStream(),
+        stdout: new MemoryWriteStream(),
+        stderr: new MemoryWriteStream(),
+        logDebug: () => {
+          // Do nothing.
+        },
+      }).config.pathsRelativeTo;
+    expect(make({})).toBe(cwd);
+    expect(make({ [INIT_CWD]: "" })).toBe(cwd);
+    expect(make({ [INIT_CWD]: path.resolve("/project/sub") })).toBe(
+      path.resolve("/project/sub"),
+    );
+  });
+
   test("fancy output (emoji) in modern terminals", () => {
     const fancy = (env: Record<string, string>): boolean =>
       makeTestTerminal({ env }).config.fancy;

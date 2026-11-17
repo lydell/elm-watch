@@ -245,9 +245,10 @@ export function toTerminalString(
   width: number,
   noColor: boolean,
   // When showing one error at a time: Whether to collapse long code excerpts,
-  // and the location goes on the title line, relative to `root` (opening it in
-  // the editor is just a key press away, so the full path is just noise).
-  oneAtATime?: { collapse: boolean; root: AbsolutePath },
+  // and the location goes on the title line, relative to `pathsRelativeTo`
+  // (opening it in the editor is just a key press away, so the full path is
+  // just noise).
+  oneAtATime?: { collapse: boolean; pathsRelativeTo: AbsolutePath },
 ): string {
   const renderPiece = noColor
     ? (piece: Piece): string => piece.text
@@ -261,7 +262,7 @@ export function toTerminalString(
   const titleLocation =
     oneAtATime === undefined || location === undefined
       ? []
-      : renderRelativeErrorLocation(location, oneAtATime.root);
+      : renderRelativeErrorLocation(location, oneAtATime.pathsRelativeTo);
   // Box drawing characters render as a solid line, and are supported by the
   // fonts of the Windows console too.
   const prefix = `── ${title} `;
@@ -327,8 +328,9 @@ export function toHtml(
   theme: Theme.Theme,
   noColor: boolean,
   // File locations also get a path relative to this, for showing one error at
-  // a time (the browser can’t calculate relative paths itself).
-  root: AbsolutePath,
+  // a time (the browser can’t calculate relative paths itself, and doesn’t
+  // know where elm-watch was started from).
+  pathsRelativeTo: AbsolutePath,
 ): {
   title: string;
   location?: ReturnType<typeof withRelativeFile>;
@@ -351,7 +353,7 @@ export function toHtml(
     title,
     ...(location === undefined
       ? {}
-      : { location: withRelativeFile(location, root) }),
+      : { location: withRelativeFile(location, pathsRelativeTo) }),
     htmlContent: content,
     ...(collapsedContent === undefined
       ? {}
@@ -444,14 +446,14 @@ function renderErrorLocation(location: ErrorLocation): Piece {
 
 function renderRelativeErrorLocation(
   location: ErrorLocation,
-  root: AbsolutePath,
+  pathsRelativeTo: AbsolutePath,
 ): Array<Piece> {
   switch (location.tag) {
     case "FileOnly":
-      return [text(relativeErrorFile(root, location.file))];
+      return [text(relativeErrorFile(pathsRelativeTo, location.file))];
     case "FileWithLineAndColumn":
       return [
-        text(relativeErrorFile(root, location.file)),
+        text(relativeErrorFile(pathsRelativeTo, location.file)),
         dim(`:${location.line}:${location.column}`),
       ];
     case "Target":
@@ -461,7 +463,7 @@ function renderRelativeErrorLocation(
 
 function withRelativeFile(
   location: ErrorLocation,
-  root: AbsolutePath,
+  pathsRelativeTo: AbsolutePath,
 ):
   | (Exclude<ErrorLocation, { tag: "Target" }> & { relativeFile: string })
   | Extract<ErrorLocation, { tag: "Target" }> {
@@ -470,7 +472,7 @@ function withRelativeFile(
     case "FileWithLineAndColumn":
       return {
         ...location,
-        relativeFile: relativeErrorFile(root, location.file),
+        relativeFile: relativeErrorFile(pathsRelativeTo, location.file),
       };
     case "Target":
       return location;
@@ -478,10 +480,10 @@ function withRelativeFile(
 }
 
 export function relativeErrorFile(
-  root: AbsolutePath,
+  pathsRelativeTo: AbsolutePath,
   file: AbsolutePath,
 ): string {
-  return path.relative(root, file);
+  return path.relative(pathsRelativeTo, file);
 }
 
 export function readElmWatchJson(

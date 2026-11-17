@@ -54,7 +54,7 @@ const ErrorLocation = Codec.taggedUnion("tag", [
   {
     tag: Codec.tag("FileOnly"),
     file: AbsolutePath,
-    // Relative to the root (the elm-watch.json directory).
+    // Relative to the directory of the shell elm-watch was started from.
     relativeFile: Codec.string,
   },
   {

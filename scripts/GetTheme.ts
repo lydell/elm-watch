@@ -2,8 +2,10 @@
 
 import { makeTerminal } from "../src/Terminal.ts";
 import { getThemeFromTerminal } from "../src/Theme.ts";
+import { markAsAbsolutePath } from "../src/Types.ts";
 
 const terminal = makeTerminal({
+  cwd: markAsAbsolutePath(process.cwd()),
   env: process.env,
   getNow: () => new Date(),
   stdin: process.stdin,
