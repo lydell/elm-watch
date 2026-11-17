@@ -8,6 +8,8 @@ import {
   onlyErrorMessages,
   stringSnapshotSerializer,
   TerminalColorReadStream,
+  wait,
+  waitFor,
 } from "./Helpers.ts";
 import {
   cleanupAfterEachTest,
@@ -816,6 +818,45 @@ describe("hot reloading", () => {
       expect(panelColors).toMatchInlineSnapshot(
         `--fg: #112233; --bg: #aabbcc; color-scheme: light;`,
       );
+    });
+
+    test("panel follows terminal theme changes when focusing the tab", async () => {
+      const stdin = new TerminalColorReadStream();
+      const { go } = runHotReload({
+        fixture,
+        name: "App",
+        programType: "Html",
+        compilationMode: "standard",
+        stdin,
+        env: {
+          [__ELM_WATCH_QUERY_TERMINAL_MAX_AGE_MS]: "0",
+        },
+      });
+
+      const panelColors: Array<string> = [];
+
+      await go(async () => {
+        await waitFor(() => getPanelColors() !== "");
+        panelColors.push(getPanelColors());
+        // Switch the terminal to a dark theme, and go back to the browser.
+        stdin.foreground = "eeee/eeee/eeee";
+        stdin.background = "1111/1111/1111";
+        window.dispatchEvent(new Event("focus"));
+        // Don’t wait for the test timeout if the colors are never updated.
+        await Promise.race([
+          waitFor(() => getPanelColors() !== panelColors[0]),
+          wait(2000),
+        ]);
+        panelColors.push(getPanelColors());
+        return "Stop" as const;
+      });
+
+      expect(panelColors).toMatchInlineSnapshot(`
+        [
+          --fg: #112233; --bg: #aabbcc; color-scheme: light;,
+          --fg: #eeeeee; --bg: #111111; color-scheme: dark;,
+        ]
+      `);
     });
 
     test("system colors for the panel if the terminal doesn’t respond", async () => {

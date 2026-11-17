@@ -1325,6 +1325,9 @@ function onWebSocketToServerMessage(
             webSocket,
             message: { tag: "FocusedTabAcknowledged" },
           },
+          // The terminal theme might have changed, for example when switching
+          // between light and dark mode, and then going back to the browser.
+          { tag: "WebSocketSendTerminalColors", webSocket },
         ],
       ];
 

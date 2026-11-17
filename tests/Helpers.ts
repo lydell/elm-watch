@@ -164,6 +164,11 @@ export class TerminalColorReadStream
   extends SilentReadStream
   implements ReadStream
 {
+  // Can be changed to simulate switching the terminal theme.
+  foreground = "1111/2222/3333";
+
+  background = "aaaa/bbbb/cccc";
+
   // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Must match the overridden method.
   override on<T>(
     eventName: string | symbol,
@@ -177,8 +182,8 @@ export class TerminalColorReadStream
             i % 2 === 0 ? "\x07" : "\x1B\\"
           }`;
         }),
-        "\x1B]10;rgb:1111/2222/3333\x07",
-        "\x1B]11;rgb:aaaa/bbbb/cccc\x1B\\",
+        `\x1B]10;rgb:${this.foreground}\x07`,
+        `\x1B]11;rgb:${this.background}\x1B\\`,
       );
       this._read();
     }
