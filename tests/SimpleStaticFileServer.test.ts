@@ -158,7 +158,10 @@ async function http10RequestWithoutHost(port: number): Promise<string> {
 
 // Returns everything the server sends, until it closes the connection (which
 // it does after each HTTP/1.0 response).
-async function rawHttp10Request(port: number, request: string): Promise<string> {
+async function rawHttp10Request(
+  port: number,
+  request: string,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const socket = net.connect(port, "127.0.0.1", () => {
       // Not `.end`: Then the server closes the connection before a response
