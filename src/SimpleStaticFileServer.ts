@@ -1004,7 +1004,9 @@ function removeQuery(url: string): string {
 
 function decodePercentageEscapes(url: string): string {
   try {
-    return decodeURIComponent(url);
+    const decoded = decodeURIComponent(url);
+    // File paths cannot contain null bytes (`fs` throws).
+    return decoded.includes("\0") ? url : decoded;
   } catch {
     return url;
   }

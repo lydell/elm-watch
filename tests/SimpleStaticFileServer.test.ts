@@ -448,6 +448,25 @@ describe("SimpleStaticFileServer", () => {
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/%E0%A4%A</pre>
           `);
+          // Null byte: Used as-is, since file paths cannot contain null bytes.
+          expect(await get("/file.txt%00")).toMatchInlineSnapshot(`
+            404
+            content-type: text/html; charset=utf-8
+
+                      <h1>404 – Not Found</h1>
+                      <p>The URL you requested does not point to any existing file.</p>
+                      
+                              <p>
+                                👉
+                                <a href="https://lydell.github.io/elm-watch/server/#indexhtml"
+                                  >How index.html files work</a
+                                >
+                                (for <code>Browser.application</code> programs)
+                              </p>
+                            
+                      <p>This is the absolute file path the URL resolves to:</p>
+                      <pre>/tmp/public/file.txt%00</pre>
+          `);
         },
       );
     });
