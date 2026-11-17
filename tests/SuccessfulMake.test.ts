@@ -3,7 +3,7 @@ import * as path from "path";
 import { describe, expect, test } from "vitest";
 
 import elmWatchCli, { elmWatch } from "../src/ElmWatch.ts";
-import { type Env, NO_COLOR } from "../src/Env.ts";
+import { __ELM_WATCH_MOCKED_TIMINGS, type Env, NO_COLOR } from "../src/Env.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
@@ -247,6 +247,52 @@ describe("successful make", () => {
         ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
         ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
       `);
+  });
+
+  test("synchronous postprocess shows up as postprocess (not queued)", async () => {
+    const dir = fixtureDir("successful-make");
+    await rimraf(path.join(dir, "build"));
+    const stdout = new CursorWriteStream();
+    const stderr = new MemoryWriteStream();
+    stdout.isTTY = true;
+    stderr.isTTY = true;
+    let outputDuringPostprocess = "";
+    // Real timings, not mocked ones.
+    const env: Env = { ...process.env, ...TEST_ENV };
+    delete env[__ELM_WATCH_MOCKED_TIMINGS];
+    const { targets, ...options } = await fixtureOptions(dir);
+
+    const exitCode = await elmWatch({
+      ...options,
+      targets: targets.map((target) => ({
+        ...target,
+        postprocess: (code: string) => {
+          outputDuringPostprocess = clean(stdout.getOutput());
+          const start = Date.now();
+          while (Date.now() - start < 200) {
+            // Busy wait, like heavy synchronous work.
+          }
+          return code;
+        },
+      })),
+      runMode: "make",
+      env,
+      stdin: new SilentReadStream(),
+      stdout,
+      stderr,
+      logDebug,
+    });
+
+    const output = clean(stdout.getOutput());
+    assertExitCode(0, exitCode, output, stderr.content, dir);
+
+    expect(outputDuringPostprocess).toMatch("⏳ main: postprocess");
+
+    const regex = /(\d+) ms R \| (\d+) ms P/u;
+    expect(output).toMatch(regex);
+    const [, queued = "", postprocess = ""] = regex.exec(output) ?? [];
+    expect(Number(queued)).toBeLessThan(200);
+    expect(Number(postprocess)).toBeGreaterThanOrEqual(200);
   });
 
   test("no postprocess", async () => {

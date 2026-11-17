@@ -1250,7 +1250,7 @@ async function postprocessHelper({
     });
   };
 
-  const { promise, kill } = runPostprocess({
+  const { run, kill } = runPostprocess({
     postprocess,
     code,
     compilationMode: outputState.compilationMode,
@@ -1260,7 +1260,7 @@ async function postprocessHelper({
   outputState.setStatus({ tag: "Postprocess", kill });
   updateStatusLineHelper();
 
-  const postprocessResult = await promise;
+  const postprocessResult = await run();
 
   // There’s no need doing the usual `if (outputState.dirty)` check here, since
   // we always `.kill()` running postprocessing when marking as dirty (which is

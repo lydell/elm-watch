@@ -36,7 +36,9 @@ export type PostprocessError =
     };
 
 // A function cannot be killed. Instead, we stop waiting for it and ignore
-// whatever it results in.
+// whatever it results in. `run` is separate from creating `kill`, so that the
+// caller can update the status first: A synchronous function does all of its
+// work inside the `run()` call.
 export function runPostprocess({
   postprocess,
   code,
@@ -47,7 +49,7 @@ export function runPostprocess({
   code: string;
   compilationMode: CompilationMode;
   runMode: RunMode;
-}): { promise: Promise<PostprocessResult>; kill: () => void } {
+}): { run: () => Promise<PostprocessResult>; kill: () => void } {
   let resolveKilled: (result: PostprocessResult) => void = () => {
     // Replaced below.
   };
@@ -55,7 +57,7 @@ export function runPostprocess({
     resolveKilled = resolve;
   });
 
-  const run = async (): Promise<PostprocessResult> => {
+  const runFunction = async (): Promise<PostprocessResult> => {
     let returnValue;
     try {
       returnValue = await postprocess.postprocessFunction(code, {
@@ -77,7 +79,7 @@ export function runPostprocess({
   };
 
   return {
-    promise: Promise.race([run(), killed]),
+    run: () => Promise.race([runFunction(), killed]),
     kill: () => {
       resolveKilled({ tag: "Killed" });
     },
