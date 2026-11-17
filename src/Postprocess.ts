@@ -44,7 +44,7 @@ export function runPostprocess({
   runMode,
 }: {
   postprocess: PostprocessToRun;
-  code: Buffer | string;
+  code: string;
   compilationMode: CompilationMode;
   runMode: RunMode;
 }): { promise: Promise<PostprocessResult>; kill: () => void } {
@@ -58,10 +58,10 @@ export function runPostprocess({
   const run = async (): Promise<PostprocessResult> => {
     let returnValue;
     try {
-      returnValue = await postprocess.postprocessFunction(
-        code.toString("utf8"),
-        { compilationMode, runMode },
-      );
+      returnValue = await postprocess.postprocessFunction(code, {
+        compilationMode,
+        runMode,
+      });
     } catch (error) {
       return {
         tag: "PostprocessFunctionError",

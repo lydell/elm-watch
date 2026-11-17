@@ -270,7 +270,7 @@ export type OutputStatus =
   | {
       tag: "QueuedForPostprocess";
       postprocess: PostprocessToRun;
-      code: Buffer | string;
+      code: string;
       elmCompiledTimestamp: number;
       recordFields: Set<string> | undefined;
     }

@@ -973,7 +973,7 @@ function handleOutputActionResultToCmd(
         outputPath: handleOutputActionResult.outputPath,
         message: {
           tag: "SuccessfullyCompiled",
-          code: handleOutputActionResult.code.toString("utf8"),
+          code: handleOutputActionResult.code,
           elmCompiledTimestamp: handleOutputActionResult.elmCompiledTimestamp,
           compilationMode: handleOutputActionResult.outputState.compilationMode,
         },

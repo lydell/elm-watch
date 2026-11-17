@@ -349,7 +349,7 @@ type NeedsPostprocessOutputAction = {
   output: IndexedOutput;
   postprocess: PostprocessToRun;
   priority: number;
-  code: Buffer | string;
+  code: string;
   elmCompiledTimestamp: number;
   recordFields: Set<string> | undefined;
 };
@@ -749,7 +749,7 @@ export type HandleOutputActionResult =
       tag: "FullyCompiledJS";
       outputPath: OutputPath;
       outputState: OutputState;
-      code: Buffer | string;
+      code: string;
       elmCompiledTimestamp: number;
     }
   | {
@@ -1073,9 +1073,9 @@ async function onCompileSuccess(
         }
 
         case "Postprocess": {
-          let buffer;
+          let code;
           try {
-            buffer = await readFile(outputPath.temporaryOutputPath);
+            code = await readFile(outputPath.temporaryOutputPath, "utf8");
           } catch (unknownError) {
             const error = toError(unknownError);
             outputState.setStatus({
@@ -1094,7 +1094,7 @@ async function onCompileSuccess(
           outputState.setStatus({
             tag: "QueuedForPostprocess",
             postprocess,
-            code: buffer,
+            code,
             elmCompiledTimestamp,
             recordFields: undefined,
           });
@@ -1283,7 +1283,7 @@ async function postprocessHelper({
   index: number;
   total: number;
   postprocess: PostprocessToRun;
-  code: Buffer | string;
+  code: string;
   elmCompiledTimestamp: number;
   recordFields: Set<string> | undefined;
 }): Promise<HandleOutputActionResult> {
@@ -1341,12 +1341,7 @@ async function postprocessHelper({
             );
             fs.writeFileSync(
               outputPath.theOutputPath,
-              typeof postprocessResult.code === "string"
-                ? clientCode + postprocessResult.code
-                : Buffer.concat([
-                    Buffer.from(clientCode),
-                    postprocessResult.code,
-                  ]),
+              clientCode + postprocessResult.code,
             );
             break;
           }
