@@ -32,6 +32,7 @@ import {
   absolutePathFromString,
   absoluteRealpath,
   hasPath,
+  isInsideDirectory,
   isSamePath,
 } from "./PathHelpers.ts";
 import type {
@@ -949,6 +950,13 @@ export function projectHasFilePathThatCanBeOpenedInEditor(
       ({ elmJsonPath, outputState }) =>
         isSamePath(filePath, elmJsonPath) ||
         hasPath(outputState.allRelatedElmFilePaths, filePath),
+    ) ||
+    // Packages typecheck all Elm files in their source directory (src/).
+    Array.from(project.packages.keys()).some(
+      (elmJsonPath) =>
+        isSamePath(filePath, elmJsonPath) ||
+        (filePath.endsWith(".elm") &&
+          isInsideDirectory(filePath, getPackageSourceDirectory(elmJsonPath))),
     ) ||
     project.externalErrors.sources.some(([, errors]) =>
       errors.some(

@@ -10,6 +10,7 @@ import {
   initProject,
   OutputState,
   type Project,
+  projectHasFilePathThatCanBeOpenedInEditor,
   projectToDebug,
 } from "../src/Project.ts";
 import {
@@ -26,6 +27,7 @@ import {
 import { removeCoveredWatchDirs } from "../src/Watcher.ts";
 import type { WebSocketUrl } from "../src/WebSocketUrl.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
+import { makeProject, projectPath } from "./ProjectHelpers.ts";
 
 const getNow: GetNow = () => new Date();
 
@@ -518,5 +520,32 @@ describe("Project", () => {
         allowedHosts: ["env.example.com"],
       });
     });
+  });
+});
+
+describe("projectHasFilePathThatCanBeOpenedInEditor", () => {
+  const projectWithPackage = makeProject({
+    elmJsons: { app: [["Main", "clean"]] },
+    packages: { pkg: ["Package", "clean"] },
+  });
+
+  const canOpen = (unixPath: string): boolean =>
+    projectHasFilePathThatCanBeOpenedInEditor(
+      projectWithPackage,
+      projectPath(unixPath),
+    );
+
+  test("application files", () => {
+    expect(canOpen("/project/app/elm.json")).toBe(true);
+    expect(canOpen("/project/src/Main.elm")).toBe(true);
+    expect(canOpen("/project/src/Other.elm")).toBe(false);
+  });
+
+  test("package files", () => {
+    expect(canOpen("/project/pkg/elm.json")).toBe(true);
+    expect(canOpen("/project/pkg/src/Package.elm")).toBe(true);
+    expect(canOpen("/project/pkg/src/Nested/Module.elm")).toBe(true);
+    expect(canOpen("/project/pkg/tests/Tests.elm")).toBe(false);
+    expect(canOpen("/project/pkg/src")).toBe(false);
   });
 });

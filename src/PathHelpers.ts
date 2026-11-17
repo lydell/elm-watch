@@ -33,6 +33,18 @@ export function hasPath(
   );
 }
 
+// Like `isSamePath`, but for whether `absolutePath` is somewhere inside `dir`.
+export function isInsideDirectory(
+  absolutePath: AbsolutePath,
+  dir: AbsolutePath,
+): boolean {
+  const prefix = dir + path.sep;
+  return (
+    absolutePath.startsWith(prefix) ||
+    (IS_WINDOWS && absolutePath.toLowerCase().startsWith(prefix.toLowerCase()))
+  );
+}
+
 export function absoluteDirname(absolutePath: AbsolutePath): AbsolutePath {
   return markAsAbsolutePath(path.dirname(absolutePath));
 }
