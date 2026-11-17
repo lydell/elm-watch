@@ -140,12 +140,12 @@ export const SEND_KEY_DO_NOT_USE_ALL_THE_TIME: unique symbol = Symbol(
 // to be bundled with.
 //
 // The targets on a page might come from different versions of elm-watch. Bump
-// `UI_VERSION` whenever `Ui` or anything it uses changes (such as
-// `TargetSnapshot`). Targets with a different UI version get a UI of their own.
-export const UI_VERSION = 1;
+// the version in `__ELM_WATCH.UI_V1` (in client.ts) whenever `Ui` or anything
+// it uses changes (such as `TargetSnapshot`). Targets with a different UI
+// version get a UI of their own.
 
-// Documented, for hiding the UI with CSS, so it does not change with
-// `UI_VERSION`. Several UIs (from different versions) get the same ID, which is
+// Documented, for hiding the UI with CSS, so it does not change with the UI
+// version. Several UIs (from different versions) get the same ID, which is
 // fine since nothing looks the container up by ID. elm-watch 1.x uses
 // `elm-watch`, and reuses an existing element with that ID.
 const CONTAINER_ID = "elm-watch2";
