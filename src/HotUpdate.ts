@@ -326,19 +326,25 @@ export const init = (
     ...(hasErrorReporter
       ? [{ tag: "WebSocketSendExternalErrors", webSocket: undefined } as const]
       : []),
-    ...targetsErrors.map((targetError): Cmd => ({
-      tag: "WebSocketSendToOutput",
-      outputPath: targetError.outputPath,
-      message: {
-        tag: "StatusChanged",
-        status: {
-          tag: "ElmJsonError",
-          error: Errors.toPlainString(Compile.renderTargetError(targetError)),
-        },
-      },
-    })),
+    ...targetsErrors.map(webSocketSendTargetError),
   ],
 ];
+
+function webSocketSendTargetError(
+  targetError: ApplicationTargetErrorWithMetadata,
+): Cmd {
+  return {
+    tag: "WebSocketSendToOutput",
+    outputPath: targetError.outputPath,
+    message: {
+      tag: "StatusChanged",
+      status: {
+        tag: "ElmJsonError",
+        error: Errors.toPlainString(Compile.renderTargetError(targetError)),
+      },
+    },
+  };
+}
 
 export function update(
   terminalConfig: TerminalConfig,
@@ -688,28 +694,11 @@ export function update(
           ];
         }
 
-        case "ElmJsonError": {
-          const targetError = result.error;
+        case "ElmJsonError":
           return [
             model,
-            [
-              {
-                tag: "WebSocketSendToOutput",
-                outputPath: targetError.outputPath,
-                message: {
-                  tag: "StatusChanged",
-                  status: {
-                    tag: "ElmJsonError",
-                    error: Errors.toPlainString(
-                      Compile.renderTargetError(targetError),
-                    ),
-                  },
-                },
-              },
-              ...connectCmds,
-            ],
+            [webSocketSendTargetError(result.error), ...connectCmds],
           ];
-        }
 
         // The browser shows the error.
         default:
