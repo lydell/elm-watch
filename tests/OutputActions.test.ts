@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { getOutputActions, type OutputActions } from "../src/Compile.ts";
-import type { Project } from "../src/Project.ts";
+import { getFlatOutputs, type Project } from "../src/Project.ts";
 import {
   markAsTargetName,
   type RunMode,
@@ -406,6 +406,38 @@ describe("getOutputActions", () => {
         elm make: A (Dirty, priority 1)
         without action: B
         executing: 0, interrupted: 1, errors: 1
+      `);
+    });
+
+    test("queued postprocess for changed files counts as interrupted", () => {
+      const project = makeProject({
+        elmJsons: { a: [["A", "queuedForPostprocess"]] },
+      });
+      // A file changed while waiting for postprocess, so the code is outdated.
+      for (const { outputState } of getFlatOutputs(project)) {
+        outputState.dirty = true;
+      }
+      expect(
+        run({
+          project,
+          includeInterrupted: false,
+          prioritizedOutputs: priorities({ A: 1 }),
+        }),
+      ).toMatchInlineSnapshot(`
+        (no actions)
+        without action: A
+        executing: 0, interrupted: 1, errors: 0
+      `);
+      expect(
+        run({
+          project,
+          includeInterrupted: true,
+          prioritizedOutputs: priorities({ A: 1 }),
+        }),
+      ).toMatchInlineSnapshot(`
+        elm make: A (Dirty, priority 1)
+        without action: -
+        executing: 0, interrupted: 1, errors: 0
       `);
     });
   });

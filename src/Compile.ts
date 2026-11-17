@@ -424,6 +424,15 @@ export function getOutputActions({
         }
       };
 
+      const interrupted = (): void => {
+        numInterrupted++;
+        if (includeInterrupted) {
+          needsElm("Dirty");
+        } else {
+          outputsWithoutAction.push(output);
+        }
+      };
+
       switch (outputState.status.tag) {
         case "ElmMake":
         case "ElmMakeTypecheckOnly":
@@ -444,23 +453,24 @@ export function getOutputActions({
           break;
 
         case "QueuedForPostprocess":
-          postprocessActions.push({
-            tag: "NeedsPostprocess",
-            output,
-            postprocess: outputState.status.postprocess,
-            priority: priority ?? 0,
-            code: outputState.status.code,
-            elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
-          });
+          // If a file changed while waiting, the code is outdated. That’s
+          // like a killed postprocess.
+          if (outputState.dirty) {
+            interrupted();
+          } else {
+            postprocessActions.push({
+              tag: "NeedsPostprocess",
+              output,
+              postprocess: outputState.status.postprocess,
+              priority: priority ?? 0,
+              code: outputState.status.code,
+              elmCompiledTimestamp: outputState.status.elmCompiledTimestamp,
+            });
+          }
           break;
 
         case "Interrupted":
-          numInterrupted++;
-          if (includeInterrupted) {
-            needsElm("Dirty");
-          } else {
-            outputsWithoutAction.push(output);
-          }
+          interrupted();
           break;
 
         case "Success":
