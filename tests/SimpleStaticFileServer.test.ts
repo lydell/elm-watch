@@ -29,16 +29,21 @@ import { fixtureDir, run } from "./HotHelpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
 
-// Lets tests get hold of the read streams that `serveStatic` creates.
-const readStreams = vi.hoisted((): Array<fs.ReadStream> => []);
+// Lets tests get hold of the read streams that `serveStatic` creates, and do
+// things right before a file is opened.
+const readStreamMock = vi.hoisted(() => ({
+  streams: [] as Array<fs.ReadStream>,
+  beforeCreate: undefined as ((filePath: string) => void) | undefined,
+}));
 
 vi.mock("fs", async (importOriginal) => {
   const original = await importOriginal<typeof fs>();
   return {
     ...original,
     createReadStream: (...args: Parameters<typeof fs.createReadStream>) => {
+      readStreamMock.beforeCreate?.(args[0].toString());
       const readStream = original.createReadStream(...args);
-      readStreams.push(readStream);
+      readStreamMock.streams.push(readStream);
       return readStream;
     },
   };
@@ -144,22 +149,28 @@ function mkfifo(filePath: string): void {
 // Node.js’ HTTP client always sends a Host header, and Node.js’ HTTP server
 // rejects HTTP/1.1 requests without one. HTTP/1.0 does not require it.
 async function http10RequestWithoutHost(port: number): Promise<string> {
+  const response = await rawHttp10Request(port, "GET / HTTP/1.0\r\n\r\n");
+  return [
+    response.split("\r\n", 1)[0],
+    /<main>([^]*)<\/main>/.exec(response)?.[1] ?? response,
+  ].join("\n");
+}
+
+// Returns everything the server sends, until it closes the connection (which
+// it does after each HTTP/1.0 response).
+async function rawHttp10Request(port: number, request: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const socket = net.connect(port, "127.0.0.1", () => {
-      socket.end("GET / HTTP/1.0\r\n\r\n");
+      // Not `.end`: Then the server closes the connection before a response
+      // that needs to wait for a file.
+      socket.write(request);
     });
     const chunks: Array<Buffer> = [];
     socket.on("data", (chunk: Buffer) => {
       chunks.push(chunk);
     });
     socket.on("end", () => {
-      const response = Buffer.concat(chunks).toString();
-      resolve(
-        [
-          response.split("\r\n", 1)[0],
-          /<main>([^]*)<\/main>/.exec(response)?.[1] ?? response,
-        ].join("\n"),
-      );
+      resolve(Buffer.concat(chunks).toString());
     });
     socket.on("error", reject);
   });
@@ -1168,7 +1179,7 @@ describe("SimpleStaticFileServer", () => {
           fs.writeFileSync(path.join(dir, "big.txt"), "x".repeat(10_000_000));
         },
         async (_get, port) => {
-          readStreams.length = 0;
+          readStreamMock.streams.length = 0;
           await new Promise<void>((resolve, reject) => {
             const request = http.get(
               `http://127.0.0.1:${port}/big.txt`,
@@ -1181,10 +1192,79 @@ describe("SimpleStaticFileServer", () => {
             );
             request.on("error", reject);
           });
-          expect(readStreams).toHaveLength(1);
+          expect(readStreamMock.streams).toHaveLength(1);
           await vi.waitFor(() => {
-            expect(readStreams[0]?.closed).toBe(true);
+            expect(readStreamMock.streams[0]?.closed).toBe(true);
           });
+        },
+      );
+    });
+
+    test("file grows after its size was checked", async () => {
+      await withServer(
+        (dir) => {
+          fs.writeFileSync(path.join(dir, "file.txt"), "0123456789");
+        },
+        async (_get, port) => {
+          readStreamMock.beforeCreate = (filePath) => {
+            fs.appendFileSync(filePath, "EXTRA");
+          };
+          try {
+            // Node.js’ HTTP client stops reading at the Content-Length, so
+            // read the raw response to see if anything comes after it.
+            const response = await rawHttp10Request(
+              port,
+              "GET /file.txt HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n",
+            );
+            expect(response).toMatch(/\r\ncontent-length: 10\r\n/i);
+            expect(response.split("\r\n\r\n")[1]).toBe("0123456789");
+          } finally {
+            readStreamMock.beforeCreate = undefined;
+          }
+        },
+      );
+    });
+
+    test("empty files", async () => {
+      await withServer(
+        (dir) => {
+          fs.writeFileSync(path.join(dir, "empty.txt"), "");
+          fs.mkdirSync(path.join(dir, "app"));
+          fs.writeFileSync(path.join(dir, "app", "index.html"), "");
+        },
+        async (get) => {
+          expect(await get("/empty.txt")).toMatchInlineSnapshot(`
+            200
+            content-type: text/plain; charset=utf-8
+            content-length: 0
+          `);
+          // Index fallbacks add a comment, even to empty files.
+          expect(await get("/app/not-found")).toMatchInlineSnapshot(`
+            200
+            elm-watch-404: /tmp/public/app/not-found
+            elm-watch-index-html: /tmp/public/app/index.html
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/server/#indexhtml
+            content-type: text/html; charset=utf-8
+            <!-- elm-watch debug information:
+
+            hacky_hint If_you_see_this_in_a_JS_syntax_error_then_your_JS_file_was_not_found___Click_the_file_name_to_the_right_for_more_information /*
+
+            This response could have been served as a 404 (Not Found),
+            but was served as 200 (OK) instead, because an index.html file was found.
+            This is for supporting Browser.application programs.
+
+            If you expected a file to served rather than this HTML,
+            make sure the URL is correct or that this file exists:
+            /tmp/public/app/not-found
+
+            This is the closest index.html file, which was served instead:
+            /tmp/public/app/index.html
+
+            Learn more:
+            https://lydell.github.io/elm-watch/server/#indexhtml
+
+            -->
+          `);
         },
       );
     });

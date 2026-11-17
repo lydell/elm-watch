@@ -782,7 +782,24 @@ File size: ${fsSize} bytes`,
         );
         return;
       }
-      const readStream = fs.createReadStream(toAbsolutePath(fsPath), range);
+      if (fsSize === 0) {
+        // `fs.createReadStream` cannot be told to read nothing (see below).
+        writeHead(response, 200, {
+          ...contentTypeHeader,
+          "Content-Length":
+            extraContent === undefined ? 0 : Buffer.byteLength(extraContent),
+        });
+        response.end(extraContent);
+        return;
+      }
+      // Read no more than `fsSize`, even if the file has grown since we
+      // checked its size (like an output being rewritten). Otherwise, the
+      // extra bytes would go beyond the Content-Length, and end up in the
+      // next response on a keep-alive connection.
+      const readStream = fs.createReadStream(
+        toAbsolutePath(fsPath),
+        range ?? { start: 0, end: fsSize - 1 },
+      );
       readStream.on("error", (error) => {
         respondHtml(
           response,
