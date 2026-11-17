@@ -155,8 +155,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:6:5
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────── ⧘src/A.elm⧙:6:5⧘
 
       Something is off with the body of the \`a\` definition:
 
@@ -172,8 +171,7 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:11:5
+      ⧙── TYPE MISMATCH ──────────────────────────────────────────────── ⧘src/A.elm⧙:11:5⧘
 
       Something is off with the body of the \`b\` definition:
 
@@ -189,8 +187,7 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/hot/error-view/src/B.elm:6:5
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────── ⧘src/B.elm⧙:6:5⧘
 
       Something is off with the body of the \`c\` definition:
 
@@ -206,8 +203,7 @@ describe("hot error view", () => {
 
       ⧙Hint⧘: Try using ⧙String.fromInt⧘ to convert it to a string?
 
-      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/hot/error-view/src/Other.elm:7:20
+      ⧙── TYPE MISMATCH ──────────────────────────────────────────── ⧘src/Other.elm⧙:7:20⧘
 
       I cannot do addition with ⧙String⧘ values like this one:
 

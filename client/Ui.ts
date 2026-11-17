@@ -1742,7 +1742,6 @@ const CLASS = {
   overlayBottom: "overlayBottom",
   overlayError: "overlayError",
   overlayErrorHeader: "overlayErrorHeader",
-  overlayErrorHeaderInline: "overlayErrorHeaderInline",
   overlayFooter: "overlayFooter",
   overlayKeyHint: "overlayKeyHint",
   overlayKeyHintNote: "overlayKeyHintNote",
@@ -1903,15 +1902,10 @@ supported by browsers, for browsers without popover support.
 
 .${CLASS.overlayErrorHeader} {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: flex-start;
   padding: 0 2ch;
   word-break: break-word;
-}
-
-.${CLASS.overlayErrorHeaderInline} {
-  flex-direction: row;
-  flex-wrap: wrap;
   /* The location is right-aligned at the same width as in the terminal. */
   max-width: 100ch;
   box-sizing: border-box;
@@ -3309,9 +3303,7 @@ function viewOverlay({
   if (showAll || selection === undefined) {
     const items = group.files.flatMap((file) => file.errors);
     return [
-      ...items.map((item) =>
-        viewOverlayError(item, true, false, onKey, onOpenEditor),
-      ),
+      ...items.map((item) => viewOverlayError(item, true, onKey, onOpenEditor)),
       viewOverlayFooter(
         aboveFooter,
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
@@ -3353,7 +3345,7 @@ function viewOverlay({
   const openInName = editor.current?.name ?? "editor";
 
   return [
-    viewOverlayError(item, expanded, true, onKey, onOpenEditor),
+    viewOverlayError(item, expanded, onKey, onOpenEditor),
     viewOverlayFooter(
       aboveFooter,
       `🚨 ${position}`,
@@ -3503,9 +3495,6 @@ function viewOtherEditor(): Array<HTMLElement> {
 function viewOverlayError(
   item: OverlayErrorItem,
   expanded: boolean,
-  // When showing one error at a time, the location is shown next to the title,
-  // relative to the root, like in the terminal.
-  locationInTitle: boolean,
   onKey: (key: OverlayKey) => void,
   onOpenEditor: (item: OverlayErrorItem, location: LocationToOpen) => void,
 ): HTMLElement {
@@ -3521,11 +3510,7 @@ function viewOverlayError(
     },
     h(
       HTMLDivElement,
-      {
-        className: locationInTitle
-          ? `${CLASS.overlayErrorHeader} ${CLASS.overlayErrorHeaderInline}`
-          : CLASS.overlayErrorHeader,
-      },
+      { className: CLASS.overlayErrorHeader },
       h(
         HTMLSpanElement,
         {
@@ -3538,41 +3523,25 @@ function viewOverlayError(
       ),
       error.location === undefined
         ? undefined
-        : locationInTitle
-          ? h(HTMLSpanElement, { className: CLASS.errorTitleSpacer })
-          : undefined,
+        : h(HTMLSpanElement, { className: CLASS.errorTitleSpacer }),
       error.location === undefined
         ? undefined
-        : locationInTitle
-          ? h(
-              HTMLSpanElement,
-              {
-                className: CLASS.errorTitleLocation,
-                style: {
-                  backgroundColor: error.backgroundColor,
-                },
+        : h(
+            HTMLSpanElement,
+            {
+              className: CLASS.errorTitleLocation,
+              style: {
+                backgroundColor: error.backgroundColor,
               },
-              viewErrorLocation(
-                item.sendKey !== undefined,
-                error.location,
-                true,
-                (location) => {
-                  onOpenEditor(item, location);
-                },
-              ),
-            )
-          : h(
-              HTMLParagraphElement,
-              {},
-              viewErrorLocation(
-                item.sendKey !== undefined,
-                error.location,
-                false,
-                (location) => {
-                  onOpenEditor(item, location);
-                },
-              ),
+            },
+            viewErrorLocation(
+              item.sendKey !== undefined,
+              error.location,
+              (location) => {
+                onOpenEditor(item, location);
+              },
             ),
+          ),
     ),
     h(HTMLPreElement, {
       innerHTML: expanded
@@ -3701,41 +3670,39 @@ function viewOverlayFooter(
 function viewErrorLocation(
   clickable: boolean,
   location: ErrorLocation,
-  relative: boolean,
   onOpenEditor: (location: LocationToOpen) => void,
-): HTMLElement | string {
+): HTMLElement {
   switch (location.tag) {
     case "FileOnly":
       return viewErrorLocationButton(
         clickable,
         { file: location.file, line: 1, column: 1 },
-        [relative ? location.relativeFile : location.file],
+        [location.relativeFile],
         onOpenEditor,
       );
 
     case "FileWithLineAndColumn": {
-      const lineAndColumn = `:${location.line}:${location.column}`;
       return viewErrorLocationButton(
         clickable,
         location,
-        relative
-          ? [
-              location.relativeFile,
-              h(HTMLSpanElement, { className: CLASS.dim }, lineAndColumn),
-            ]
-          : [`${location.file}${lineAndColumn}`],
+        [
+          location.relativeFile,
+          h(
+            HTMLSpanElement,
+            { className: CLASS.dim },
+            `:${location.line}:${location.column}`,
+          ),
+        ],
         onOpenEditor,
       );
     }
 
     case "Target":
-      return relative
-        ? h(
-            HTMLSpanElement,
-            { className: CLASS.dim },
-            `Target: ${location.targetName}`,
-          )
-        : `Target: ${location.targetName}`;
+      return h(
+        HTMLSpanElement,
+        { className: CLASS.dim },
+        `Target: ${location.targetName}`,
+      );
   }
 }
 

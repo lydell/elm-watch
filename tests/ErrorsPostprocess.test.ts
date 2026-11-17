@@ -12,8 +12,7 @@ describe("errors", () => {
     test("fail to read Elm’s output", async () => {
       expect(await runWithBadElmBin("exit-0-no-write", { postprocess: true }))
         .toMatchInlineSnapshot(`
-          ⧙── TROUBLE READING OUTPUT ──────────────────────────────────────────────────────⧘
-          ⧙Target: app⧘
+          ⧙── TROUBLE READING OUTPUT ────────────────────────────────────────── ⧘⧙Target: app⧘
 
           I managed to compile your code. Then I tried to read the output:
 
@@ -39,8 +38,7 @@ describe("errors", () => {
           },
         }),
       ).toMatchInlineSnapshot(`
-        ⧙── TROUBLE WRITING OUTPUT ──────────────────────────────────────────────────────⧘
-        ⧙Target: Main⧘
+        ⧙── TROUBLE WRITING OUTPUT ───────────────────────────────────────── ⧘⧙Target: Main⧘
 
         I managed to compile your code and read the generated file:
 
@@ -58,8 +56,7 @@ describe("errors", () => {
 
     test("postprocess in elm-watch.json is no longer supported", async () => {
       expect(await run("old-postprocess", ["make"])).toMatchInlineSnapshot(`
-        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/old-postprocess/elm-watch.json
+        ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -90,8 +87,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙── TROUBLE WRITING DUMMY OUTPUT ────────────────────────────────────────────────⧘
-        ⧙Target: Main⧘
+        ⧙── TROUBLE WRITING DUMMY OUTPUT ─────────────────────────────────── ⧘⧙Target: Main⧘
 
         There are no WebSocket connections for this target, so I only typecheck the
         code. That went well. Then I tried to write a dummy output file here:

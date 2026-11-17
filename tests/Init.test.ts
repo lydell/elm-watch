@@ -169,8 +169,7 @@ describe("init", () => {
     assertExitCode(1, exitCode, stdout.content, stderr.content, dir);
     expect(stderr.content).toBe("");
     expect(clean(stdout.content)).toMatchInlineSnapshot(`
-      ⧙── TROUBLE READING elm-watch.json ──────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/init/already-exists-as-folder/elm-watch.json
+      ⧙── TROUBLE READING elm-watch.json ─────────────────────────────── ⧘elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 

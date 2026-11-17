@@ -786,8 +786,7 @@ describe("init --javascript and --typescript", () => {
   test("invalid elm-watch.json", async () => {
     const { stdout } = await runInit("invalid", 1, ["--javascript"]);
     expect(stdout).toMatchInlineSnapshot(`
-      ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/init-entrypoint/invalid/elm-watch.json
+      ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 

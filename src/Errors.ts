@@ -244,11 +244,10 @@ export function toTerminalString(
   errorTemplate: ErrorTemplate,
   width: number,
   noColor: boolean,
-  // When showing one error at a time: Whether to collapse long code excerpts,
-  // and the location goes on the title line, relative to `pathsRelativeTo`
-  // (opening it in the editor is just a key press away, so the full path is
-  // just noise).
-  oneAtATime?: { collapse: boolean; pathsRelativeTo: AbsolutePath },
+  // File locations are shown relative to this. `undefined` means absolute.
+  pathsRelativeTo: AbsolutePath | undefined,
+  // Collapse long code excerpts (when showing one error at a time).
+  collapse = false,
 ): string {
   const renderPiece = noColor
     ? (piece: Piece): string => piece.text
@@ -260,9 +259,9 @@ export function toTerminalString(
   );
 
   const titleLocation =
-    oneAtATime === undefined || location === undefined
+    location === undefined
       ? []
-      : renderRelativeErrorLocation(location, oneAtATime.pathsRelativeTo);
+      : renderErrorLocation(location, pathsRelativeTo);
   // Box drawing characters render as a solid line, and are supported by the
   // fonts of the Windows console too.
   const prefix = `── ${title} `;
@@ -298,11 +297,8 @@ export function toTerminalString(
 
   return [
     titleWithSeparator,
-    ...(location === undefined || oneAtATime !== undefined
-      ? []
-      : [renderPiece(renderErrorLocation(location))]),
     "",
-    oneAtATime?.collapse === true ? (collapsedContent ?? content) : content,
+    collapse ? (collapsedContent ?? content) : content,
   ].join("\n");
 }
 
@@ -320,16 +316,16 @@ export function getErrorLocation(
 }
 
 export function toPlainString(errorTemplate: ErrorTemplate): string {
-  return toTerminalString(errorTemplate, DEFAULT_COLUMNS, true);
+  return toTerminalString(errorTemplate, DEFAULT_COLUMNS, true, undefined);
 }
 
 export function toHtml(
   errorTemplate: ErrorTemplate,
   theme: Theme.Theme,
   noColor: boolean,
-  // File locations also get a path relative to this, for showing one error at
-  // a time (the browser can’t calculate relative paths itself, and doesn’t
-  // know where elm-watch was started from).
+  // File locations also get a path relative to this (the browser can’t
+  // calculate relative paths itself, and doesn’t know where elm-watch was
+  // started from).
   pathsRelativeTo: AbsolutePath,
 ): {
   title: string;
@@ -433,20 +429,9 @@ function fancyToPlainErrorLocation(
   }
 }
 
-function renderErrorLocation(location: ErrorLocation): Piece {
-  switch (location.tag) {
-    case "FileOnly":
-      return text(location.file);
-    case "FileWithLineAndColumn":
-      return text(`${location.file}:${location.line}:${location.column}`);
-    case "Target":
-      return dim(`Target: ${location.targetName}`);
-  }
-}
-
-function renderRelativeErrorLocation(
+function renderErrorLocation(
   location: ErrorLocation,
-  pathsRelativeTo: AbsolutePath,
+  pathsRelativeTo: AbsolutePath | undefined,
 ): Array<Piece> {
   switch (location.tag) {
     case "FileOnly":
@@ -457,7 +442,7 @@ function renderRelativeErrorLocation(
         dim(`:${location.line}:${location.column}`),
       ];
     case "Target":
-      return [renderErrorLocation(location)];
+      return [dim(`Target: ${location.targetName}`)];
   }
 }
 
@@ -479,11 +464,13 @@ function withRelativeFile(
   }
 }
 
-export function relativeErrorFile(
-  pathsRelativeTo: AbsolutePath,
+function relativeErrorFile(
+  pathsRelativeTo: AbsolutePath | undefined,
   file: AbsolutePath,
 ): string {
-  return path.relative(pathsRelativeTo, file);
+  return pathsRelativeTo === undefined
+    ? file
+    : path.relative(pathsRelativeTo, file);
 }
 
 export function readElmWatchJson(

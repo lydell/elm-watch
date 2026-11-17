@@ -304,8 +304,7 @@ describe("hot", () => {
       elm-watch %VERSION%
       [Close elm-watch]
       🚨 Main elm.json or inputs error · 13:10:05
-      ── elm.json NOT FOUND ──────────────────────────────────────────────────────────
-      Target: Main
+      ── elm.json NOT FOUND ───────────────────────────────────────────── Target: Main
 
       I could not find the elm.json for this target:
 

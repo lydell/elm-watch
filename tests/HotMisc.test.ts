@@ -279,8 +279,7 @@ describe("hot", () => {
     fs.unlinkSync(symlink);
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙── INPUTS NOT FOUND ────────────────────────────────────────────────────────────⧘
-      ⧙Target: Main⧘
+      ⧙── INPUTS NOT FOUND ─────────────────────────────────────────────── ⧘⧙Target: Main⧘
 
       You asked me to compile these inputs:
 
@@ -292,8 +291,7 @@ describe("hot", () => {
 
       …
 
-      ⧙── DUPLICATE INPUTS ────────────────────────────────────────────────────────────⧘
-      ⧙Target: Main⧘
+      ⧙── DUPLICATE INPUTS ─────────────────────────────────────────────── ⧘⧙Target: Main⧘
 
       Some of your inputs seem to be duplicates!
 
@@ -307,8 +305,7 @@ describe("hot", () => {
 
       …
 
-      ⧙── DUPLICATE INPUTS ────────────────────────────────────────────────────────────⧘
-      ⧙Target: Main⧘
+      ⧙── DUPLICATE INPUTS ─────────────────────────────────────────────── ⧘⧙Target: Main⧘
 
       Some of your inputs seem to be duplicates!
 

@@ -205,7 +205,7 @@ export function makeTerminal({
     },
     errorTemplate(template) {
       stdout.write(
-        `${newlineIfNeeded()}${Errors.toTerminalString(template, config.columns, noColor)}\n`,
+        `${newlineIfNeeded()}${Errors.toTerminalString(template, config.columns, noColor, config.pathsRelativeTo)}\n`,
       );
     },
     debug(...args) {

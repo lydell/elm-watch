@@ -26,8 +26,7 @@ describe("errors", () => {
           },
         }),
       ).toMatchInlineSnapshot(`
-        ⧙── ELM NOT FOUND ───────────────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/valid/elm.json
+        ⧙── ELM NOT FOUND ────────────────────────────────────────────────────── ⧘elm.json
 
         I tried to execute ⧙elm⧘, but it does not appear to exist!
 
@@ -56,8 +55,7 @@ describe("errors", () => {
           },
         }),
       ).toMatchInlineSnapshot(`
-        ⧙── LAMDERA NOT FOUND ───────────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/lamdera-not-found/elm.json
+        ⧙── LAMDERA NOT FOUND ────────────────────────────────────────────────── ⧘elm.json
 
         I tried to execute ⧙lamdera⧘, but it does not appear to exist!
 
@@ -83,8 +81,7 @@ describe("errors", () => {
             "because process.env.PATH is undefined!",
           ),
       ).toMatchInlineSnapshot(`
-        ⧙── ELM NOT FOUND ───────────────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/valid/elm.json
+        ⧙── ELM NOT FOUND ────────────────────────────────────────────────────── ⧘elm.json
 
         I tried to execute ⧙elm⧘, but it does not appear to exist!
 
@@ -160,8 +157,7 @@ describe("errors", () => {
       ).toMatchInlineSnapshot(`
         🚨 Dependencies
 
-        ⧙── PROBLEM LOADING PACKAGE LIST ────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/valid/elm.json
+        ⧙── PROBLEM LOADING PACKAGE LIST ─────────────────────────────────────── ⧘elm.json
 
         I need the list of published packages to verify your dependencies, so I tried to
         fetch:
@@ -182,8 +178,7 @@ describe("errors", () => {
     test("elm install error – hot", async () => {
       expect(await runWithBadElmBin("install-error", { exitHotOnError: true }))
         .toMatchInlineSnapshot(`
-          ⧙── PROBLEM LOADING PACKAGE LIST ────────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/valid/elm.json
+          ⧙── PROBLEM LOADING PACKAGE LIST ─────────────────────────────────────── ⧘elm.json
 
           I need the list of published packages to verify your dependencies, so I tried to
           fetch:
@@ -205,8 +200,7 @@ describe("errors", () => {
       test("exit 0 + stderr", async () => {
         expect(await runWithBadElmBin("exit-0-stderr-install"))
           .toMatchInlineSnapshot(`
-            ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-            /Users/you/project/tests/fixtures/errors/valid/elm.json
+            ⧙── UNEXPECTED ELM OUTPUT ────────────────────────────────────────────── ⧘elm.json
 
             I tried to make sure all packages are installed by running the following commands:
 
@@ -228,8 +222,7 @@ describe("errors", () => {
       test("exit 1 + stderr not matching", async () => {
         expect(await runWithBadElmBin("exit-1-stderr-not-install-error-match"))
           .toMatchInlineSnapshot(`
-            ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-            /Users/you/project/tests/fixtures/errors/valid/elm.json
+            ⧙── UNEXPECTED ELM OUTPUT ────────────────────────────────────────────── ⧘elm.json
 
             I tried to make sure all packages are installed by running the following commands:
 
@@ -254,8 +247,7 @@ describe("errors", () => {
       test("exit 2 + no output", async () => {
         expect(await runWithBadElmBin("exit-2-no-output-install"))
           .toMatchInlineSnapshot(`
-            ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-            /Users/you/project/tests/fixtures/errors/valid/elm.json
+            ⧙── UNEXPECTED ELM OUTPUT ────────────────────────────────────────────── ⧘elm.json
 
             I tried to make sure all packages are installed by running the following commands:
 
@@ -281,8 +273,7 @@ describe("errors", () => {
         await runWithBadElmBinAndWrittenError("json-syntax-error");
 
       expect(output).toMatchInlineSnapshot(`
-        ⧙── TROUBLE WITH JSON REPORT ────────────────────────────────────────────────────⧘
-        ⧙Target: app⧘
+        ⧙── TROUBLE WITH JSON REPORT ──────────────────────────────────────── ⧘⧙Target: app⧘
 
         I ran the following commands:
 
@@ -327,8 +318,7 @@ describe("errors", () => {
         await runWithBadElmBinAndWrittenError("json-decode-error");
 
       expect(output).toMatchInlineSnapshot(`
-        ⧙── TROUBLE WITH JSON REPORT ────────────────────────────────────────────────────⧘
-        ⧙Target: app⧘
+        ⧙── TROUBLE WITH JSON REPORT ──────────────────────────────────────── ⧘⧙Target: app⧘
 
         I ran the following commands:
 
@@ -377,8 +367,7 @@ describe("errors", () => {
     test("error failed to write", async () => {
       expect(await runWithBadElmBin("json-error-failed-write"))
         .toMatchInlineSnapshot(`
-          ⧙── TROUBLE WITH JSON REPORT ────────────────────────────────────────────────────⧘
-          ⧙Target: app⧘
+          ⧙── TROUBLE WITH JSON REPORT ──────────────────────────────────────── ⧘⧙Target: app⧘
 
           I ran the following commands:
 
@@ -405,8 +394,7 @@ describe("errors", () => {
   describe("unexpected `elm make` output", () => {
     test("exit 0 + stdout", async () => {
       expect(await runWithBadElmBin("exit-0-stdout")).toMatchInlineSnapshot(`
-        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-        ⧙Target: app⧘
+        ⧙── UNEXPECTED ELM OUTPUT ─────────────────────────────────────────── ⧘⧙Target: app⧘
 
         I ran the following commands:
 
@@ -426,8 +414,7 @@ describe("errors", () => {
 
     test("exit 0 + stderr", async () => {
       expect(await runWithBadElmBin("exit-0-stderr")).toMatchInlineSnapshot(`
-        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-        ⧙Target: app⧘
+        ⧙── UNEXPECTED ELM OUTPUT ─────────────────────────────────────────── ⧘⧙Target: app⧘
 
         I ran the following commands:
 
@@ -447,8 +434,7 @@ describe("errors", () => {
 
     test("exit 1 + stdout", async () => {
       expect(await runWithBadElmBin("exit-1-stdout")).toMatchInlineSnapshot(`
-        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-        ⧙Target: app⧘
+        ⧙── UNEXPECTED ELM OUTPUT ─────────────────────────────────────────── ⧘⧙Target: app⧘
 
         I ran the following commands:
 
@@ -469,8 +455,7 @@ describe("errors", () => {
     test("exit 1 + stderr that isn’t json", async () => {
       expect(await runWithBadElmBin("exit-1-stderr-not-{"))
         .toMatchInlineSnapshot(`
-          ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-          ⧙Target: app⧘
+          ⧙── UNEXPECTED ELM OUTPUT ─────────────────────────────────────────── ⧘⧙Target: app⧘
 
           I ran the following commands:
 
@@ -497,8 +482,7 @@ describe("errors", () => {
 
     test("exit 2 + no output", async () => {
       expect(await runWithBadElmBin("exit-2-no-output")).toMatchInlineSnapshot(`
-        ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-        ⧙Target: app⧘
+        ⧙── UNEXPECTED ELM OUTPUT ─────────────────────────────────────────── ⧘⧙Target: app⧘
 
         I ran the following commands:
 
@@ -518,8 +502,7 @@ describe("errors", () => {
     test("exit 2 + both stdout and stderr", async () => {
       expect(await runWithBadElmBin("exit-2-both-stdout-and-stderr"))
         .toMatchInlineSnapshot(`
-          ⧙── UNEXPECTED ELM OUTPUT ───────────────────────────────────────────────────────⧘
-          ⧙Target: app⧘
+          ⧙── UNEXPECTED ELM OUTPUT ─────────────────────────────────────────── ⧘⧙Target: app⧘
 
           I ran the following commands:
 

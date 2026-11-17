@@ -1886,6 +1886,7 @@ export function errorsToTerminalStrings(
           template,
           terminalConfig.columns,
           terminalConfig.noColor,
+          terminalConfig.pathsRelativeTo,
         ),
       ),
     ),

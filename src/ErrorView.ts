@@ -194,10 +194,8 @@ export function render({
       error.template,
       terminalConfig.columns,
       terminalConfig.noColor,
-      {
-        collapse: !expanded,
-        pathsRelativeTo: terminalConfig.pathsRelativeTo,
-      },
+      terminalConfig.pathsRelativeTo,
+      !expanded,
     ),
     "",
     ...noticeLines,

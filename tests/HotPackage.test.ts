@@ -120,8 +120,7 @@ describe("package targets in hot mode", () => {
     // The targets are compiled in parallel, so the order of the status lines
     // varies.
     expect(onlyErrorMessages(terminal())).toMatchInlineSnapshot(`
-      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/package/src/Package/Internal.elm:6:5
+      ⧙── TYPE MISMATCH ── ⧘tests/fixtures/package/src/Package/Internal.elm⧙:6:5⧘
 
       Something is off with the body of the \`greeting\` definition:
 
@@ -163,8 +162,7 @@ describe("package targets in hot mode", () => {
     });
 
     expect(onlyErrorMessages(terminal())).toMatchInlineSnapshot(`
-      ⧙── elm.json TYPE MISMATCH ──────────────────────────────────────────────────────⧘
-      ⧙Target: Package⧘
+      ⧙── elm.json TYPE MISMATCH ────────────────────────────────────── ⧘⧙Target: Package⧘
 
       This target has ⧙"type": "package"⧘, but its ⧙elm.json⧘ has ⧙"type": "application"⧘:
 

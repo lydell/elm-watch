@@ -273,8 +273,7 @@ describe("library", () => {
     expect(stdout).toMatchInlineSnapshot(`
       🚨 main
 
-      ⧙── POSTPROCESS ERROR ───────────────────────────────────────────────────────────⧘
-      ⧙Target: main⧘
+      ⧙── POSTPROCESS ERROR ────────────────────────────────────────────── ⧘⧙Target: main⧘
 
       I ran your postprocess function for this target.
 
@@ -307,8 +306,7 @@ describe("library", () => {
     expect(stdout).toMatchInlineSnapshot(`
       🚨 main
 
-      ⧙── INVALID POSTPROCESS RESULT ──────────────────────────────────────────────────⧘
-      ⧙Target: main⧘
+      ⧙── INVALID POSTPROCESS RESULT ───────────────────────────────────── ⧘⧙Target: main⧘
 
       I ran your postprocess function for this target.
 
@@ -593,13 +591,11 @@ describe("library", () => {
         🚨 translations
         ✅ main⧙                                                      1.23 s E | 31.2 s P⧘
 
-        ⧙── ESBUILD ─────────────────────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/library/ts/main.ts:12:9
+        ⧙── ESBUILD ── ⧘tests/fixtures/library/ts/main.ts⧙:12:9⧘
 
         Expected ⧙;⧘ but found ⧙foo⧘⧘
 
-        ⧙── ESBUILD ─────────────────────────────────────────────────────────────────────⧘
-        /absolute/file.ts
+        ⧙── ESBUILD ──────────────────────────────────────── ⧘../../../../absolute/file.ts
 
         Only a file
 

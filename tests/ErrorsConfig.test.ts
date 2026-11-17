@@ -31,8 +31,7 @@ describe("errors", () => {
   test("elm-watch.json is a folder", async () => {
     expect(await run("elm-watch-json-is-folder", ["make"]))
       .toMatchInlineSnapshot(`
-        ⧙── TROUBLE READING elm-watch.json ──────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-is-folder/elm-watch.json
+        ⧙── TROUBLE READING elm-watch.json ─────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -45,8 +44,7 @@ describe("errors", () => {
   test("elm-watch.json bad json", async () => {
     expect(await run("elm-watch-json-bad-json", ["make"]))
       .toMatchInlineSnapshot(`
-        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-json/elm-watch.json
+        ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -61,8 +59,7 @@ describe("errors", () => {
     test("empty outputs", async () => {
       expect(await run("elm-watch-json-decode-error/empty-outputs", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/empty-outputs/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -81,8 +78,7 @@ describe("errors", () => {
             "make",
           ]),
         ).toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/starts-with-dash/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -101,8 +97,7 @@ describe("errors", () => {
             "make",
           ]),
         ).toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/starts-with-whitespace/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -121,8 +116,7 @@ describe("errors", () => {
             "make",
           ]),
         ).toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/contains-newline/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -141,8 +135,7 @@ describe("errors", () => {
             "make",
           ]),
         ).toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-bad-target-name/ends-with-whitespace/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -160,8 +153,7 @@ describe("errors", () => {
       expect(
         await run("elm-watch-json-decode-error/bad-output-extension", ["make"]),
       ).toMatchInlineSnapshot(`
-        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-output-extension/elm-watch.json
+        ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -181,8 +173,7 @@ describe("errors", () => {
           ["make"],
         ),
       ).toMatchInlineSnapshot(`
-        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-output-extension-just-dot-js/elm-watch.json
+        ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -197,8 +188,7 @@ describe("errors", () => {
     test("/dev/null is not a valid output", async () => {
       expect(await run("elm-watch-json-decode-error/bad-dev-null", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-dev-null/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -214,8 +204,7 @@ describe("errors", () => {
       expect(
         await run("elm-watch-json-decode-error/old-target-format", ["make"]),
       ).toMatchInlineSnapshot(`
-        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/old-target-format/elm-watch.json
+        ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -236,8 +225,7 @@ describe("errors", () => {
     test("unknown target type", async () => {
       expect(await run("elm-watch-json-decode-error/unknown-type", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-type/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -255,8 +243,7 @@ describe("errors", () => {
       expect(
         await run("elm-watch-json-decode-error/bad-elm-json-path", ["make"]),
       ).toMatchInlineSnapshot(`
-        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-elm-json-path/elm-watch.json
+        ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -271,8 +258,7 @@ describe("errors", () => {
     test("unknown field", async () => {
       expect(await run("elm-watch-json-decode-error/unknown-field", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/unknown-field/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -293,8 +279,7 @@ describe("errors", () => {
     test("empty list of inputs", async () => {
       expect(await run("elm-watch-json-decode-error/empty-inputs", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/empty-inputs/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -310,8 +295,7 @@ describe("errors", () => {
       expect(
         await run("elm-watch-json-decode-error/bad-input-extension", ["make"]),
       ).toMatchInlineSnapshot(`
-        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-input-extension/elm-watch.json
+        ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -329,8 +313,7 @@ describe("errors", () => {
           "make",
         ]),
       ).toMatchInlineSnapshot(`
-        ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/bad-input-module-name/elm-watch.json
+        ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
         I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -345,8 +328,7 @@ describe("errors", () => {
     test("too low port", async () => {
       expect(await run("elm-watch-json-decode-error/too-low-port", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/too-low-port/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -361,8 +343,7 @@ describe("errors", () => {
     test("too high port", async () => {
       expect(await run("elm-watch-json-decode-error/too-high-port", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── INVALID elm-watch.json FORMAT ───────────────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/elm-watch-json-decode-error/too-high-port/elm-watch.json
+          ⧙── INVALID elm-watch.json FORMAT ──────────────────────────────── ⧘elm-watch.json
 
           I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -481,8 +462,7 @@ describe("errors", () => {
     expect(
       await run("valid", ["make", "build/app.js", "build/adnim.js", "app.js"]),
     ).toMatchInlineSnapshot(`
-      ⧙── UNKNOWN TARGETS SUBSTRINGS ──────────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/errors/valid/elm-watch.json
+      ⧙── UNKNOWN TARGETS SUBSTRINGS ─────────────────────────────────── ⧘elm-watch.json
 
       I read inputs, outputs and options from ⧙elm-watch.json⧘.
 
@@ -504,8 +484,7 @@ describe("errors", () => {
 
   test("duplicate outputs", async () => {
     expect(await run("duplicate-outputs", ["make"])).toMatchInlineSnapshot(`
-      ⧙── DUPLICATE OUTPUTS ───────────────────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/errors/duplicate-outputs/elm-watch.json
+      ⧙── DUPLICATE OUTPUTS ──────────────────────────────────────────── ⧘elm-watch.json
 
       Some of your outputs seem to be duplicates!
 
@@ -525,8 +504,7 @@ describe("errors", () => {
   describe("inputs errors", () => {
     test("inputs not found", async () => {
       expect(await run("inputs-not-found", ["make"])).toMatchInlineSnapshot(`
-        ⧙── INPUTS NOT FOUND ────────────────────────────────────────────────────────────⧘
-        ⧙Target: main⧘
+        ⧙── INPUTS NOT FOUND ─────────────────────────────────────────────── ⧘⧙Target: main⧘
 
         You asked me to compile these inputs:
 
@@ -576,8 +554,7 @@ describe("errors", () => {
 
       test("make", async () => {
         expect(await runAbsolute(dir, ["make"])).toMatchInlineSnapshot(`
-          ⧙── INPUTS FAILED TO RESOLVE ────────────────────────────────────────────────────⧘
-          ⧙Target: main⧘
+          ⧙── INPUTS FAILED TO RESOLVE ─────────────────────────────────────── ⧘⧙Target: main⧘
 
           I start by checking if the inputs you give me exist,
           but doing so resulted in errors!
@@ -592,8 +569,7 @@ describe("errors", () => {
       test("hot", async () => {
         expect(await runAbsolute(dir, ["hot"], { exitHotOnError: true }))
           .toMatchInlineSnapshot(`
-            ⧙── INPUTS FAILED TO RESOLVE ────────────────────────────────────────────────────⧘
-            ⧙Target: main⧘
+            ⧙── INPUTS FAILED TO RESOLVE ─────────────────────────────────────── ⧘⧙Target: main⧘
 
             I start by checking if the inputs you give me exist,
             but doing so resulted in errors!
@@ -609,8 +585,7 @@ describe("errors", () => {
     test("hot failure to read previous output file", async () => {
       expect(await run("output-is-folder", ["hot"], { exitHotOnError: true }))
         .toMatchInlineSnapshot(`
-          ⧙── TROUBLE CHECKING OUTPUT ─────────────────────────────────────────────────────⧘
-          ⧙Target: Main⧘
+          ⧙── TROUBLE CHECKING OUTPUT ──────────────────────────────────────── ⧘⧙Target: Main⧘
 
           I managed to typecheck your code. Then I tried to read part of the previous output,
           to see if I need to write a dummy output file there:
@@ -625,8 +600,7 @@ describe("errors", () => {
 
     test("duplicate inputs", async () => {
       expect(await run("duplicate-inputs", ["make"])).toMatchInlineSnapshot(`
-        ⧙── DUPLICATE INPUTS ────────────────────────────────────────────────────────────⧘
-        ⧙Target: main⧘
+        ⧙── DUPLICATE INPUTS ─────────────────────────────────────────────── ⧘⧙Target: main⧘
 
         Some of your inputs seem to be duplicates!
 
@@ -643,8 +617,7 @@ describe("errors", () => {
       fixtureDir("duplicate-inputs");
       expect(await run("duplicate-inputs-with-symlinks", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── DUPLICATE INPUTS ────────────────────────────────────────────────────────────⧘
-          ⧙Target: main⧘
+          ⧙── DUPLICATE INPUTS ─────────────────────────────────────────────── ⧘⧙Target: main⧘
 
           Some of your inputs seem to be duplicates!
 
@@ -667,8 +640,7 @@ describe("errors", () => {
   describe("elm.json errors", () => {
     test("elm.json not found, with long target name", async () => {
       expect(await run("elm-json-not-found", ["make"])).toMatchInlineSnapshot(`
-        ⧙── elm.json NOT FOUND ──────────────────────────────────────────────────────────⧘
-        ⧙Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo⧘
+        ⧙── elm.json NOT FOUND ── ⧘⧙Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo⧘
 
         I could not find the ⧙elm.json⧘ for this target:
 
@@ -688,8 +660,7 @@ describe("errors", () => {
           },
         }),
       ).toMatchInlineSnapshot(`
-        ── elm.json NOT FOUND ──────────────────────────────────────────────────────────
-        Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+        ── elm.json NOT FOUND ── Target: yooooooooooooooooooooooooooooloooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
 
         I could not find the elm.json for this target:
 
@@ -706,8 +677,7 @@ describe("errors", () => {
     test("package target with application elm.json", async () => {
       expect(await run("elm-json-type-mismatch-package", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── elm.json TYPE MISMATCH ──────────────────────────────────────────────────────⧘
-          ⧙Target: main⧘
+          ⧙── elm.json TYPE MISMATCH ───────────────────────────────────────── ⧘⧙Target: main⧘
 
           This target has ⧙"type": "package"⧘, but its ⧙elm.json⧘ has ⧙"type": "application"⧘:
 
@@ -724,8 +694,7 @@ describe("errors", () => {
     test("package elm.json used by several targets", async () => {
       expect(await run("non-unique-package-elm-json", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── PACKAGE elm.json USED BY SEVERAL TARGETS ────────────────────────────────────⧘
-          /Users/you/project/tests/fixtures/errors/non-unique-package-elm-json/elm-watch.json
+          ⧙── PACKAGE elm.json USED BY SEVERAL TARGETS ───────────────────── ⧘elm-watch.json
 
           A package target typechecks everything in its package, so it must be the only
           target using its ⧙elm.json⧘. But these are used by several targets:
@@ -741,8 +710,7 @@ describe("errors", () => {
 
     test("package target with type error", async () => {
       expect(await run("package-type-error", ["make"])).toMatchInlineSnapshot(`
-        ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/package-type-error/src/Package/Internal.elm:6:5
+        ⧙── TYPE MISMATCH ────────────────────────────────── ⧘src/Package/Internal.elm⧙:6:5⧘
 
         Something is off with the body of the \`greeting\` definition:
 
@@ -763,8 +731,7 @@ describe("errors", () => {
     test("application target with package elm.json", async () => {
       expect(await run("elm-json-type-mismatch-application", ["make"]))
         .toMatchInlineSnapshot(`
-          ⧙── elm.json TYPE MISMATCH ──────────────────────────────────────────────────────⧘
-          ⧙Target: main⧘
+          ⧙── elm.json TYPE MISMATCH ───────────────────────────────────────── ⧘⧙Target: main⧘
 
           This target has ⧙"type": "application"⧘, but its ⧙elm.json⧘ has ⧙"type": "package"⧘:
 
@@ -786,8 +753,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙── TROUBLE READING elm.json ────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-json-is-folder/elm.json
+        ⧙── TROUBLE READING elm.json ─────────────────────────────────────────── ⧘elm.json
 
         I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
         your inputs depend on.
@@ -808,8 +774,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙── INVALID elm.json FORMAT ─────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-json-bad-json/elm.json
+        ⧙── INVALID elm.json FORMAT ──────────────────────────────────────────── ⧘elm.json
 
         I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
         your inputs depend on.
@@ -831,8 +796,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙── INVALID elm.json FORMAT ─────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-json-decode-error/elm.json
+        ⧙── INVALID elm.json FORMAT ──────────────────────────────────────────── ⧘elm.json
 
         I read "source-directories" from ⧙elm.json⧘ when figuring out all Elm files that
         your inputs depend on.
@@ -857,8 +821,7 @@ describe("errors", () => {
           exitHotOnError: true,
         }),
       ).toMatchInlineSnapshot(`
-        ⧙── TOO OLD PACKAGES ────────────────────────────────────────────────────────────⧘
-        /Users/you/project/tests/fixtures/errors/elm-json-too-old-elm-core/elm.json
+        ⧙── TOO OLD PACKAGES ─────────────────────────────────────────────────── ⧘elm.json
 
         For hot reloading, elm-watch modifies some functions in the compiled JavaScript.
         That requires newer versions of these packages than your ⧙elm.json⧘ depends on:

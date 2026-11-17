@@ -124,8 +124,7 @@ describe("hot reloading", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙── DEBUG REMNANTS ──────────────────────────────────────────────────────────────⧘
-      ⧙Target: DebugLog⧘
+      ⧙── DEBUG REMNANTS ───────────────────────────────────────────── ⧘⧙Target: DebugLog⧘
 
       There are uses of the \`Debug\` module in the following modules:
 
@@ -621,7 +620,7 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppHelpers.elm:3:8</button></p></div>
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">NEEDS DOUBLE QUOTES</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -635,13 +634,13 @@ describe("hot reloading", () => {
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></div>
         --------------------------------------------------------------------------------
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="1"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/Shared.elm:1:25</button></p></div>
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="1"><div><span style="background-color: rgb(32, 30, 30);">UNKNOWN EXPORT</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Shared.elm<span>:1:25</span></button></span></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
         Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></div>
         --------------------------------------------------------------------------------
-        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="2"><div><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><p><button>/Users/you/project/tests/fixtures/hot/error-overlay/src/AppOtherHelpers.elm:3:7</button></p></div>
+        <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="2"><div><span style="background-color: rgb(32, 30, 30);">PROBLEM IN TYPE ANNOTATION</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/AppOtherHelpers.elm<span>:3:7</span></button></span></div>
         <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
 
         3| text := "AppOther"

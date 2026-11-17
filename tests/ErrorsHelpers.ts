@@ -178,5 +178,5 @@ export async function runWithBadElmBinAndWrittenError(
 }
 
 export function printError(errorTemplate: Errors.ErrorTemplate): string {
-  return clean(Errors.toTerminalString(errorTemplate, 80, false));
+  return clean(Errors.toTerminalString(errorTemplate, 80, false, undefined));
 }
