@@ -87,7 +87,7 @@ Note that the browser opens the editor on the device you click on. If you test o
 
 Set the `ELM_WATCH_OPEN_EDITOR` environment variable to either [a URL](#a-url) or [a command](#a-command). If it starts like a URL (`something://`), it’s a URL. Otherwise it’s a command. It is used by default in all your projects, but you can still [choose one of the editors](#choose-your-editor) in a specific project (press e in the error overlay or the terminal). To go back to `ELM_WATCH_OPEN_EDITOR` in that project, press e and then 7 (which says “ELM_WATCH_OPEN_EDITOR” instead of “Other” when the environment variable is set).
 
-The easiest way to get started is to run `elm-watch editor`. It explains how to try out values and how to set the environment variable permanently in your shell.
+The easiest way to get started is to run `elm-watch editor`. It explains how to try out values and how to set the environment variable permanently in your shell. If opening an error location fails, the error overlay (or the terminal, if you opened it from there) shows why.
 
 Here’s how to set it in different shells:
 

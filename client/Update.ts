@@ -175,6 +175,10 @@ export type Cmd =
       tag: "OpenPanel";
     }
   | {
+      tag: "ShowOpenEditorError";
+      message: string;
+    }
+  | {
       tag: "Reconnect";
       elmCompiledTimestamp: number;
     }
@@ -521,16 +525,9 @@ function onWebSocketToClientMessage(
 
     case "OpenEditorFailed":
       return [
-        model.status.tag === "CompileError"
-          ? {
-              ...model,
-              status: { ...model.status, openEditorError: msg.error },
-            }
-          : model,
+        model,
         [
-          model.status.tag === "CompileError"
-            ? { tag: "OpenPanel" }
-            : { tag: "NoCmd" },
+          { tag: "ShowOpenEditorError", message: msg.error.message },
           {
             tag: "TriggerReachedIdleState",
             reason: "OpenEditorFailed",
@@ -687,7 +684,6 @@ function statusChanged(
               status.foregroundColor,
               status.backgroundColor,
             ),
-            openEditorError: undefined,
           },
           compilationMode: status.compilationMode,
         },

@@ -136,9 +136,6 @@ function describeModel(model: Model): string {
     ...("reasons" in status
       ? status.reasons.map((reason) => `reason: ${reason}`)
       : []),
-    ...("openEditorError" in status && status.openEditorError !== undefined
-      ? [`openEditorError: ${status.openEditorError.tag}`]
-      : []),
     `mode: ${model.compilationMode}`,
     `timestamp: ${model.elmCompiledTimestamp}`,
   ];
@@ -591,8 +588,8 @@ describe("client update", () => {
         cmd: TriggerReachedIdleState CompileError
 
       > WebSocketMessageReceived OpenEditorFailed
-        status: CompileError, 1 errors, openEditorError: CommandFailed, mode: standard, timestamp: 1
-        cmd: OpenPanel
+        status: CompileError, 1 errors, mode: standard, timestamp: 1
+        cmd: ShowOpenEditorError
         cmd: TriggerReachedIdleState OpenEditorFailed
 
       > WebSocketMessageReceived StatusChanged CompileError
@@ -605,6 +602,7 @@ describe("client update", () => {
 
       > WebSocketMessageReceived OpenEditorFailed
         status: Idle, mode: standard, timestamp: 1
+        cmd: ShowOpenEditorError
         cmd: TriggerReachedIdleState OpenEditorFailed
     `);
   });

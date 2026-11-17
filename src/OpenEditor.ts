@@ -47,6 +47,14 @@ export function openEditor(
         onError(error);
       }
     };
+    const onEnvDone = (error: OpenEditorError | undefined): void => {
+      if (error !== undefined) {
+        onError({
+          ...error,
+          message: `${error.message}\n\n${Errors.openEditorTryEnvHint()}`,
+        });
+      }
+    };
     // A chosen preset takes precedence over `ELM_WATCH_OPEN_EDITOR`, so that
     // you can use a preset in some projects, and your custom editor in others.
     if (project.editor !== undefined) {
@@ -69,7 +77,7 @@ export function openEditor(
           location,
           projectOpenEditor.template,
           "Env",
-          onDone,
+          onEnvDone,
         );
         return;
 
@@ -79,7 +87,7 @@ export function openEditor(
           project.root,
           location,
           projectOpenEditor.command,
-          onDone,
+          onEnvDone,
         );
         return;
     }

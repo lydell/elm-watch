@@ -242,7 +242,7 @@ describe("hot", () => {
           { tag: "PressedOpenEditor" }
         >,
       ) => Extract<WebSocketToServerMessage, { tag: "PressedOpenEditor" }>;
-    }): Promise<string> => {
+    }): Promise<{ renders: string; notice: string }> => {
       class TestWebSocket extends WebSocket {
         override send(data: Parameters<WebSocket["send"]>[0]): void {
           if (typeof data === "string") {
@@ -288,7 +288,13 @@ describe("hot", () => {
           }
         },
       });
-      return onlyExpandedRenders === "" ? renders : onlyExpandedRenders;
+      return {
+        renders: onlyExpandedRenders === "" ? renders : onlyExpandedRenders,
+        // Open editor failures are shown in the error overlay, where the
+        // location was clicked.
+        notice:
+          /<notice>[^]*<\/notice>/.exec(getOverlay())?.[0] ?? "(no notice)",
+      };
     };
 
     describe("choose editor in the browser", () => {
@@ -515,11 +521,11 @@ describe("hot", () => {
       });
 
       test("env var set to an invalid URL", async () => {
-        const renders = await runFailClickErrorLocation({
+        const { notice } = await runFailClickErrorLocation({
           env: { [ELM_WATCH_OPEN_EDITOR]: "myeditor://open?line={line}" },
         });
         expect(openedUrls).toEqual([]);
-        expect(grep(renders, /URL|placeholders/)).toMatchInlineSnapshot(`
+        expect(grep(notice, /URL|placeholders/)).toMatchInlineSnapshot(`
           Your ELM_WATCH_OPEN_EDITOR environment variable looks like a URL:
           But it is not a valid URL for opening an editor: The URL must contain {file}.
           These placeholders are replaced: {file} {line} {column} {line0} {column0}
@@ -612,7 +618,7 @@ describe("hot", () => {
     });
 
     test("invalid line number", async () => {
-      const renders = await runFailClickErrorLocation({
+      const { renders } = await runFailClickErrorLocation({
         env: {
           [ELM_WATCH_OPEN_EDITOR]: "true",
         },
@@ -640,7 +646,7 @@ describe("hot", () => {
     });
 
     test("invalid column number", async () => {
-      const renders = await runFailClickErrorLocation({
+      const { renders } = await runFailClickErrorLocation({
         env: {
           [ELM_WATCH_OPEN_EDITOR]: "true",
         },
@@ -668,7 +674,7 @@ describe("hot", () => {
     });
 
     test("invalid file", async () => {
-      const renders = await runFailClickErrorLocation({
+      const { notice } = await runFailClickErrorLocation({
         env: {
           [ELM_WATCH_OPEN_EDITOR]: "true",
         },
@@ -677,30 +683,20 @@ describe("hot", () => {
           file: markAsAbsolutePath("; echo hacked #"),
         }),
       });
-      expect(renders).toMatchInlineSnapshot(`
-        ▲ 🚨
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide errors]
-        [Close elm-watch]
-        🚨 Main Compilation error · 13:10:05
-        Compilation mode for Main
-        ◯ (disabled) Debug
-        ◉ Standard
-        ◯ Optimize
-        The Elm debugger isn't available at this point.
+      expect(notice).toMatchInlineSnapshot(`
+        <notice>
         Opening the location in your editor failed!
         I received a command to open the following file in your editor:
 
         ; echo hacked #
 
         However, no target imports that file. For security reasons, I never executed any command with that file.
-        Drag emoji or press shift+arrows to move
+        </notice>
       `);
     });
 
     test("unknown command", async () => {
-      const renders = await runFailClickErrorLocation({
+      const { notice } = await runFailClickErrorLocation({
         env: {
           [ELM_WATCH_OPEN_EDITOR]: "nope",
         },
@@ -708,7 +704,7 @@ describe("hot", () => {
 
       const replacement = "nope: command not found";
 
-      const cleanedRenders = renders
+      const cleanedNotice = notice
         // macOS
         .replace("/bin/sh: nope: command not found", replacement)
         // Linux
@@ -720,18 +716,8 @@ describe("hot", () => {
         )
         .replace("code 1.", "code 127.");
 
-      expect(cleanedRenders).toMatchInlineSnapshot(`
-        ▲ 🚨
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide errors]
-        [Close elm-watch]
-        🚨 Main Compilation error · 13:10:05
-        Compilation mode for Main
-        ◯ (disabled) Debug
-        ◉ Standard
-        ◯ Optimize
-        The Elm debugger isn't available at this point.
+      expect(cleanedNotice).toMatchInlineSnapshot(`
+        <notice>
         Opening the location in your editor failed!
         I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
 
@@ -751,29 +737,21 @@ describe("hot", () => {
         The command exited with code 127.
 
         nope: command not found
-        Drag emoji or press shift+arrows to move
+
+        Run "elm-watch editor" to try out changes to ELM_WATCH_OPEN_EDITOR without restarting elm-watch.
+        </notice>
       `);
     });
 
     test("timeout", async () => {
-      const renders = await runFailClickErrorLocation({
+      const { notice } = await runFailClickErrorLocation({
         env: {
           [ELM_WATCH_OPEN_EDITOR]: `node -e "setTimeout(() => process.exit(1), 10000)"`,
           [__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS]: "10",
         },
       });
-      expect(renders).toMatchInlineSnapshot(`
-        ▲ 🚨
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide errors]
-        [Close elm-watch]
-        🚨 Main Compilation error · 13:10:05
-        Compilation mode for Main
-        ◯ (disabled) Debug
-        ◉ Standard
-        ◯ Optimize
-        The Elm debugger isn't available at this point.
+      expect(notice).toMatchInlineSnapshot(`
+        <notice>
         Opening the location in your editor failed!
         I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
 
@@ -793,28 +771,20 @@ describe("hot", () => {
         The command took too long to run, and was killed after 10 ms.
 
         (no output)
-        Drag emoji or press shift+arrows to move
+
+        Run "elm-watch editor" to try out changes to ELM_WATCH_OPEN_EDITOR without restarting elm-watch.
+        </notice>
       `);
     });
 
     test("exit 1", async () => {
-      const renders = await runFailClickErrorLocation({
+      const { notice } = await runFailClickErrorLocation({
         env: {
           [ELM_WATCH_OPEN_EDITOR]: `node -e "process.exit(1)"`,
         },
       });
-      expect(renders).toMatchInlineSnapshot(`
-        ▲ 🚨
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide errors]
-        [Close elm-watch]
-        🚨 Main Compilation error · 13:10:05
-        Compilation mode for Main
-        ◯ (disabled) Debug
-        ◉ Standard
-        ◯ Optimize
-        The Elm debugger isn't available at this point.
+      expect(notice).toMatchInlineSnapshot(`
+        <notice>
         Opening the location in your editor failed!
         I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
 
@@ -834,7 +804,9 @@ describe("hot", () => {
         The command exited with code 1.
 
         (no output)
-        Drag emoji or press shift+arrows to move
+
+        Run "elm-watch editor" to try out changes to ELM_WATCH_OPEN_EDITOR without restarting elm-watch.
+        </notice>
       `);
     });
 

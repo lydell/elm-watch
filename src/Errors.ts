@@ -1576,6 +1576,11 @@ ${boldTerminal("elm-watch editor")}
   `.trim();
 }
 
+// `elm-watch editor` prints the errors without this hint.
+export function openEditorTryEnvHint(): string {
+  return `Run "elm-watch editor" to try out changes to ${ELM_WATCH_OPEN_EDITOR} without restarting elm-watch.`;
+}
+
 export function openEditorInvalidUrl(url: string, error: string): string {
   return `
 Your ${ELM_WATCH_OPEN_EDITOR} environment variable looks like a URL:

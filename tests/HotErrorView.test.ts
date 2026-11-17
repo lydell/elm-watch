@@ -592,6 +592,63 @@ describe("hot error view", () => {
     },
   );
 
+  test("open in editor fails", async () => {
+    const stdin = new KeyReadStream();
+    let screen = "";
+
+    await run({
+      fixture: "error-view",
+      args: ["Other"],
+      scripts: ["Other.js"],
+      env: {
+        [ELM_WATCH_OPEN_EDITOR]: `node -e "process.exit(1)"`,
+      },
+      stdin,
+      init: () => {
+        // Do nothing.
+      },
+      onIdle: async ({ stdout }) => {
+        stdin.press("\r");
+        await waitFor(() =>
+          clean(stdout.getOutput()).includes("elm-watch editor"),
+        );
+        const output = clean(stdout.getOutput());
+        screen = output.slice(output.lastIndexOf("Opening the location"));
+        return "Stop" as const;
+      },
+    });
+
+    expect(screen).toMatchInlineSnapshot(`
+      Opening the location in your editor failed!⧘
+
+      I ran your command for opening an editor (set via the ELM_WATCH_OPEN_EDITOR environment variable):
+
+      cd /Users/you/project/tests/fixtures/hot/error-view
+      node -e "process.exit(1)"
+
+      I ran the command with these extra environment variables:
+
+      {
+        "file": "/Users/you/project/tests/fixtures/hot/error-view/src/Other.elm",
+        "line": "7",
+        "column": "20",
+        "line0": "6",
+        "column0": "19"
+      }
+
+      The command exited with code 1.
+
+      (no output)
+
+      Run "elm-watch editor" to try out changes to ELM_WATCH_OPEN_EDITOR without restarting elm-watch.
+
+      ℹ️ ⧙13:10:05⧘ Up to date   ⧙web socket connected: Other⧘
+
+      🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor
+      ⧙[⧘⧙e⧘⧙]⧘ change editor   ⧙[⧘⧙a⧘⧙]⧘ show all
+    `);
+  });
+
   test("one-line info message for files not imported by any target", async () => {
     const fixture = "error-view";
     const unused = path.join(fixtureDir(fixture), "src", "Unused.elm");

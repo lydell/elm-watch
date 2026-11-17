@@ -23,11 +23,7 @@ import type {
   CompilationMode,
   CompilationModeWithProxy,
 } from "../src/Types.ts";
-import type {
-  ErrorLocation,
-  OpenEditorError,
-  OpenEditorEnv,
-} from "./WebSocketMessages.ts";
+import type { ErrorLocation, OpenEditorEnv } from "./WebSocketMessages.ts";
 
 export type UiMsg =
   | {
@@ -88,7 +84,6 @@ export type Status =
       date: Date;
       sendKey: SendKey;
       errors: Map<string, OverlayError>;
-      openEditorError: OpenEditorError | undefined;
     }
   | {
       tag: "Connecting";
@@ -174,6 +169,9 @@ export type UiTarget = {
   ) => void;
   // For statuses that need the user’s attention.
   openPanel: () => void;
+  // Shown in the error overlay, where the error location was clicked, until
+  // the next key press.
+  showOpenEditorError: (message: string) => void;
   unregister: () => void;
 };
 
@@ -398,6 +396,8 @@ export function createUi(): Ui {
   let panelOpen = false;
   // Set while choosing an editor for opening error locations in.
   let editorChooser: EditorChooser | undefined = undefined;
+  // Set when the server failed to open an error location in the editor.
+  let openEditorError: string | undefined = undefined;
   // For taking screenshots, for example. Not saved: The emoji is back after
   // reloading the page. It is also back on errors, so that you don’t miss them.
   let hiddenUntilReloadOrError = false;
@@ -485,6 +485,7 @@ export function createUi(): Ui {
           openEditorForItem(item, location);
         },
         editor: getOverlayEditor(),
+        openEditorError,
       }),
     );
 
@@ -532,6 +533,10 @@ export function createUi(): Ui {
       .htmlContentCollapsed !== undefined;
 
   const handleOverlayKey = (key: OverlayKey): void => {
+    if (openEditorError !== undefined) {
+      openEditorError = undefined;
+      renderOverlay();
+    }
     // The other keys are paused while choosing an editor.
     if (editorChooser !== undefined) {
       if (key === "CancelEditorChooser") {
@@ -678,6 +683,10 @@ export function createUi(): Ui {
     item: OverlayErrorItem,
     location: LocationToOpen,
   ): void => {
+    if (openEditorError !== undefined) {
+      openEditorError = undefined;
+      renderOverlay();
+    }
     const openEditor = getOpenEditor()?.openEditor;
     const preset =
       openEditor?.preset === null || openEditor === undefined
@@ -971,8 +980,12 @@ export function createUi(): Ui {
       return;
     }
     errorOverlayOpen = open;
-    if (!open && editorChooser !== undefined) {
+    if (
+      !open &&
+      (editorChooser !== undefined || openEditorError !== undefined)
+    ) {
       editorChooser = undefined;
+      openEditorError = undefined;
       renderOverlay();
     }
     updateErrorOverlayVisibility();
@@ -1445,6 +1458,14 @@ export function createUi(): Ui {
           render();
         },
 
+        showOpenEditorError: (message) => {
+          openEditorError = message;
+          renderOverlay();
+          if (!errorOverlayOpen) {
+            setErrorOverlayOpen(true);
+          }
+        },
+
         unregister: () => {
           const index = entries.indexOf(entry);
           if (index === -1) {
@@ -1718,6 +1739,7 @@ const CLASS = {
   overlayKeyHint: "overlayKeyHint",
   overlayKeyHintNote: "overlayKeyHintNote",
   overlayKeyHints: "overlayKeyHints",
+  overlayNotice: "overlayNotice",
   overlayPosition: "overlayPosition",
   panel: "panel",
   root: "root",
@@ -1980,7 +2002,8 @@ supported by browsers, for browsers without popover support.
   text-decoration: underline;
 }
 
-.${CLASS.editorChooser} {
+.${CLASS.editorChooser},
+.${CLASS.overlayNotice} {
   display: grid;
   gap: 1ch;
   min-height: 0;
@@ -1990,7 +2013,9 @@ supported by browsers, for browsers without popover support.
 }
 
 .${CLASS.editorChooser} p,
-.${CLASS.editorChooser} pre {
+.${CLASS.editorChooser} pre,
+.${CLASS.overlayNotice} p,
+.${CLASS.overlayNotice} pre {
   margin: 0;
 }
 
@@ -2848,13 +2873,9 @@ function viewStatusDetails(
   const { status, info } = snapshot;
   switch (status.tag) {
     case "Busy":
+    case "CompileError":
     case "Idle":
       return [];
-
-    case "CompileError":
-      return status.openEditorError === undefined
-        ? []
-        : viewOpenEditorError(status.openEditorError);
 
     case "Connecting":
       return [
@@ -3036,8 +3057,10 @@ function viewCompilationModeChooser(
   return { fieldset, details };
 }
 
-function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
-  return [
+function viewOpenEditorError(message: string): HTMLElement {
+  return h(
+    HTMLDivElement,
+    { className: CLASS.overlayNotice, attrs: { role: "alert" } },
     h(
       HTMLParagraphElement,
       {},
@@ -3047,8 +3070,8 @@ function viewOpenEditorError(error: OpenEditorError): Array<HTMLElement> {
         "Opening the location in your editor failed!",
       ),
     ),
-    h(HTMLPreElement, {}, error.message),
-  ];
+    h(HTMLPreElement, {}, message),
+  );
 }
 
 function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
@@ -3185,6 +3208,7 @@ function viewOverlay({
   onKey,
   onOpenEditor,
   editor,
+  openEditorError,
 }: {
   group: ErrorGroup<OverlayErrorItem>;
   selection: Selection | undefined;
@@ -3193,16 +3217,21 @@ function viewOverlay({
   onKey: (key: OverlayKey) => void;
   onOpenEditor: (item: OverlayErrorItem, location: LocationToOpen) => void;
   editor: OverlayEditor;
+  openEditorError: string | undefined;
 }): Array<HTMLElement> {
   if (group.numErrors === 0) {
     return [];
   }
 
   // While choosing an editor, the other keys are paused.
-  const chooser =
+  const aboveFooter = [
+    openEditorError === undefined
+      ? undefined
+      : viewOpenEditorError(openEditorError),
     editor.chooser === undefined
       ? undefined
-      : viewEditorChooser(editor.chooser);
+      : viewEditorChooser(editor.chooser),
+  ];
   const cancelHints: Array<OverlayHint> = [
     [[["esc", "CancelEditorChooser", true, "Cancel"]], "cancel"],
   ];
@@ -3217,7 +3246,7 @@ function viewOverlay({
     return [
       ...items.map((item) => viewOverlayError(item, true, onKey, onOpenEditor)),
       viewOverlayFooter(
-        chooser,
+        aboveFooter,
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
         editor.chooser === undefined
           ? [
@@ -3259,7 +3288,7 @@ function viewOverlay({
   return [
     viewOverlayError(item, expanded, onKey, onOpenEditor),
     viewOverlayFooter(
-      chooser,
+      aboveFooter,
       `🚨 ${position}`,
       editor.chooser !== undefined
         ? cancelHints
@@ -3482,7 +3511,7 @@ type OverlayHint = [keys: Array<OverlayHintKey>, label: string, note?: string];
 // keys (the arrows) has one button per key, and the label is just text.
 // The editor chooser (if open) goes above the footer, sticking with it.
 function viewOverlayFooter(
-  chooser: HTMLElement | undefined,
+  aboveFooter: Array<HTMLElement | undefined>,
   position: string,
   hints: Array<OverlayHint | undefined>,
   onKey: (key: OverlayKey) => void,
@@ -3563,7 +3592,12 @@ function viewOverlayFooter(
       }),
     ),
   );
-  return h(HTMLDivElement, { className: CLASS.overlayBottom }, chooser, footer);
+  return h(
+    HTMLDivElement,
+    { className: CLASS.overlayBottom },
+    ...aboveFooter,
+    footer,
+  );
 }
 
 function viewErrorLocation(

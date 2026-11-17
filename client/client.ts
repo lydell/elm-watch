@@ -1264,6 +1264,10 @@ const runCmd =
         mutable.uiTarget?.openPanel();
         return;
 
+      case "ShowOpenEditorError":
+        mutable.uiTarget?.showOpenEditorError(cmd.message);
+        return;
+
       case "Reconnect":
         // The previous web socket should already be closed, but make sure it
         // is, and that its timeout can’t close the new web socket.
@@ -1783,7 +1787,6 @@ function renderMockStatuses(ui: Ui | undefined): void {
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       errors: new Map(),
-      openEditorError: undefined,
       info: {
         ...info,
         originalCompilationMode: "standard",
@@ -1835,10 +1838,6 @@ function renderMockStatuses(ui: Ui | undefined): void {
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       errors: new Map(),
-      openEditorError: {
-        tag: "CommandFailed",
-        message: "Opening the editor failed.",
-      },
     },
     TargetError: {
       tag: "TargetError",
