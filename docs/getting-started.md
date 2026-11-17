@@ -23,7 +23,7 @@ npm install --save-dev elm-watch
 ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [unofficial npm][unofficial-npm], [elm-tooling]).
 
 {: .info }  
-ℹ️ Node.js 16 or newer is required.
+ℹ️ Node.js 22 or newer is required.
 
 ```
 npx elm-watch --help

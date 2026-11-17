@@ -18,9 +18,6 @@ nav_order: 9
 
 Instead of `elm-watch.json` and the `elm-watch` command, you can write a small JavaScript file that imports elm-watch and passes all configuration as options. Since it’s just code, you can compute your targets however you want, [postprocess](../postprocess/) Elm’s output with a function, and [customize the HTTP server](../server/#custom-server). And there are TypeScript types to help you get it right.
 
-{: .info }  
-ℹ️ The examples use `import.meta.dirname` (Node.js 20.11 or later) and `node --watch` (stable in Node.js 22).
-
 ## Example
 
 ```js
