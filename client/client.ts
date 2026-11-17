@@ -509,7 +509,7 @@ function statusToReloadStatus(model: Model): ReloadStatus {
       return { tag: "MightWantToReload" };
 
     case "CompileError":
-    case "ElmJsonError":
+    case "TargetError":
     case "EvalError":
     case "Idle":
     case "SleepingBeforeReconnect":
@@ -538,7 +538,7 @@ function statusToStatusType(statusTag: Status["tag"]): StatusType {
       return "Waiting";
 
     case "CompileError":
-    case "ElmJsonError":
+    case "TargetError":
     case "EvalError":
     case "UnexpectedError":
       return "Error";
@@ -560,7 +560,7 @@ function statusToSpecialCaseSendKey(status: Status): SendKey | undefined {
     case "SleepingBeforeReconnect":
     case "WaitingForReload":
     // We can’t really send messages if there are elm.json errors.
-    case "ElmJsonError":
+    case "TargetError":
     // These two _might_ work, but it’s unclear. They’re not supposed to happen
     // anyway.
     case "EvalError":
@@ -1840,8 +1840,8 @@ function renderMockStatuses(ui: Ui | undefined): void {
         message: "Opening the editor failed.",
       },
     },
-    ElmJsonError: {
-      tag: "ElmJsonError",
+    TargetError: {
+      tag: "TargetError",
       date,
       error: "Elm.json error",
     },

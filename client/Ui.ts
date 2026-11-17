@@ -96,7 +96,7 @@ export type Status =
       attemptNumber: number;
     }
   | {
-      tag: "ElmJsonError";
+      tag: "TargetError";
       date: Date;
       error: string;
     }
@@ -2513,7 +2513,7 @@ export function statusIconAndText(
         severity: 2,
       };
 
-    case "ElmJsonError":
+    case "TargetError":
       return {
         icon: "🚨",
         status: "elm.json or inputs error",
@@ -2864,7 +2864,7 @@ function viewStatusDetails(
         ...viewHttpsInfo(info.webSocketUrl),
       ];
 
-    case "ElmJsonError":
+    case "TargetError":
       return [h(HTMLPreElement, {}, status.error)];
 
     case "EvalError":

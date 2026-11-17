@@ -93,7 +93,7 @@ const StatusChange = Codec.taggedUnion("tag", [
     backgroundColor: Codec.string,
   },
   {
-    tag: Codec.tag("ElmJsonError"),
+    tag: Codec.tag("TargetError"),
     error: Codec.string,
   },
   {

@@ -225,7 +225,7 @@ export type ReachedIdleStateReason =
   | "AlreadyUpToDate"
   | "ClientError"
   | "CompileError"
-  | "ElmJsonError"
+  | "TargetError"
   | "EvalErrored"
   | "EvalSucceeded"
   | "OpenEditorFailed"
@@ -699,16 +699,16 @@ function statusChanged(
         ],
       ];
 
-    case "ElmJsonError":
+    case "TargetError":
       return [
         {
           ...model,
-          status: { tag: "ElmJsonError", date, error: status.error },
+          status: { tag: "TargetError", date, error: status.error },
         },
         [
           {
             tag: "TriggerReachedIdleState",
-            reason: "ElmJsonError",
+            reason: "TargetError",
           },
         ],
       ];

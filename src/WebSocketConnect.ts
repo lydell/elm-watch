@@ -66,7 +66,7 @@ const WebSocketConnectedParams = Codec.fields(
 export type ParseWebSocketConnectRequestUrlResult =
   | ParseWebSocketConnectRequestUrlError
   | {
-      tag: "ElmJsonError";
+      tag: "TargetError";
       error: ApplicationTargetErrorWithMetadata;
     }
   | {
@@ -129,7 +129,7 @@ export function parseWebSocketConnectRequestUrl(
   const flatOutputs = getFlatOutputs(project);
 
   const { targetName } = webSocketConnectedParams;
-  const matchElmJsonError = getApplicationTargetsErrors(project).find(
+  const matchTargetError = getApplicationTargetsErrors(project).find(
     ({ outputPath }) => outputPath.targetName === targetName,
   );
   const matchOutput = flatOutputs.find(
@@ -145,16 +145,16 @@ export function parseWebSocketConnectRequestUrl(
       expectedVersion: "%VERSION%",
       actualVersion: webSocketConnectedParams.elmWatchVersion,
       targetNotBuilt:
-        matchElmJsonError === undefined && matchOutput === undefined
+        matchTargetError === undefined && matchOutput === undefined
           ? { targetName, ...getOutputs(project) }
           : undefined,
     };
   }
 
-  if (matchElmJsonError !== undefined) {
+  if (matchTargetError !== undefined) {
     return {
-      tag: "ElmJsonError",
-      error: matchElmJsonError,
+      tag: "TargetError",
+      error: matchTargetError,
     };
   } else if (matchOutput !== undefined) {
     return {
@@ -205,7 +205,7 @@ function webSocketConnectRequestUrlResultToOutputPath(
   switch (result.tag) {
     case "Success":
       return result.outputPath;
-    case "ElmJsonError":
+    case "TargetError":
       return result.error.outputPath;
     default: {
       // Make sure only error results are left.

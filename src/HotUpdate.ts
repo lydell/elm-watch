@@ -339,7 +339,7 @@ function webSocketSendTargetError(
     message: {
       tag: "StatusChanged",
       status: {
-        tag: "ElmJsonError",
+        tag: "TargetError",
         error: Errors.toPlainString(Compile.renderTargetError(targetError)),
       },
     },
@@ -694,7 +694,7 @@ export function update(
           ];
         }
 
-        case "ElmJsonError":
+        case "TargetError":
           return [
             model,
             [webSocketSendTargetError(result.error), ...connectCmds],
