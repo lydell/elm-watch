@@ -465,14 +465,6 @@ function toConfig(
   };
 }
 
-export function example(cwd: Cwd, elmWatchJsonPath: ElmWatchJsonPath): string {
-  return Codec.JSON.stringify(
-    ElmWatchJson,
-    exampleJson(cwd, elmWatchJsonPath),
-    4,
-  );
-}
-
 // More `main` files than this are probably not all entrypoints (scratch files,
 // generated code), so we use the example then instead.
 const MAX_DISCOVERED_MAINS = 10;

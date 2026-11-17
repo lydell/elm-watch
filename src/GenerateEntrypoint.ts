@@ -1,8 +1,11 @@
+import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
 
 import type { ElmWatchJsonWithLegacyPostprocess } from "./ElmWatchJson.ts";
 import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
+import { absoluteDirname, absolutePathFromString } from "./PathHelpers.ts";
+import type { AbsolutePath } from "./Types.ts";
 
 export type EntrypointLanguage = "javascript" | "typescript";
 
@@ -10,6 +13,21 @@ export const ENTRYPOINT_NAMES: Record<EntrypointLanguage, string> = {
   javascript: "elm-watch.mjs",
   typescript: "elm-watch.mts",
 };
+
+// Like `findClosest` for elm-watch.json: The closest elm-watch.mjs or
+// elm-watch.mts in `dir` or a parent directory.
+export function findClosestEntrypoint(
+  dir: AbsolutePath,
+): AbsolutePath | undefined {
+  const entrypoint = Object.values(ENTRYPOINT_NAMES)
+    .map((name) => absolutePathFromString(dir, name))
+    .find((entrypointPath) => fs.existsSync(entrypointPath));
+  if (entrypoint !== undefined) {
+    return entrypoint;
+  }
+  const parent = absoluteDirname(dir);
+  return parent === dir ? undefined : findClosestEntrypoint(parent);
+}
 
 // elm-watch 1 had `"postprocess": ["elm-watch-node", "postprocess.js"]`.
 const ELM_WATCH_NODE_LEGACY = "elm-watch-node";

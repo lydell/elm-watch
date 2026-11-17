@@ -9,6 +9,7 @@ import * as ElmWatchStuffJson from "./ElmWatchStuffJson.ts";
 import type { Env } from "./Env.ts";
 import * as Errors from "./Errors.ts";
 import type { ErrorViewState } from "./ErrorView.ts";
+import { findClosestEntrypoint } from "./GenerateEntrypoint.ts";
 import * as Hot from "./Hot.ts";
 import type { LatestEvent } from "./LatestEvent.ts";
 import * as Make from "./Make.ts";
@@ -94,7 +95,14 @@ export async function run(
       );
 
     case "ElmWatchJsonNotFound":
-      terminal.errorTemplate(Errors.elmWatchJsonNotFound(cwd));
+      terminal.errorTemplate(
+        Errors.elmWatchJsonNotFound(
+          cwd,
+          runMode,
+          args,
+          findClosestEntrypoint(cwd),
+        ),
+      );
       return { tag: "Exit", exitCode: 1 };
 
     case "Parsed": {

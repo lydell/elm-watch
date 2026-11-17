@@ -384,21 +384,27 @@ describe("errors", () => {
 
         ⧙But I couldn't find one!⧘
 
-        You need to create one with JSON like this:
+        Run this to create one, with a target for each Elm file with ⧙main⧘:
 
-        {
-            "targets": {
-                "My target name": {
-                    "type": "application",
-                    "elmJson": "elm.json",
-                    "inputs": [
-                        "src/Main.elm"
-                    ],
-                    "output": "build/main.js"
-                }
-            }
-        }
+        ⧙elm-watch init⧘
       `);
+  });
+
+  test("elm-watch.json not found, but elm-watch.mjs in a parent directory", async () => {
+    expect(await run("javascript-api/src", ["make", "--optimize", "My App"]))
+      .toMatchInlineSnapshot(`
+      ⧙── elm-watch.json NOT FOUND ────────────────────────────────────────────────────⧘
+
+      I read inputs, outputs and options from ⧙elm-watch.json⧘.
+
+      ⧙But I couldn't find one!⧘ It looks like you use the JavaScript API instead:
+
+      /Users/you/project/tests/fixtures/errors/javascript-api/elm-watch.mjs
+
+      Run it like this:
+
+      ⧙node ../elm-watch.mjs make --optimize 'My App'⧘
+    `);
   });
 
   describe("unexpected flags", () => {

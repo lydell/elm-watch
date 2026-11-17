@@ -117,20 +117,9 @@ describe("hot", () => {
 
       ⧙But I couldn't find one!⧘
 
-      You need to create one with JSON like this:
+      Run this to create one, with a target for each Elm file with ⧙main⧘:
 
-      {
-          "targets": {
-              "My target name": {
-                  "type": "application",
-                  "elmJson": "../elm.json",
-                  "inputs": [
-                      "src/Main.elm"
-                  ],
-                  "output": "build/main.js"
-              }
-          }
-      }
+      ⧙elm-watch init⧘
     `);
 
     function assert1(div: HTMLDivElement): void {

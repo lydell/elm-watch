@@ -10,7 +10,6 @@ import type { ConfigSource } from "./Config.ts";
 import { EDITOR_PLACEHOLDERS } from "./Editor.ts";
 import type { ElmJsonType, TooOldPackage } from "./ElmJson.ts";
 import type * as ElmMakeError from "./ElmMakeError.ts";
-import * as ElmWatchJson from "./ElmWatchJson.ts";
 import {
   ELM_WATCH_HOST,
   ELM_WATCH_OPEN_EDITOR,
@@ -38,21 +37,20 @@ import type { Port } from "./Port.ts";
 import type { Command, ExitReason } from "./Spawn.ts";
 import { DEFAULT_COLUMNS } from "./Terminal.ts";
 import * as Theme from "./Theme.ts";
-import {
-  type AbsolutePath,
-  type CliArg,
-  type Cwd,
-  type ElmJsonPath,
-  type ElmWatchJsonPath,
-  type ElmWatchStuffJsonPath,
-  type InputPath,
-  markAsElmWatchJsonPath,
-  type OutputPath,
-  type RunMode,
-  type TargetLocation,
-  type TargetName,
-  type UncheckedInputPath,
-  type WriteOutputErrorReasonForWriting,
+import type {
+  AbsolutePath,
+  CliArg,
+  Cwd,
+  ElmJsonPath,
+  ElmWatchJsonPath,
+  ElmWatchStuffJsonPath,
+  InputPath,
+  OutputPath,
+  RunMode,
+  TargetLocation,
+  TargetName,
+  UncheckedInputPath,
+  WriteOutputErrorReasonForWriting,
 } from "./Types.ts";
 import type { TargetNotBuilt } from "./WebSocketConnect.ts";
 import type { WebSocketUrl } from "./WebSocketUrl.ts";
@@ -436,20 +434,40 @@ ${printJsonError(error)}
 `;
 }
 
-export function elmWatchJsonNotFound(cwd: Cwd): ErrorTemplate {
-  const example = ElmWatchJson.example(
-    cwd,
-    markAsElmWatchJsonPath(absolutePathFromString(cwd, "elm-watch.json")),
-  );
-
-  return fancyError("elm-watch.json NOT FOUND", { tag: "NoLocation" })`
+export function elmWatchJsonNotFound(
+  cwd: Cwd,
+  runMode: RunMode,
+  args: Array<CliArg>,
+  entrypoint: AbsolutePath | undefined,
+): ErrorTemplate {
+  return entrypoint === undefined
+    ? fancyError("elm-watch.json NOT FOUND", { tag: "NoLocation" })`
 I read inputs, outputs and options from ${elmWatchJson}.
 
 ${bold("But I couldn't find one!")}
 
-You need to create one with JSON like this:
+Run this to create one, with a target for each Elm file with ${bold("main")}:
 
-${text(example)}
+${bold("elm-watch init")}
+`
+    : fancyError("elm-watch.json NOT FOUND", { tag: "NoLocation" })`
+I read inputs, outputs and options from ${elmWatchJson}.
+
+${bold("But I couldn't find one!")} It looks like you use the JavaScript API instead:
+
+${text(entrypoint)}
+
+Run it like this:
+
+${bold(
+  commandToPresentationName([
+    "node",
+    // Forward slashes work on Windows too, and need no quoting.
+    path.relative(cwd, entrypoint).split(path.sep).join("/"),
+    runMode,
+    ...args,
+  ]),
+)}
 `;
 }
 
