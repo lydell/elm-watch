@@ -24,6 +24,7 @@ import type {
   InputPath,
   OutputPath,
 } from "./Types.ts";
+import { isIgnoredStaticFile } from "./Watcher.ts";
 
 // Decides what a file change means for the project. This doesn’t look at the
 // file system: Whether a path was removed is checked beforehand.
@@ -130,6 +131,7 @@ export function classifyWatcherEvent(
         const prefix = project.staticFilesDir + path.sep;
         if (
           absolutePath.startsWith(prefix) &&
+          !isIgnoredStaticFile(absolutePath.slice(prefix.length)) &&
           !getFlatOutputs(project).some(
             ({ outputPath }) => absolutePath === outputPath.theOutputPath,
           )

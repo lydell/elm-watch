@@ -49,10 +49,15 @@ const ignoreFunctions: Record<WatchDir["tag"], (filename: string) => boolean> =
         .some((part) => !MODULE_NAME_PART.test(part)),
     // Any file could be served from the static files directory, but there is
     // no point in watching the contents of these.
-    StaticFilesDir: (filename) =>
-      /(?:^|[/\\])(?:elm-stuff|node_modules)[/\\]/.test(filename),
+    StaticFilesDir: (filename) => isIgnoredStaticFile(filename),
     Shallow: () => false,
   };
+
+// Other watchers can still report paths inside ignored directories, such as
+// the shallow watcher of elm-stuff/ (see Project.ts).
+export function isIgnoredStaticFile(filename: string): boolean {
+  return /(?:^|[/\\])(?:elm-stuff|node_modules)[/\\]/.test(filename);
+}
 
 type RootState =
   | { tag: "Watching"; fsWatcher: fs.FSWatcher }

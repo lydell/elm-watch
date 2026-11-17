@@ -197,6 +197,18 @@ describe("classifyWatcherEvent", () => {
     expect(classify(withStaticFiles, "changed", "/project/other")).toBe(
       "static file: /other",
     );
+    // The static files watcher ignores the contents of elm-stuff/ and
+    // node_modules/, but elm-stuff/ is also watched shallowly, which reports
+    // elm-stuff/0.19.1/ being created.
+    expect(
+      classify(withStaticFiles, "changed", "/project/elm-stuff/0.19.1"),
+    ).toBe("ignored");
+    expect(
+      classify(withStaticFiles, "changed", "/project/app/elm-stuff/0.19.1"),
+    ).toBe("ignored");
+    expect(
+      classify(withStaticFiles, "changed", "/project/node_modules/x/y.js"),
+    ).toBe("ignored");
   });
 
   test("other files", () => {
