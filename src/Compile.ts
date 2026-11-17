@@ -817,7 +817,6 @@ export async function handleOutputAction({
             env,
             terminal,
             getNow,
-            runMode: runMode.tag,
             compiler: action.compiler,
             elmJsonPath: action.elmJsonPath,
             outputs: mapNonEmptyArray(action.outputs, ({ output }) => output),
@@ -1453,7 +1452,6 @@ async function typecheck({
   env,
   terminal,
   getNow,
-  runMode,
   compiler,
   elmJsonPath,
   outputs,
@@ -1464,7 +1462,6 @@ async function typecheck({
   env: Env;
   terminal: Terminal;
   getNow: GetNow;
-  runMode: RunMode;
   compiler: Compiler;
   elmJsonPath: ElmJsonPath;
   outputs: NonEmptyArray<{
@@ -1513,7 +1510,7 @@ async function typecheck({
     output.outputState.setStatus(outputStatus);
     updateStatusLine({
       terminal,
-      runMode,
+      runMode: "hot",
       outputPath: output.outputPath,
       outputState: output.outputState,
       index: output.index,
@@ -1565,7 +1562,7 @@ async function typecheck({
       outputState.setStatus({ tag: "Interrupted" });
       updateStatusLine({
         terminal,
-        runMode,
+        runMode: "hot",
         outputPath,
         outputState,
         index,
@@ -1640,7 +1637,7 @@ async function typecheck({
 
     updateStatusLine({
       terminal,
-      runMode,
+      runMode: "hot",
       outputPath,
       outputState,
       index,
