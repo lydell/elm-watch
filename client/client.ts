@@ -1926,10 +1926,4 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
 
 void renderMockStatuses;
 
-// Node.js used to not have a `WebSocket` global. We used to skip running the elm-watch client
-// for `Platform.worker` programs run (in a certain way) in Node.js.
-// These days, Node.js does have `WebSocket`, and the elm-watch client does work in Node.js.
-// But we keep the check for backwards compatibility.
-if (typeof WebSocket !== "undefined") {
-  run();
-}
+run();
