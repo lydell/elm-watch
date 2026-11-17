@@ -576,8 +576,8 @@ describe("errors", () => {
         get a new port number on each restart, which means that if you had tabs
         open in the browser they would try to connect to the old port number.
 
-        I tried to use such a saved port number from a previous run (or from previous
-        configuration). But now that port (9123) wasn't available!
+        I tried to use such a saved port number from a previous run. But now that port
+        (9123) wasn't available!
 
         Most likely you already have elm-watch running somewhere else! If so,
         find it and use that, or kill it.

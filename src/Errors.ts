@@ -1303,8 +1303,8 @@ I then save the port I got to ${elmWatchStuffJson}. Otherwise I would
 get a new port number on each restart, which means that if you had tabs
 open in the browser they would try to connect to the old port number.
 
-I tried to use such a saved port number from a previous run (or from previous
-configuration). But now that port (${number(port)}) wasn't available!
+I tried to use such a saved port number from a previous run. But now that port
+(${number(port)}) wasn't available!
 
 Most likely you already have elm-watch running somewhere else! If so,
 find it and use that, or kill it.
@@ -1398,8 +1398,8 @@ export function watcherError(error: Error): ErrorTemplate {
 The file watcher encountered an error, which means that it cannot continue.
 elm-watch is powered by its file watcher, so I have to exit at this point.
 
-See if this is something you can solve by maybe removing some problematic files
-or something!
+This can happen if a watched directory isn't readable, or if your operating
+system's limit for open files or watched files is reached.
 
 This is the error message I got:
 
