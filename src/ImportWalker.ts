@@ -119,16 +119,19 @@ function parse(elmFilePath: AbsolutePath): Array<Parser.ModuleName> {
   // time is the fastest.
   const buffer = Buffer.alloc(2048);
   let bytesRead = 0;
-  outer: while ((bytesRead = fs.readSync(handle, buffer)) > 0) {
-    // The last read might contain less bytes than we asked for.
-    for (const char of buffer.subarray(0, bytesRead)) {
-      Parser.readChar(char, readState);
-      if (Parser.isNonImport(readState)) {
-        break outer;
+  try {
+    outer: while ((bytesRead = fs.readSync(handle, buffer)) > 0) {
+      // The last read might contain less bytes than we asked for.
+      for (const char of buffer.subarray(0, bytesRead)) {
+        Parser.readChar(char, readState);
+        if (Parser.isNonImport(readState)) {
+          break outer;
+        }
       }
     }
+  } finally {
+    fs.closeSync(handle);
   }
-  fs.closeSync(handle);
   return Parser.finalize(readState);
 }
 

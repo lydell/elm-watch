@@ -1232,6 +1232,8 @@ function needsToWriteProxyFile(
   } catch (unknownError) {
     const error = toError(unknownError);
     return { tag: "ReadError", error };
+  } finally {
+    fs.closeSync(handle);
   }
   return buffer.equals(versionedIdentifier)
     ? { tag: "NotNeeded" }
