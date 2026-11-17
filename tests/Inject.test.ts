@@ -2,7 +2,13 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, test } from "vitest";
 
-import { inject } from "../src/Inject.ts";
+import { inject, proxyFile } from "../src/Inject.ts";
+import { markAsPort } from "../src/Port.ts";
+import {
+  markAsAbsolutePath,
+  markAsTargetName,
+  markAsWebSocketToken,
+} from "../src/Types.ts";
 
 const FIXTURES_DIR = path.join(import.meta.dirname, "fixtures", "inject");
 
@@ -49,6 +55,29 @@ describe("inject", () => {
       linesOnlyIn(elmBrowser, lydellBrowserSafe).join("\n"),
     ).toMatchInlineSnapshot(
       `"				if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button < 1 && !domNode.target && !domNode.hasAttribute('download'))"`,
+    );
+  });
+});
+
+describe("proxyFile", () => {
+  test("target name with $ replacement patterns", () => {
+    const targetName = "a$&b$`c$'d$$e";
+    const outputPath = markAsAbsolutePath("/build/main.js");
+    const code = proxyFile(
+      {
+        tag: "OutputPath",
+        theOutputPath: outputPath,
+        temporaryOutputPath: outputPath,
+        originalString: "build/main.js",
+        targetName: markAsTargetName(targetName),
+      },
+      0,
+      { tag: "AutomaticUrl", port: markAsPort(1234) },
+      markAsWebSocketToken("token"),
+      false,
+    );
+    expect(code).toContain(
+      `globalThis.__ELM_WATCH.REGISTER(${JSON.stringify(targetName)}, {});`,
     );
   });
 });

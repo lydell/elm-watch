@@ -1131,8 +1131,8 @@ export function proxyFile(
     webSocketToken,
     debug,
   );
-  const proxyCodeString = ClientCode.proxy.replace(
-    /"%TARGET_NAME%"/g,
+  // Using a function, so that `$` in the replacement isn’t special.
+  const proxyCodeString = ClientCode.proxy.replace(/"%TARGET_NAME%"/g, () =>
     Codec.JSON.stringify(Codec.string, outputPath.targetName),
   );
   return `${clientCodeString}\n${proxyCodeString}`;
