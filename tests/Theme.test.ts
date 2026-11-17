@@ -30,12 +30,12 @@ describe("parseTheme", () => {
       ].join(""),
     );
     expect([
-      theme.palette.black,
-      theme.palette.red,
-      theme.palette.green,
-      theme.palette.yellow,
-      theme.foreground,
-      theme.background,
+      theme?.palette.black,
+      theme?.palette.red,
+      theme?.palette.green,
+      theme?.palette.yellow,
+      theme?.foreground,
+      theme?.background,
     ]).toStrictEqual([
       "#ff8800",
       "#ff8000",
@@ -44,5 +44,18 @@ describe("parseTheme", () => {
       "#123456",
       "#aabbcc",
     ]);
+  });
+
+  test("foreground and background are required", () => {
+    const foreground = "\x1B]10;rgb:1111/2222/3333\x07";
+    const background = "\x1B]11;rgb:aaaa/bbbb/cccc\x07";
+    expect(parseTheme(foreground + background)).toMatchObject({
+      foreground: "#112233",
+      background: "#aabbcc",
+    });
+    // Missing foreground.
+    expect(parseTheme(background)).toBeUndefined();
+    // Unparseable background (`isThemeResponseDone` accepts any response).
+    expect(parseTheme(`${foreground}\x1B]11;?\x07`)).toBeUndefined();
   });
 });

@@ -98,28 +98,33 @@ export const DEFAULT_THEME: Theme = {
 
 export async function getThemeFromTerminal(terminal: Terminal): Promise<Theme> {
   const stdin = await terminal.query(THEME_ESCAPES_STRING, isThemeResponseDone);
-  return stdin === undefined ? DEFAULT_THEME : parseTheme(stdin);
+  return (stdin === undefined ? undefined : parseTheme(stdin)) ?? DEFAULT_THEME;
 }
 
 // Unlike `getThemeFromTerminal`, there is no fallback: `undefined` if the
-// terminal did not respond.
+// terminal did not respond (properly).
 export async function getColorsFromTerminal(
   terminal: Terminal,
 ): Promise<{ foreground: string; background: string } | undefined> {
   const stdin = await terminal.query(THEME_ESCAPES_STRING, isThemeResponseDone);
-  if (stdin === undefined) {
-    return undefined;
-  }
-  const { foreground, background } = parseTheme(stdin);
-  return { foreground, background };
+  const theme = stdin === undefined ? undefined : parseTheme(stdin);
+  return theme === undefined
+    ? undefined
+    : { foreground: theme.foreground, background: theme.background };
 }
 
 export function isThemeResponseDone(stdin: string): boolean {
   return THEME_ESCAPES_DONE_REGEX.test(stdin);
 }
 
-export function parseTheme(stdin: string): Theme {
+// Returns `undefined` if the foreground or background is missing, which can
+// happen since `isThemeResponseDone` accepts any response. Mixing the default
+// theme’s foreground or background with the terminal’s colors could be
+// unreadable. (Missing palette colors fall back to the default theme’s, though.)
+export function parseTheme(stdin: string): Theme | undefined {
   const theme = { ...DEFAULT_THEME, palette: { ...DEFAULT_THEME.palette } };
+  let foundForeground = false;
+  let foundBackground = false;
 
   for (const match of stdin.matchAll(THEME_ESCAPES_REGEX)) {
     const [, isPaletteString, indexString, r = "0", g = "0", b = "0"] = match;
@@ -134,12 +139,14 @@ export function parseTheme(stdin: string): Theme {
       }
     } else if (index === 10) {
       theme.foreground = color;
+      foundForeground = true;
     } else if (index === 11) {
       theme.background = color;
+      foundBackground = true;
     }
   }
 
-  return theme;
+  return foundForeground && foundBackground ? theme : undefined;
 }
 
 // https://github.com/xtermjs/xterm.js/blob/19367a6042a6360e9130fd0fbee0a66cdd75ddd4/src/common/input/XParseColor.ts#L7-L56
