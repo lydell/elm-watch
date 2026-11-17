@@ -969,55 +969,32 @@ async function compileOneOutput({
     outputState,
   );
 
-  const combinedResult = combineResults(
+  const compileError = getCompileError(
     elmMakeResult,
     allRelatedElmFilePathsResult,
   );
 
-  switch (combinedResult.tag) {
-    case "elm make success + walker success":
-      return onCompileSuccess(
-        terminal.config,
-        getNow,
-        updateStatusLineHelper,
-        runMode,
-        elmJsonPath,
-        outputPath,
-        outputState,
-        outputStatus,
-      );
-
-    case "elm make success + walker failure":
-      outputState.setStatus(combinedResult.walkerError);
-      updateStatusLineHelper();
-      return {
-        tag: "CompileError",
-        elmJsonPath,
-        outputPath,
-        outputState,
-      };
-
-    case "elm make failure + walker success":
-      outputState.setStatus(combinedResult.elmMakeError);
-      updateStatusLineHelper();
-      return {
-        tag: "CompileError",
-        elmJsonPath,
-        outputPath,
-        outputState,
-      };
-
-    case "elm make failure + walker failure":
-      // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
-      outputState.setStatus(combinedResult.elmMakeError);
-      updateStatusLineHelper();
-      return {
-        tag: "CompileError",
-        elmJsonPath,
-        outputPath,
-        outputState,
-      };
+  if (compileError === undefined) {
+    return onCompileSuccess(
+      terminal.config,
+      getNow,
+      updateStatusLineHelper,
+      runMode,
+      elmJsonPath,
+      outputPath,
+      outputState,
+      outputStatus,
+    );
   }
+
+  outputState.setStatus(compileError);
+  updateStatusLineHelper();
+  return {
+    tag: "CompileError",
+    elmJsonPath,
+    outputPath,
+    outputState,
+  };
 }
 
 // Reading `elm make`’s output is async on purpose, unlike most other IO in
@@ -1602,7 +1579,7 @@ async function typecheck({
       outputState,
     );
 
-    const combinedResult = combineResults(
+    const compileError = getCompileError(
       onlyElmMakeErrorsRelatedToOutput(outputState, elmMakeResult),
       allRelatedElmFilePathsResult,
     );
@@ -1655,25 +1632,10 @@ async function typecheck({
         break;
     }
 
-    switch (combinedResult.tag) {
-      case "elm make success + walker success":
-        break;
-
-      // In all of the remaining cases, `elm make` and
-      // `getAllRelatedElmFilePaths` errors are more important than proxy file
-      // errors.
-      case "elm make success + walker failure":
-        outputState.setStatus(combinedResult.walkerError);
-        break;
-
-      case "elm make failure + walker success":
-        outputState.setStatus(combinedResult.elmMakeError);
-        break;
-
-      case "elm make failure + walker failure":
-        // If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
-        outputState.setStatus(combinedResult.elmMakeError);
-        break;
+    // `elm make` and `getAllRelatedElmFilePaths` errors are more important
+    // than proxy file errors.
+    if (compileError !== undefined) {
+      outputState.setStatus(compileError);
     }
 
     updateStatusLine({
@@ -1722,65 +1684,16 @@ function onlyElmMakeErrorsRelatedToOutput(
     : { tag: "Success" };
 }
 
-type CombinedResult =
-  | {
-      tag: "elm make failure + walker failure";
-      elmMakeError: SpawnElm.RunElmMakeError;
-      walkerError: GetAllRelatedElmFilePathsError;
-    }
-  | {
-      tag: "elm make failure + walker success";
-      elmMakeError: SpawnElm.RunElmMakeError;
-      allRelatedElmFilePaths: Set<string>;
-    }
-  | {
-      tag: "elm make success + walker failure";
-      walkerError: GetAllRelatedElmFilePathsError;
-    }
-  | {
-      tag: "elm make success + walker success";
-      allRelatedElmFilePaths: Set<string>;
-    };
-
-function combineResults(
+// If `elm make` failed, don’t bother with `getAllRelatedElmFilePaths` errors.
+function getCompileError(
   elmMakeResult: Exclude<SpawnElm.RunElmMakeResult, { tag: "Killed" }>,
   allRelatedElmFilePathsResult: GetAllRelatedElmFilePathsResult,
-): CombinedResult {
-  switch (elmMakeResult.tag) {
-    case "Success":
-      switch (allRelatedElmFilePathsResult.tag) {
-        case "Success":
-          return {
-            tag: "elm make success + walker success",
-            allRelatedElmFilePaths:
-              allRelatedElmFilePathsResult.allRelatedElmFilePaths,
-          };
-
-        default:
-          return {
-            tag: "elm make success + walker failure",
-            walkerError: allRelatedElmFilePathsResult,
-          };
-      }
-
-    default:
-      switch (allRelatedElmFilePathsResult.tag) {
-        case "Success":
-          return {
-            tag: "elm make failure + walker success",
-            elmMakeError: elmMakeResult,
-            allRelatedElmFilePaths:
-              allRelatedElmFilePathsResult.allRelatedElmFilePaths,
-          };
-
-        default:
-          return {
-            tag: "elm make failure + walker failure",
-            elmMakeError: elmMakeResult,
-            walkerError: allRelatedElmFilePathsResult,
-          };
-      }
-  }
+): SpawnElm.RunElmMakeError | GetAllRelatedElmFilePathsError | undefined {
+  return elmMakeResult.tag !== "Success"
+    ? elmMakeResult
+    : allRelatedElmFilePathsResult.tag !== "Success"
+      ? allRelatedElmFilePathsResult
+      : undefined;
 }
 
 // This allows us to _always_ move the cursor in `updateStatusLine`, even the
