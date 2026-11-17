@@ -273,19 +273,24 @@ export function update(
       return [{ ...model }, []];
 
     case "EvalErrored":
-      return [
-        {
-          ...model,
-          status: { tag: "EvalError", date: msg.date },
-        },
-        [
-          { tag: "OpenPanel" },
-          {
-            tag: "TriggerReachedIdleState",
-            reason: "EvalErrored",
-          },
-        ],
-      ];
+      // Evaluating is async. If the connection was lost meanwhile, keep the
+      // reconnect status, or we would never reconnect. The error is logged to
+      // the console.
+      return isDisconnected(model.status)
+        ? [model, []]
+        : [
+            {
+              ...model,
+              status: { tag: "EvalError", date: msg.date },
+            },
+            [
+              { tag: "OpenPanel" },
+              {
+                tag: "TriggerReachedIdleState",
+                reason: "EvalErrored",
+              },
+            ],
+          ];
 
     case "EvalNeedsReload":
       return [
@@ -301,22 +306,26 @@ export function update(
       ];
 
     case "EvalSucceeded":
-      return [
-        {
-          ...model,
-          status: {
-            tag: "Idle",
-            date: msg.date,
-            sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-          },
-        },
-        [
-          {
-            tag: "TriggerReachedIdleState",
-            reason: "EvalSucceeded",
-          },
-        ],
-      ];
+      // See `EvalErrored`. (`EvalNeedsReload` is fine: Reloading the page
+      // connects anew anyway.)
+      return isDisconnected(model.status)
+        ? [model, []]
+        : [
+            {
+              ...model,
+              status: {
+                tag: "Idle",
+                date: msg.date,
+                sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
+              },
+            },
+            [
+              {
+                tag: "TriggerReachedIdleState",
+                reason: "EvalSucceeded",
+              },
+            ],
+          ];
 
     case "FocusedTab":
       return [
@@ -755,6 +764,12 @@ function toOverlayErrors(
       const id = Codec.JSON.stringify(Codec.unknown, overlayError);
       return [id, overlayError];
     }),
+  );
+}
+
+function isDisconnected(status: Status): boolean {
+  return (
+    status.tag === "SleepingBeforeReconnect" || status.tag === "Connecting"
   );
 }
 

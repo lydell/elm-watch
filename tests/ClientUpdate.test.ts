@@ -555,6 +555,90 @@ describe("client update", () => {
     `);
   });
 
+  test("connection lost while evaluating", () => {
+    // Evaluating is async. If the WebSocket closes meanwhile, the result must
+    // not overwrite the reconnect status, or the timer would never reconnect.
+    expect(
+      new Simulation()
+        .send(msg.connected)
+        .receive(successfullyCompiled)
+        .send(msg.closed)
+        .send(msg.evalSucceeded)
+        .wait(retryWaitMs(1))
+        .timerFired()
+        .send(msg.evalErrored)
+        .send(msg.connected)
+        .receive(upToDate)
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived SuccessfullyCompiled
+        status: Busy, mode: standard, timestamp: 2
+        cmd: Eval /* new code */
+
+      > WebSocketClosed
+        status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 2
+        cmd: SleepBeforeReconnect (attempt 1, 1010 ms)
+
+      > EvalSucceeded
+        status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 2
+
+      (1010 ms later)
+
+      > SleepBeforeReconnectDone (attempt 1, sleep started at 0 ms)
+        status: Connecting, attempt 1, mode: standard, timestamp: 2
+        cmd: Reconnect (timestamp 2)
+
+      > EvalErrored
+        status: Connecting, attempt 1, mode: standard, timestamp: 2
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 2
+
+      > WebSocketMessageReceived StatusChanged AlreadyUpToDate
+        status: Idle, mode: standard, timestamp: 2
+        cmd: TriggerReachedIdleState AlreadyUpToDate
+    `);
+  });
+
+  test("eval needs reload while reconnecting", () => {
+    // Reloading the page connects anew anyway.
+    expect(
+      new Simulation()
+        .send(msg.connected)
+        .receive(successfullyCompiled)
+        .send(msg.closed)
+        .send((date) => ({
+          tag: "EvalNeedsReload",
+          date,
+          reasons: [{ tag: "NewPortAdded", name: "toJs", moduleName: "Main" }],
+        }))
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived SuccessfullyCompiled
+        status: Busy, mode: standard, timestamp: 2
+        cmd: Eval /* new code */
+
+      > WebSocketClosed
+        status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 2
+        cmd: SleepBeforeReconnect (attempt 1, 1010 ms)
+
+      > EvalNeedsReload
+        status: WaitingForReload, reason: a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!, mode: standard, timestamp: 2
+    `);
+  });
+
   test("eval needs reload, with duplicate reasons removed", () => {
     expect(
       new Simulation()
