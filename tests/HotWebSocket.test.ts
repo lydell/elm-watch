@@ -168,6 +168,9 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 ParamsDecodeError Connecting · 13:10:05
+        Attempt 1 failed.
+        Trying again now…
+        [Reconnect now] (disabled)
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳
@@ -880,6 +883,28 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Sleeping · 13:10:05
+        Attempt 1 failed.
+        Trying again in 1.01 seconds.
+        [Reconnect now]
+        Drag emoji or press shift+arrows to move
+        ================================================================================
+        ▲ 🔌
+        --------------------------------------------------------------------------------
+        elm-watch %VERSION%
+        [Hide until reload or error]
+        [Close elm-watch]
+        🔌 Reconnect Connecting · 13:10:05
+        Attempt 1 failed.
+        Trying again now…
+        [Reconnect now] (disabled)
+        Drag emoji or press shift+arrows to move
+        ================================================================================
+        ▲ 🔌
+        --------------------------------------------------------------------------------
+        elm-watch %VERSION%
+        [Hide until reload or error]
+        [Close elm-watch]
+        🔌 Reconnect Sleeping · 13:10:05
         Attempt 2 failed.
         Trying again in 1.04 seconds.
         [Reconnect now]
@@ -892,28 +917,6 @@ describe("hot", () => {
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Attempt 2 failed.
-        Trying again now…
-        [Reconnect now] (disabled)
-        Drag emoji or press shift+arrows to move
-        ================================================================================
-        ▲ 🔌
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide until reload or error]
-        [Close elm-watch]
-        🔌 Reconnect Sleeping · 13:10:05
-        Attempt 3 failed.
-        Trying again in 1.09 seconds.
-        [Reconnect now]
-        Drag emoji or press shift+arrows to move
-        ================================================================================
-        ▲ 🔌
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide until reload or error]
-        [Close elm-watch]
-        🔌 Reconnect Connecting · 13:10:05
-        Attempt 3 failed.
         Trying again now…
         [Reconnect now] (disabled)
         Drag emoji or press shift+arrows to move

@@ -93,6 +93,7 @@ export type Status =
   | {
       tag: "Connecting";
       date: Date;
+      // The number of failed attempts so far (0 for the first connection).
       attemptNumber: number;
     }
   | {
@@ -2992,7 +2993,7 @@ function viewStatusDetails(
       return [];
 
     case "Connecting":
-      return status.attemptNumber > 1
+      return status.attemptNumber > 0
         ? viewReconnecting(
             info,
             status.attemptNumber,

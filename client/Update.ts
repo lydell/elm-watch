@@ -255,7 +255,7 @@ export const init = (
   const model: Model = {
     status: config.isFileProtocol
       ? { tag: "FileProtocol", date }
-      : { tag: "Connecting", date, attemptNumber: 1 },
+      : { tag: "Connecting", date, attemptNumber: 0 },
     compilationMode: config.originalCompilationMode,
     elmCompiledTimestamp: config.initialElmCompiledTimestamp,
     elmCompiledTimestampBeforeReload,

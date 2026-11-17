@@ -1881,7 +1881,7 @@ function renderMockStatuses(ui: Ui | undefined): void {
     Connecting: {
       tag: "Connecting",
       date,
-      attemptNumber: 1,
+      attemptNumber: 0,
     },
     Connecting2: {
       tag: "Connecting",
@@ -1896,7 +1896,7 @@ function renderMockStatuses(ui: Ui | undefined): void {
     ConnectingWss: {
       tag: "Connecting",
       date,
-      attemptNumber: 1,
+      attemptNumber: 0,
       info: {
         ...info,
         webSocketUrl: new URL("wss://localhost:53167"),
