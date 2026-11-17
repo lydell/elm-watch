@@ -157,7 +157,8 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 ParamsDecodeError Sleeping · 13:10:05
-        Attempt 1 failed. Trying again in 1.01 seconds.
+        Attempt 1 failed.
+        Trying again in 1.01 seconds.
         [Reconnect now]
         Drag emoji or press shift+arrows to move
         ================================================================================
@@ -879,7 +880,8 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Sleeping · 13:10:05
-        Attempt 2 failed. Trying again in 1.04 seconds.
+        Attempt 2 failed.
+        Trying again in 1.04 seconds.
         [Reconnect now]
         Drag emoji or press shift+arrows to move
         ================================================================================
@@ -889,7 +891,9 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
-        Attempt 2.
+        Attempt 2 failed.
+        Trying again now…
+        [Reconnect now] (disabled)
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
@@ -898,7 +902,8 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Sleeping · 13:10:05
-        Attempt 3 failed. Trying again in 1.09 seconds.
+        Attempt 3 failed.
+        Trying again in 1.09 seconds.
         [Reconnect now]
         Drag emoji or press shift+arrows to move
         ================================================================================
@@ -908,7 +913,9 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
-        Attempt 3.
+        Attempt 3 failed.
+        Trying again now…
+        [Reconnect now] (disabled)
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳

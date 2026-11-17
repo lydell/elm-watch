@@ -1029,7 +1029,7 @@ function walkTextNodes(node: Node, parts: Array<string>): void {
     } else {
       newline();
       parts.push(
-        `[${textContent === "" ? (node.getAttribute("aria-label") ?? "") : textContent}]${pressed ? " (pressed)" : ""}`,
+        `[${textContent === "" ? (node.getAttribute("aria-label") ?? "") : textContent}]${pressed ? " (pressed)" : ""}${node.disabled ? " (disabled)" : ""}`,
       );
     }
   } else if (node instanceof HTMLAnchorElement) {

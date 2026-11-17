@@ -2409,8 +2409,13 @@ focus might be inside the panel and must not be lost.
   content: "]";
 }
 
-.${CLASS.button}:hover {
+.${CLASS.button}:enabled:hover {
   text-decoration: underline;
+}
+
+.${CLASS.button}:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .${CLASS.iconButton} {
@@ -2987,18 +2992,14 @@ function viewStatusDetails(
       return [];
 
     case "Connecting":
-      return [
-        ...(status.attemptNumber > 1
-          ? [
-              h(
-                HTMLParagraphElement,
-                { className: CLASS.wrapToPanel },
-                `Attempt ${status.attemptNumber}.`,
-              ),
-            ]
-          : []),
-        ...viewHttpsInfo(info.webSocketUrl),
-      ];
+      return status.attemptNumber > 1
+        ? viewReconnecting(
+            info,
+            status.attemptNumber,
+            "Trying again now…",
+            undefined,
+          )
+        : viewHttpsInfo(info.webSocketUrl);
 
     case "TargetError":
       return [h(HTMLPreElement, {}, status.error)];
@@ -3030,25 +3031,12 @@ function viewStatusDetails(
     }
 
     case "SleepingBeforeReconnect":
-      return [
-        h(
-          HTMLParagraphElement,
-          { className: CLASS.wrapToPanel },
-          `Attempt ${status.attemptNumber} failed. Trying again in ${printRetryWaitMs(status.attemptNumber)}.`,
-        ),
-        ...viewHttpsInfo(info.webSocketUrl),
-        h(
-          HTMLButtonElement,
-          {
-            className: CLASS.button,
-            attrs: { [DATA_FOCUS_KEY]: `reconnect:${info.targetName}` },
-            onclick: () => {
-              dispatch({ tag: "PressedReconnectNow" });
-            },
-          },
-          "Reconnect now",
-        ),
-      ];
+      return viewReconnecting(
+        info,
+        status.attemptNumber,
+        `Trying again in ${printRetryWaitMs(status.attemptNumber)}.`,
+        dispatch,
+      );
 
     case "UnexpectedError":
       return [
@@ -3207,6 +3195,39 @@ function viewOpenEditorError(message: string): HTMLElement {
 }
 
 // elm-watch’s HTTP server is on the same host and port as its WebSocket.
+// Sleeping and Connecting (after a failed attempt) have the same lines, which
+// are short enough not to wrap, so that the panel doesn’t keep changing height
+// while reconnecting.
+function viewReconnecting(
+  info: Info,
+  attemptNumber: number,
+  tryingAgain: string,
+  // `undefined` disables the “Reconnect now” button.
+  dispatch: ((msg: UiMsg) => void) | undefined,
+): Array<HTMLElement> {
+  return [
+    h(
+      HTMLParagraphElement,
+      { className: CLASS.wrapToPanel },
+      `Attempt ${attemptNumber} failed.`,
+    ),
+    h(HTMLParagraphElement, { className: CLASS.wrapToPanel }, tryingAgain),
+    ...viewHttpsInfo(info.webSocketUrl),
+    h(
+      HTMLButtonElement,
+      {
+        className: CLASS.button,
+        disabled: dispatch === undefined,
+        attrs: { [DATA_FOCUS_KEY]: `reconnect:${info.targetName}` },
+        onclick: () => {
+          dispatch?.({ tag: "PressedReconnectNow" });
+        },
+      },
+      "Reconnect now",
+    ),
+  ];
+}
+
 function webSocketUrlToServerUrl(webSocketUrl: URL): string {
   const url = new URL(webSocketUrl);
   url.protocol = webSocketUrl.protocol === "wss:" ? "https:" : "http:";
