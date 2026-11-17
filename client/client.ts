@@ -852,6 +852,24 @@ const initMutable =
       });
     };
 
+    // The original code was registered with the other kind of hot reloading,
+    // for example because the target's compiler changed. Neither can take over
+    // from the other.
+    const dispatchElmHotChanged = (
+      elmExports: ElmExports,
+      usesElmHot: boolean,
+    ): void => {
+      dispatch({
+        tag: "EvalNeedsReload",
+        date: getNow(),
+        reasons: flattenElmExports(elmExports).map(([moduleName]) => ({
+          tag: "ElmHotChanged",
+          usesElmHot,
+          moduleName,
+        })),
+      });
+    };
+
     const originalHotReload = __ELM_WATCH.HOT_RELOAD;
     __ELM_WATCH.HOT_RELOAD = (targetName, elmExports, setSchedulerEnqueue) => {
       originalHotReload(targetName, elmExports, setSchedulerEnqueue);
@@ -860,6 +878,7 @@ const initMutable =
       }
       const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
       if (targetData?.tag !== "Patched") {
+        dispatchElmHotChanged(elmExports, false);
         return;
       }
       // Make the new code use the original code’s scheduler, so there’s only ever
@@ -991,6 +1010,7 @@ const initMutable =
       }
       const targetData = __ELM_WATCH.TARGET_DATA.get(TARGET_NAME);
       if (targetData?.tag !== "ElmHot") {
+        dispatchElmHotChanged(newElm, true);
         return;
       }
       const reloadReasons = elmHotReload(targetData, newElm, initData, eq);

@@ -32,6 +32,10 @@ export type UpdateConfig = {
 
 export type ReloadReason =
   | {
+      tag: "ElmHotChanged";
+      usesElmHot: boolean;
+    }
+  | {
       tag: "ElmHotUnavailable";
     }
   | {
@@ -801,6 +805,10 @@ export function reloadReasonToString(
   reason: ReloadReasonWithModuleName,
 ): string {
   switch (reason.tag) {
+    case "ElmHotChanged":
+      return reason.usesElmHot
+        ? `\`${reason.moduleName}\` now uses built-in hot reloading (\`Elm.hot\`), for example because the compiler changed.`
+        : `\`${reason.moduleName}\` no longer uses built-in hot reloading (\`Elm.hot\`), for example because the compiler changed.`;
     case "ElmHotUnavailable":
       return `\`${reason.moduleName}\` uses built-in hot reloading (\`Elm.hot\`), which isn't available. It only exists when not in optimize mode, and when elm/core, elm/browser and elm/virtual-dom all support it.`;
     case "FlagsTypeChanged":

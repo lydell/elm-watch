@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import * as fs from "fs";
+import * as path from "path";
 import { afterEach, describe, expect, test } from "vitest";
 
 import {
@@ -11,6 +13,7 @@ import {
   assertDebugDisabled,
   cleanupAfterEachTest,
   click,
+  fixtureDir,
   nextWatcherEventHandled,
   runHotReload,
   waitForElmWatchIdle,
@@ -372,6 +375,47 @@ main =
 
       Expecting an OBJECT with a field named \`two\`
       (target: FlagsChange)
+    `);
+  });
+
+  test("switching compiler to and from Lamdera does a full page reload", async () => {
+    const { go } = runHotReload({
+      name: "HtmlMain",
+      programType: "Html",
+      compilationMode: "standard",
+    });
+
+    const elmWatchJsonPath = path.join(
+      fixtureDir("hot-reload"),
+      "elm-watch.json",
+    );
+    const setCompiler = (compiler: "elm" | "lamdera"): void => {
+      const json = JSON.parse(fs.readFileSync(elmWatchJsonPath, "utf8")) as {
+        targets: Record<string, Record<string, unknown>>;
+      };
+      json.targets["HtmlMain"] = { ...json.targets["HtmlMain"], compiler };
+      fs.writeFileSync(elmWatchJsonPath, JSON.stringify(json, null, 4));
+    };
+
+    const { browserConsole } = await go(({ idle }) => {
+      switch (idle) {
+        case 1:
+          setCompiler("lamdera");
+          return "KeepGoing";
+        case 2:
+          setCompiler("elm");
+          return "KeepGoing";
+        default:
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because \`Elm.HtmlMain\` now uses built-in hot reloading (\`Elm.hot\`), for example because the compiler changed.
+      (target: HtmlMain)
+
+      elm-watch: I did a full page reload because \`Elm.HtmlMain\` no longer uses built-in hot reloading (\`Elm.hot\`), for example because the compiler changed.
+      (target: HtmlMain)
     `);
   });
 
