@@ -1160,10 +1160,17 @@ function getOptimizeModeRecordNames(code: string): Record<string, string> {
     port_ = "port__missing",
   ] = match5 ?? [];
 
+  // Things like `var view = impl.view;`. Only look inside the functions we
+  // replace, since the user’s code can contain `var view = impl.title;` too.
   const extra = Object.fromEntries(
-    Array.from(
-      code.matchAll(/^\s*var ([\w$]+) = impl\.([\w$]+);/gm),
-      ([, from = "from_missing", to = "to_missing"]) => [from, to],
+    Array.from(code.matchAll(REPLACEMENT_REGEX)).flatMap(([functionCode]) =>
+      Array.from(
+        functionCode.matchAll(/^\s*var ([\w$]+) = impl\.([\w$]+);/gm),
+        ([, from = "from_missing", to = "to_missing"]): [string, string] => [
+          from,
+          to,
+        ],
+      ),
     ),
   );
 
