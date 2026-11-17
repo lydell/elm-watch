@@ -21,8 +21,10 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 //   directory is replaced (removed or moved away, and created again) before we
 //   handle the event, the old watcher keeps watching the old directory. Moving
 //   the directory away doesn’t even result in an event for recursive watchers.
-//   So we check if the directory is still the same, and also watch its parent
-//   (except on macOS, where FSEvents watches paths).
+//   So on Linux we also watch the parent directory, and start over on any
+//   event about the watched directory there. (Comparing inode numbers is not
+//   enough: ext4 reuses the inode number for a directory that is removed and
+//   created again.)
 // - Watching a path that does not exist throws. Watched directories (such as
 //   source directories in elm.json) might not exist (yet), so we watch the
 //   closest existing ancestor until they do.
@@ -102,7 +104,8 @@ export function watch(
     closeRoot(root);
     const ignore = ignoreFunctions[watchDir.tag];
     // Before `fs.watch`: If the root is replaced in between, the first event
-    // makes us start over.
+    // makes us start over. This catches some replacements, but not all, since
+    // inode numbers can be reused (see `watchParent`).
     const identity = getIdentity(root);
     const isReplaced = (): boolean => getIdentity(root) !== identity;
     const onReplaced = (): void => {
@@ -175,11 +178,7 @@ export function watch(
     rootStates.set(root, {
       tag: "Watching",
       fsWatcher,
-      parentWatcher: watchParent(root, () => {
-        if (isReplaced()) {
-          onReplaced();
-        }
-      }),
+      parentWatcher: watchParent(root, onReplaced),
     });
   };
 
@@ -240,18 +239,19 @@ export function watch(
   };
 }
 
-// Calls `onEvent` for events about `root` in its parent directory. Returns
-// `undefined` if the parent can’t be watched: The watcher of the root itself
-// still notices most changes to the root.
+// On Linux, calls `onEvent` for events about `root` in its parent directory:
+// When `root` is created, removed, moved or gets new attributes (but not when
+// something inside it changes). Returns `undefined` if the parent can’t be
+// watched: The watcher of the root itself still notices most changes to the
+// root. Only needed on Linux (see the top of this file). On macOS, watching a
+// directory also gets (and filters out) events for everything inside it, and on
+// Windows, changes inside `root` result in events about `root` in the parent.
 function watchParent(
   root: AbsolutePath,
   onEvent: () => void,
 ): fs.FSWatcher | undefined {
   const parent = path.dirname(root);
-  // macOS (FSEvents) watches paths, so it doesn’t need this. There, watching a
-  // directory also gets (and filters out) events for everything inside it,
-  // which could be a lot for a parent directory.
-  if (process.platform === "darwin" || parent === root) {
+  if (process.platform !== "linux" || parent === root) {
     return undefined;
   }
   const basename = path.basename(root);
@@ -271,7 +271,8 @@ function watchParent(
 }
 
 // Identifies a directory, so we can tell if it has been replaced by another one
-// at the same path. `undefined` if it does not exist.
+// at the same path (unless the inode number was reused). `undefined` if it does
+// not exist.
 function getIdentity(absolutePath: AbsolutePath): string | undefined {
   try {
     const stats = fs.statSync(absolutePath, { throwIfNoEntry: false });
