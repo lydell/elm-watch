@@ -61,7 +61,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙── TYPE MISMATCH ── ⧘src/A.elm⧙:6:5⧘⧙ ──────────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────── ⧘src/A.elm⧙:6:5⧘
 
       Something is off with the body of the \`a\` definition:
 
@@ -86,7 +86,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙── TYPE MISMATCH ── ⧘src/A.elm⧙:11:5⧘⧙ ─────────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ──────────────────────────────────────────────── ⧘src/A.elm⧙:11:5⧘
 
       Something is off with the body of the \`b\` definition:
 
@@ -111,7 +111,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙── TYPE MISMATCH ── ⧘src/B.elm⧙:6:5⧘⧙ ──────────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────── ⧘src/B.elm⧙:6:5⧘
 
       Something is off with the body of the \`c\` definition:
 
@@ -136,7 +136,7 @@ describe("hot error view", () => {
       🚨 ⧙Other⧘: 1 error ◀
       🌐 http://localhost:59123
 
-      ⧙── TYPE MISMATCH ── ⧘src/Other.elm⧙:7:20⧘⧙ ─────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ──────────────────────────────────────────── ⧘src/Other.elm⧙:7:20⧘
 
       I cannot do addition with ⧙String⧘ values like this one:
 
@@ -225,7 +225,7 @@ describe("hot error view", () => {
       🚨 ⧙Other⧘: 1 error ◀
       🌐 http://localhost:59123
 
-      ⧙── TYPE MISMATCH ── ⧘src/Other.elm⧙:7:20⧘⧙ ─────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ──────────────────────────────────────────── ⧘src/Other.elm⧙:7:20⧘
 
       I cannot do addition with ⧙String⧘ values like this one:
 
@@ -279,7 +279,7 @@ describe("hot error view", () => {
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
-      ⧙── TYPE MISMATCH ── ⧘src/B.elm⧙:6:5⧘⧙ ──────────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────────── ⧘src/B.elm⧙:6:5⧘
 
       Something is off with the body of the \`c\` definition:
 
@@ -834,7 +834,7 @@ describe("hot error view", () => {
     });
 
     expect(screens.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
-      ⧙── TYPE MISMATCH ── ⧘src/Main.elm⧙:19:5⧘⧙ ──────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────── ⧘src/Main.elm⧙:19:5⧘
 
       Something is off with the body of the \`f\` definition:
 
@@ -864,7 +864,7 @@ describe("hot error view", () => {
       🚨 error 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙space⧘⧙]⧘ expand
       ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
-      ⧙── TYPE MISMATCH ── ⧘src/Main.elm⧙:19:5⧘⧙ ──────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ───────────────────────────────────────────── ⧘src/Main.elm⧙:19:5⧘
 
       Something is off with the body of the \`f\` definition:
 
@@ -920,7 +920,7 @@ describe("hot error view", () => {
     `);
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:19:5</span></button></span></div>
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:19:5</span></button></span></div>
       <pre>Something is off with the body of the \`f\` definition:
 
       19|<span style="color: rgb(241, 76, 76)">&gt;</span>    String.length &lt;|
@@ -948,7 +948,7 @@ describe("hot error view", () => {
       </overlay>
       ================================================================================
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:19:5</span></button></span></div>
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:19:5</span></button></span></div>
       <pre>Something is off with the body of the \`f\` definition:
 
       19|<span style="color: rgb(241, 76, 76)">&gt;</span>    String.length &lt;|

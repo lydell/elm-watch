@@ -533,7 +533,7 @@ describe("render", () => {
         column: 5,
       }),
     ).toMatchInlineSnapshot(
-      `"*── ERROR ── *src/Page/Home.elm~:6:5~* ──────────────────────────────────────────────*"`,
+      `"*── ERROR ───────────────────────────────────────────────── *src/Page/Home.elm~:6:5~"`,
     );
     expect(
       titleLine({
@@ -543,19 +543,34 @@ describe("render", () => {
         column: 1,
       }),
     ).toMatchInlineSnapshot(
-      `"*── ERROR ── *../shared/src/Ui.elm~:10:1~* ──────────────────────────────────────────*"`,
+      `"*── ERROR ───────────────────────────────────────────── *../shared/src/Ui.elm~:10:1~"`,
     );
     expect(
       titleLine({ tag: "FileOnly", file: file("elm.json") }),
     ).toMatchInlineSnapshot(
-      `"*── ERROR ── *elm.json* ───────────────────────────────────────────────────────────*"`,
+      `"*── ERROR ────────────────────────────────────────────────────────────── *elm.json"`,
     );
     expect(
       titleLine({ tag: "Target", targetName: markAsTargetName("Main") }),
     ).toMatchInlineSnapshot(
-      `"*── ERROR ── *~Target: Main~* ───────────────────────────────────────────────────────*"`,
+      `"*── ERROR ────────────────────────────────────────────────────────── *~Target: Main~"`,
     );
-    // No room for the line: The title line wraps instead.
+    // Like the timings in the status lines, the location is right-aligned at
+    // 100 columns at most. The line continues to the edge.
+    expect(
+      titleLine(
+        {
+          tag: "FileWithLineAndColumn",
+          file: file("src/Page/Home.elm"),
+          line: 6,
+          column: 5,
+        },
+        120,
+      ),
+    ).toMatchInlineSnapshot(
+      `"*── ERROR ───────────────────────────────────────────────────────────────────── *src/Page/Home.elm~:6:5~* ───────────────────*"`,
+    );
+    // Not enough room: The title line wraps instead.
     expect(
       titleLine(
         {

@@ -70,7 +70,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙── TYPE MISMATCH ── ⧘src/Main.elm⧙:10:31⧘⧙ ─────────────────────────────────────────⧘
+      ⧙── TYPE MISMATCH ──────────────────────────────────────────── ⧘src/Main.elm⧙:10:31⧘
 
       I am struggling with this boolean operation:
 
@@ -87,7 +87,7 @@ describe("hot", () => {
 
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:10:31</span></button></span></div>
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:10:31</span></button></span></div>
       <pre>I am struggling with this boolean operation:
 
       10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
@@ -122,7 +122,7 @@ describe("hot", () => {
       Main: 1 error
       http://localhost:59123
 
-      ── TYPE MISMATCH ── src/Main.elm:10:31 ─────────────────────────────────────────
+      ── TYPE MISMATCH ──────────────────────────────────────────── src/Main.elm:10:31
 
       I am struggling with this boolean operation:
 
@@ -141,7 +141,7 @@ describe("hot", () => {
 
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:10:31</span></button></span></div>
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:10:31</span></button></span></div>
       <pre>I am struggling with this boolean operation:
 
       10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
@@ -178,7 +178,7 @@ describe("hot", () => {
     });
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-      ⧙── UNEXPECTED ELM OUTPUT ── ⧘⧙Target: Main⧘⧙ ───────────────────────────────────────⧘
+      ⧙── UNEXPECTED ELM OUTPUT ────────────────────────────────────────── ⧘⧙Target: Main⧘
 
       I ran the following commands:
 
@@ -198,7 +198,7 @@ describe("hot", () => {
 
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNEXPECTED ELM OUTPUT</span><span style="background-color: rgb(32, 30, 30);"><span>Target: Main</span></span></div>
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">UNEXPECTED ELM OUTPUT</span><span></span><span style="background-color: rgb(32, 30, 30);"><span>Target: Main</span></span></div>
       <pre>I ran the following commands:
 
       cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
@@ -353,7 +353,7 @@ describe("hot", () => {
 
         expect(chooser).toMatchInlineSnapshot(`
           <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-          <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:10:31</span></button></span></div>
+          <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span></span><span style="background-color: rgb(32, 30, 30);"><button>src/Main.elm<span>:10:31</span></button></span></div>
           <pre>I am struggling with this boolean operation:
 
           10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"

@@ -1731,6 +1731,7 @@ const CLASS = {
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
   errorTitleLocation: "errorTitleLocation",
+  errorTitleSpacer: "errorTitleSpacer",
   flash: "flash",
   footer: "footer",
   header: "header",
@@ -1911,9 +1912,17 @@ supported by browsers, for browsers without popover support.
 .${CLASS.overlayErrorHeaderInline} {
   flex-direction: row;
   flex-wrap: wrap;
-  /* Shows as much of the border between the title and the location as the
-     “──” between them in the terminal. */
-  column-gap: 2ch;
+  /* The location is right-aligned at the same width as in the terminal. */
+  max-width: 100ch;
+  box-sizing: border-box;
+}
+
+/* Pushes the location to the right. When the location doesn’t fit, it wraps
+   and starts at the left, while the spacer stays on the title’s line. At
+   least as much of the border as the “──” between the title and the location
+   in the terminal is shown. */
+.${CLASS.errorTitleSpacer} {
+  flex: 1 0 2ch;
 }
 
 .${CLASS.errorTitle},
@@ -3527,6 +3536,11 @@ function viewOverlayError(
         },
         error.title,
       ),
+      error.location === undefined
+        ? undefined
+        : locationInTitle
+          ? h(HTMLSpanElement, { className: CLASS.errorTitleSpacer })
+          : undefined,
       error.location === undefined
         ? undefined
         : locationInTitle

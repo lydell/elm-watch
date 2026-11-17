@@ -35,7 +35,7 @@ import {
 import { absolutePathFromString } from "./PathHelpers.ts";
 import type { Port } from "./Port.ts";
 import type { Command, ExitReason } from "./Spawn.ts";
-import { DEFAULT_COLUMNS } from "./Terminal.ts";
+import { DEFAULT_COLUMNS, MAX_ALIGN_COLUMNS } from "./Terminal.ts";
 import * as Theme from "./Theme.ts";
 import type {
   AbsolutePath,
@@ -264,24 +264,35 @@ export function toTerminalString(
       : renderRelativeErrorLocation(location, oneAtATime.root);
   // Box drawing characters render as a solid line, and are supported by the
   // fonts of the Windows console too.
-  const prefix =
-    titleLocation.length === 0 ? `── ${title} ` : `── ${title} ── `;
-  const lineLength =
-    width -
-    prefix.length -
-    titleLocation.reduce((sum, piece) => sum + piece.text.length, 0) -
-    (titleLocation.length === 0 ? 0 : 1);
-  const line =
-    lineLength <= 0
-      ? ""
-      : `${titleLocation.length === 0 ? "" : " "}${"─".repeat(lineLength)}`;
+  const prefix = `── ${title} `;
+  const titleLocationLength = titleLocation.reduce(
+    (sum, piece) => sum + piece.text.length,
+    0,
+  );
+  // The location is right-aligned like the timings in the status lines, and
+  // the line continues to the edge.
+  const beforeLocation = `${prefix}${"─".repeat(
+    Math.max(
+      2,
+      Math.min(width, MAX_ALIGN_COLUMNS) -
+        prefix.length -
+        titleLocationLength -
+        1,
+    ),
+  )} `;
+  const afterLocationLength =
+    width - beforeLocation.length - titleLocationLength - 1;
   const titleWithSeparator =
     titleLocation.length === 0
-      ? renderPiece(bold(`${prefix}${line}`))
+      ? renderPiece(
+          bold(`${prefix}${"─".repeat(Math.max(0, width - prefix.length))}`),
+        )
       : [
-          renderPiece(bold(prefix)),
+          renderPiece(bold(beforeLocation)),
           ...titleLocation.map(renderPiece),
-          line === "" ? "" : renderPiece(bold(line)),
+          afterLocationLength >= 1
+            ? renderPiece(bold(` ${"─".repeat(afterLocationLength)}`))
+            : "",
         ].join("");
 
   return [

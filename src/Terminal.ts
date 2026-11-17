@@ -31,6 +31,10 @@ import type { GetNow } from "./Types.ts";
 
 export const DEFAULT_COLUMNS = 80;
 
+// Things at the end of lines (such as timings) are right-aligned at this many
+// columns at most, so they aren’t too far away on wide terminals.
+export const MAX_ALIGN_COLUMNS = 100;
+
 export type Terminal = {
   config: TerminalConfig;
   // The default is to write to `stdout`. `stderr` is used for debug logging.

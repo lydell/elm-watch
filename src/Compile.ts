@@ -45,7 +45,11 @@ import {
 } from "./Project.ts";
 import { trackRunning } from "./Spawn.ts";
 import * as SpawnElm from "./SpawnElm.ts";
-import type { Terminal, TerminalConfig } from "./Terminal.ts";
+import {
+  MAX_ALIGN_COLUMNS,
+  type Terminal,
+  type TerminalConfig,
+} from "./Terminal.ts";
 import {
   type AbsolutePath,
   type CompilationMode,
@@ -1962,7 +1966,7 @@ function statusLine(
     const startLength =
       (terminalConfig.fancy ? start.length + 3 : start.length) + delta;
     const end = strings.join("   ");
-    const max = Math.min(terminalConfig.columns, 100);
+    const max = Math.min(terminalConfig.columns, MAX_ALIGN_COLUMNS);
     const padding = terminalConfig.isTTY
       ? Math.max(3, max - end.length - startLength)
       : 3;
