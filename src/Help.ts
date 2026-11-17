@@ -65,7 +65,6 @@ ${bold("Durations legend:")}
     ${bold("T")} elm make (typecheck only)
     ${bold("W")} find all related Elm file paths
     ${bold("I")} inject hot reloading code
-    ${bold("R")} queued for postprocess
     ${bold("P")} postprocess
     ${bold(terminalConfig.fancy ? "¦" : "/")} next is run in parallel
 

@@ -176,11 +176,15 @@ export class TargetState<Status extends OutputStatus = OutputStatus> {
 
       case "Postprocess":
       case "QueuedForElmMake":
-      case "QueuedForPostprocess":
         this._durations.push({
           tag: previousStatus.tag,
           durationMs: this._lastStartTimestamp - lastStartTimestamp,
         });
+        break;
+
+      // Postprocess starts right away, so this is always about 0 ms. Not worth
+      // showing, but keep the durations so far.
+      case "QueuedForPostprocess":
         break;
 
       default:
@@ -361,10 +365,6 @@ export type Duration =
     }
   | {
       tag: "QueuedForElmMake";
-      durationMs: number;
-    }
-  | {
-      tag: "QueuedForPostprocess";
       durationMs: number;
     };
 

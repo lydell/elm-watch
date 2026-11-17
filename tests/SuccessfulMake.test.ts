@@ -243,9 +243,9 @@ describe("successful make", () => {
       .toMatchInlineSnapshot(`
         ✅ Compilation finished in ⧙123 ms⧘.
         ✅ Dependencies
-        ✅ main⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-        ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-        ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+        ✅ main⧙     1 ms Q | 1.23 s E | 31.2 s P⧘
+        ✅ second⧙     1 ms Q | 1.23 s E | 31.2 s P⧘
+        ✅ third⧙     1 ms Q | 1.23 s E | 31.2 s P⧘
       `);
   });
 
@@ -288,10 +288,9 @@ describe("successful make", () => {
 
     expect(outputDuringPostprocess).toMatch("⏳ main: postprocess");
 
-    const regex = /(\d+) ms R \| (\d+) ms P/u;
+    const regex = /(\d+) ms P/u;
     expect(output).toMatch(regex);
-    const [, queued = "", postprocess = ""] = regex.exec(output) ?? [];
-    expect(Number(queued)).toBeLessThan(200);
+    const [, postprocess = ""] = regex.exec(output) ?? [];
     expect(Number(postprocess)).toBeGreaterThanOrEqual(200);
   });
 

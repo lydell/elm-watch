@@ -2272,9 +2272,6 @@ function printDuration(duration: Duration, fancy: boolean): string {
     case "Inject":
       return `${printDurationMs(duration.durationMs)} I`;
 
-    case "QueuedForPostprocess":
-      return `${printDurationMs(duration.durationMs)} R`;
-
     case "Postprocess":
       return `${printDurationMs(duration.durationMs)} P`;
   }
@@ -2306,12 +2303,6 @@ function mockDuration(duration: Duration): Duration {
       return {
         tag: "Inject",
         durationMs: 9,
-      };
-
-    case "QueuedForPostprocess":
-      return {
-        tag: "QueuedForPostprocess",
-        durationMs: 0,
       };
 
     case "Postprocess":

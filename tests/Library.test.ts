@@ -93,8 +93,8 @@ describe("library", () => {
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
-      ✅ Sync⧙   88.5 KiB → 88.5 KiB (100.0 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2…⧘
-      ✅ Async⧙   88.5 KiB → 0.01 KiB (0.0 %)     1 ms Q | 1.23 s E |   0 ms R | 31.2 …⧘
+      ✅ Sync⧙           88.5 KiB → 88.5 KiB (100.0 %)     1 ms Q | 1.23 s E | 31.2 s P⧘
+      ✅ Async⧙            88.5 KiB → 0.01 KiB (0.0 %)     1 ms Q | 1.23 s E | 31.2 s P⧘
       ✅ None⧙                                           88.5 KiB     1 ms Q | 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
@@ -591,7 +591,7 @@ describe("library", () => {
       expect(stdout).toMatchInlineSnapshot(`
         🚨 esbuild
         🚨 translations
-        ✅ main⧙                                  1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+        ✅ main⧙                                             1 ms Q | 1.23 s E | 31.2 s P⧘
 
         ⧙── ESBUILD ─────────────────────────────────────────────────────────────────────⧘
         /Users/you/project/tests/fixtures/library/ts/main.ts:12:9

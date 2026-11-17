@@ -98,7 +98,6 @@ describe("help", () => {
           ⧙T⧘ elm make (typecheck only)
           ⧙W⧘ find all related Elm file paths
           ⧙I⧘ inject hot reloading code
-          ⧙R⧘ queued for postprocess
           ⧙P⧘ postprocess
           ⧙¦⧘ next is run in parallel
 
@@ -180,7 +179,6 @@ describe("help", () => {
             T elm make (typecheck only)
             W find all related Elm file paths
             I inject hot reloading code
-            R queued for postprocess
             P postprocess
             / next is run in parallel
 
