@@ -756,12 +756,14 @@ describe("Hot update", () => {
         state: Idle, next: NoAction, events: 0, pending: 0
         cmd: WebSocketSendExternalErrors
         cmd: WebSocketSendOpenEditorSetup
+        cmd: WebSocketSendTerminalColors
         cmd: WebSocketSend StatusChanged AlreadyUpToDate
 
       > WebSocketConnected
         state: Idle, next: NoAction, events: 1, pending: 0
         cmd: WebSocketSendExternalErrors
         cmd: WebSocketSendOpenEditorSetup
+        cmd: WebSocketSendTerminalColors
         cmd: WebSocketSendCompileErrorToOutput Other (only the connecting tab)
     `);
   });

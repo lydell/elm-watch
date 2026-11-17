@@ -55,6 +55,11 @@ export type OpenEditorSetup = {
   env: OpenEditorEnv | null;
 };
 
+export type TerminalColors = {
+  foregroundColor: string;
+  backgroundColor: string;
+};
+
 export type OverlayError = {
   title: string;
   location: ErrorLocation | undefined;
@@ -192,6 +197,7 @@ export type TargetSnapshot = {
   // For actions that work in more statuses than the ones with a `sendKey`.
   sendKey: SendKey | undefined;
   openEditor: OpenEditorSetup | undefined;
+  terminalColors: TerminalColors | undefined;
 };
 
 type OverlayErrorsEntry = {
@@ -808,6 +814,11 @@ export function createUi(): Ui {
 
   const render = (): void => {
     const snapshots = getSnapshots();
+    setTerminalColors(
+      root,
+      snapshots.find((snapshot) => snapshot.terminalColors !== undefined)
+        ?.terminalColors,
+    );
     const externalSources = externalErrors.sources.map(({ source }) => source);
     const worst = worstStatus(snapshots, externalSources);
     const someError = (worst?.severity ?? 0) >= ERROR_SEVERITY;
@@ -2111,6 +2122,7 @@ supported by browsers, for browsers without popover support.
 .${CLASS.root} {
   all: initial;
   color-scheme: light dark;
+  /* Set to the terminal colors, if known (see \`setTerminalColors\`). */
   --fg: CanvasText;
   --bg: Canvas;
   --muted: color-mix(in srgb, var(--fg) 60%, var(--bg));
@@ -3781,4 +3793,55 @@ function viewErrorLocationButton(
         ...children,
       )
     : h(HTMLSpanElement, {}, ...children);
+}
+
+// The panel uses the terminal colors, like the overlay. If the terminal didn’t
+// respond with its colors, the system colors are used instead.
+function setTerminalColors(
+  root: HTMLElement,
+  terminalColors: TerminalColors | undefined,
+): void {
+  if (terminalColors === undefined) {
+    root.style.removeProperty("--fg");
+    root.style.removeProperty("--bg");
+    root.style.removeProperty("color-scheme");
+    return;
+  }
+  const { foregroundColor, backgroundColor } = terminalColors;
+  root.style.setProperty("--fg", foregroundColor);
+  root.style.setProperty("--bg", backgroundColor);
+  // Makes scrollbars etc. light or dark like the terminal theme.
+  const colorScheme = getColorScheme(foregroundColor, backgroundColor);
+  if (colorScheme === undefined) {
+    root.style.removeProperty("color-scheme");
+  } else {
+    root.style.colorScheme = colorScheme;
+  }
+}
+
+// The terminal colors are either `#rrggbb` or `rgb(r, g, b)` (see Theme.ts).
+// The theme is dark if the background is darker than the foreground.
+function getColorScheme(
+  foregroundColor: string,
+  backgroundColor: string,
+): "light" | "dark" | undefined {
+  const foreground = getLuminance(foregroundColor);
+  const background = getLuminance(backgroundColor);
+  return foreground === undefined || background === undefined
+    ? undefined
+    : background < foreground
+      ? "dark"
+      : "light";
+}
+
+function getLuminance(color: string): number | undefined {
+  const match =
+    /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(color) ??
+    /^rgb\((\d+), (\d+), (\d+)\)$/.exec(color);
+  if (match === null) {
+    return undefined;
+  }
+  const radix = color.startsWith("#") ? 16 : 10;
+  const [r, g, b] = match.slice(1).map((part) => Number.parseInt(part, radix));
+  return 0.2126 * (r ?? 0) + 0.7152 * (g ?? 0) + 0.0722 * (b ?? 0);
 }

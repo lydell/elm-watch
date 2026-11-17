@@ -1714,6 +1714,7 @@ function modelToSnapshot(model: Model, info: Info): TargetSnapshot {
     info,
     sendKey: statusToSpecialCaseSendKey(model.status),
     openEditor: model.openEditor,
+    terminalColors: model.terminalColors,
   };
 }
 
@@ -1955,6 +1956,7 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       info: { ...(status.info ?? info), targetName },
       sendKey: statusToSpecialCaseSendKey(status),
       openEditor: undefined,
+      terminalColors: undefined,
     });
     uiTarget.openPanel();
   }

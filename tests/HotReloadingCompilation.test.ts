@@ -16,6 +16,7 @@ import {
   fixtureDir,
   getOverlay,
   getOverlayAnnouncement,
+  getPanelColors,
   hideErrors,
   hideUi,
   isOverlayVisible,
@@ -783,6 +784,69 @@ describe("hot reloading", () => {
         <footer>🚨 error 1/1 | [__] error | [__] file | [enter] open in editor | [a] show all | [esc] close (again to reopen)</footer>
         </overlay>
       `);
+    });
+
+    test("terminal theme for the panel", async () => {
+      const { replace, go } = runHotReload({
+        fixture,
+        name: "App",
+        programType: "Html",
+        compilationMode: "standard",
+        stdin: new TerminalColorReadStream(),
+      });
+
+      let panelColors = "(not set)";
+
+      // The colors are sent when connecting, without waiting for errors.
+      await go(({ idle }) => {
+        switch (idle) {
+          case 1:
+            replace((content) => content.replace("++", '++ "!" ++'));
+            return "KeepGoing";
+
+          case 2:
+            panelColors = getPanelColors();
+            return "Stop";
+
+          default:
+            return "Stop";
+        }
+      });
+
+      expect(panelColors).toMatchInlineSnapshot(
+        `--fg: #112233; --bg: #aabbcc; color-scheme: light;`,
+      );
+    });
+
+    test("system colors for the panel if the terminal doesn’t respond", async () => {
+      const { replace, go } = runHotReload({
+        fixture,
+        name: "App",
+        programType: "Html",
+        compilationMode: "standard",
+        isTTY: false,
+      });
+
+      let panelColors = "(not set)";
+
+      // The overlay falls back to a default theme, but the panel uses the
+      // system colors.
+      await go(({ idle }) => {
+        switch (idle) {
+          case 1:
+            replace((content) => content.replace("++", "+"));
+            return "KeepGoing";
+
+          case 2:
+            panelColors = getPanelColors();
+            return "Stop";
+
+          default:
+            return "Stop";
+        }
+      });
+
+      expect(panelColors).toMatchInlineSnapshot(``);
     });
   });
 });

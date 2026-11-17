@@ -10,6 +10,7 @@ import {
   type ExternalErrorsSource,
   type FlashType,
   type OpenEditorSetup,
+  type TerminalColors,
   type OverlayError,
   SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
   type SendKey,
@@ -156,6 +157,8 @@ export type Model = {
   elmCompiledTimestampBeforeReload: number | undefined;
   // Received when connecting. `undefined` until then.
   openEditor: OpenEditorSetup | undefined;
+  // Received when connecting, if the terminal responded with its colors.
+  terminalColors: TerminalColors | undefined;
 };
 
 export type Cmd =
@@ -257,6 +260,7 @@ export const init = (
     elmCompiledTimestamp: config.initialElmCompiledTimestamp,
     elmCompiledTimestampBeforeReload,
     openEditor: undefined,
+    terminalColors: undefined,
   };
   return [model, [{ tag: "Render", model }]];
 };
@@ -587,6 +591,18 @@ function onWebSocketToClientMessage(
 
     case "StatusChanged":
       return statusChanged(date, msg.status, model);
+
+    case "TerminalColors":
+      return [
+        {
+          ...model,
+          terminalColors: {
+            foregroundColor: msg.foregroundColor,
+            backgroundColor: msg.backgroundColor,
+          },
+        },
+        [],
+      ];
 
     case "SuccessfullyCompiled":
       return msg.compilationMode !== config.originalCompilationMode

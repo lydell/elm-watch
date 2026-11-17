@@ -301,6 +301,10 @@ export type Cmd =
       webSocket: WebSocket;
     }
   | {
+      tag: "WebSocketSendTerminalColors";
+      webSocket: WebSocket;
+    }
+  | {
       tag: "WebSocketUpdatePriority";
       connection: WebSocketConnection;
     };
@@ -665,6 +669,7 @@ export function update(
       const connectCmds: Array<Cmd> = [
         externalErrorsCmd,
         { tag: "WebSocketSendOpenEditorSetup", webSocket: msg.webSocket },
+        { tag: "WebSocketSendTerminalColors", webSocket: msg.webSocket },
         ...(project.staticFilesDir === undefined
           ? []
           : [

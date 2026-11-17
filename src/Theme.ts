@@ -101,6 +101,19 @@ export async function getThemeFromTerminal(terminal: Terminal): Promise<Theme> {
   return stdin === undefined ? DEFAULT_THEME : parseTheme(stdin);
 }
 
+// Unlike `getThemeFromTerminal`, there is no fallback: `undefined` if the
+// terminal did not respond.
+export async function getColorsFromTerminal(
+  terminal: Terminal,
+): Promise<{ foreground: string; background: string } | undefined> {
+  const stdin = await terminal.query(THEME_ESCAPES_STRING, isThemeResponseDone);
+  if (stdin === undefined) {
+    return undefined;
+  }
+  const { foreground, background } = parseTheme(stdin);
+  return { foreground, background };
+}
+
 export function isThemeResponseDone(stdin: string): boolean {
   return THEME_ESCAPES_DONE_REGEX.test(stdin);
 }

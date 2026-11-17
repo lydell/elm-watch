@@ -837,6 +837,25 @@ const runCmd =
         );
         return;
 
+      case "WebSocketSendTerminalColors":
+        // Not via `webSocketSend`, since the order doesn’t matter: Other
+        // messages shouldn’t wait for the terminal to respond.
+        Theme.getColorsFromTerminal(terminal)
+          .then((colors) => {
+            if (
+              colors !== undefined &&
+              cmd.webSocket.readyState === cmd.webSocket.OPEN
+            ) {
+              webSocketSendNow(cmd.webSocket, {
+                tag: "TerminalColors",
+                foregroundColor: colors.foreground,
+                backgroundColor: colors.background,
+              });
+            }
+          })
+          .catch(rejectPromise);
+        return;
+
       case "HandleKeys": {
         if (!errorViewIsActive(terminal, exitOnError, mutable.project)) {
           return;

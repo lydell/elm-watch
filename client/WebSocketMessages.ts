@@ -162,6 +162,13 @@ export const WebSocketToClientMessage = Codec.taggedUnion("tag", [
     status: StatusChange,
   },
   {
+    // Sent when connecting, if the terminal responded with its colors. Used
+    // for the browser UI panel.
+    tag: Codec.tag("TerminalColors"),
+    foregroundColor: Codec.string,
+    backgroundColor: Codec.string,
+  },
+  {
     tag: Codec.tag("SuccessfullyCompiled"),
     ...SuccessfullyCompiledFields,
   },
