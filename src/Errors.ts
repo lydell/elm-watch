@@ -916,7 +916,7 @@ Then it crashed with this error:`;
 }
 
 export function elmMakeCrashError(
-  outputPath: TargetLocation | { tag: "NoLocation" },
+  outputPath: TargetLocation,
   beforeError: ElmMakeCrashBeforeError,
   error: string,
   command: Command,
