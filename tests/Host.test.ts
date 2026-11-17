@@ -6,6 +6,7 @@ import {
   getHostFromEnv,
   getNetworkIps,
   markAsHost,
+  printServerLinks,
   resolveHost,
 } from "../src/Host.ts";
 
@@ -104,5 +105,42 @@ describe("getNetworkIps", () => {
         c: [ipv4("10.0.0.0", "255.255.255.255")],
       }),
     ).toStrictEqual(["10.0.0.0", "10.0.0.1", "10.0.0.0"]);
+  });
+});
+
+describe("printServerLinks", () => {
+  function print(host: string, networkIps: Array<string>): string {
+    return printServerLinks({
+      protocol: "http",
+      port: 1234,
+      host: markAsHost(host),
+      networkIps,
+    }).replace(/\x1B\[\d*m/g, "");
+  }
+
+  test("localhost", () => {
+    expect(print("127.0.0.1", ["192.168.0.1"])).toBe("http://localhost:1234");
+  });
+
+  test("specific host", () => {
+    expect(print("192.168.0.1", ["192.168.0.2"])).toBe(
+      "http://192.168.0.1:1234",
+    );
+  });
+
+  test("all interfaces, no network addresses", () => {
+    expect(print("0.0.0.0", [])).toBe("http://localhost:1234");
+  });
+
+  test("all interfaces, one network address", () => {
+    expect(print("0.0.0.0", ["192.168.0.1"])).toBe(
+      "http://localhost:1234   network: http://192.168.0.1:1234",
+    );
+  });
+
+  test("all interfaces, several network addresses", () => {
+    expect(print("0.0.0.0", ["192.168.0.1", "192.168.139.3"])).toBe(
+      "http://localhost:1234   network: http://192.168.0.1:1234   http://192.168.139.3:1234",
+    );
   });
 });

@@ -22,8 +22,8 @@ import * as Errors from "./Errors.ts";
 import * as ErrorSelection from "./ErrorSelection.ts";
 import * as ErrorView from "./ErrorView.ts";
 import * as ExternalErrors from "./ExternalErrors.ts";
-import { dim, silentlyReadIntEnvValue, toError } from "./Helpers.ts";
-import { getNetworkIps, type Host } from "./Host.ts";
+import { silentlyReadIntEnvValue, toError } from "./Helpers.ts";
+import { getNetworkIps, type Host, printServerLinks } from "./Host.ts";
 import {
   type Cmd,
   getNextActionSleepMs,
@@ -1429,25 +1429,13 @@ function printServerLine(
     fancy: terminalConfig.fancy,
     isTTY: terminalConfig.isTTY,
     emojiName: "Server",
-    string: printServerLinks(devServer, host),
+    string: printServerLinks({
+      protocol: devServer.isHTTPS ? "https" : "http",
+      port: devServer.port,
+      host,
+      networkIps: getNetworkIps(os.networkInterfaces()),
+    }),
   });
-}
-
-function printServerLinks(devServer: DevServer, host: Host): string {
-  const protocol = devServer.isHTTPS ? "https" : "http";
-  const { port } = devServer;
-
-  if (host !== "0.0.0.0") {
-    // `localhost` is easier to read, and the same thing in practice.
-    const hostname = host === "127.0.0.1" ? "localhost" : host;
-    return `${protocol}://${hostname}:${port}`;
-  }
-
-  const networkIps = getNetworkIps(os.networkInterfaces());
-
-  return `${protocol}://localhost:${port}${networkIps
-    .map((ip) => `   ${dim("network:")} ${protocol}://${ip}:${port}`)
-    .join("")}`;
 }
 
 // Store the editor chosen in the terminal or the browser, and let all browsers

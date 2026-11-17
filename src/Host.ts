@@ -2,6 +2,7 @@ import type * as os from "os";
 import * as Codec from "tiny-decoders";
 
 import { ELM_WATCH_HOST, type Env, getEnvValue } from "./Env.ts";
+import { dim } from "./Helpers.ts";
 
 export type Host = string & {
   readonly Host: never;
@@ -39,6 +40,36 @@ export function resolveHost(
 export function getHostFromEnv(env: Env): Host | undefined {
   const string = getEnvValue(env, ELM_WATCH_HOST);
   return string === undefined ? undefined : markAsHost(string);
+}
+
+export function printServerLinks({
+  protocol,
+  port,
+  host,
+  networkIps,
+}: {
+  protocol: "http" | "https";
+  port: number;
+  host: Host;
+  networkIps: Array<string>;
+}): string {
+  if (host !== "0.0.0.0") {
+    // `localhost` is easier to read, and the same thing in practice.
+    const hostname = host === "127.0.0.1" ? "localhost" : host;
+    return `${protocol}://${hostname}:${port}`;
+  }
+
+  const local = `${protocol}://localhost:${port}`;
+
+  if (networkIps.length === 0) {
+    return local;
+  }
+
+  const network = networkIps
+    .map((ip) => `${protocol}://${ip}:${port}`)
+    .join("   ");
+
+  return `${local}   ${dim("network:")} ${network}`;
 }
 
 // The IPv4 addresses to print as links when listening on all interfaces.
