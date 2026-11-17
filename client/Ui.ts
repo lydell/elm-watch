@@ -276,12 +276,7 @@ export function createUi(): Ui {
   // just the overlay: A modal dialog makes everything outside it inert, and the
   // emoji and the panel (which can hide the errors, for example) need to keep
   // working while the overlay is shown.
-  const dialog = h(
-    typeof HTMLDialogElement === "function"
-      ? HTMLDialogElement
-      : (HTMLDivElement as typeof HTMLDialogElement),
-    { className: CLASS.dialog },
-  );
+  const dialog = h(HTMLDialogElement, { className: CLASS.dialog });
 
   // This element covers the whole window, but lets clicks through to the page
   // (except on our own elements). It is put in the top layer as a popover (see
