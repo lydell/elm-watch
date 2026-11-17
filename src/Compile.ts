@@ -60,6 +60,7 @@ import {
   type TargetLocation,
   type TargetName,
   type WebSocketToken,
+  type WriteOutputErrorReasonForWriting,
 } from "./Types.ts";
 import type { WebSocketConnection } from "./WebSocketUrl.ts";
 
@@ -1106,61 +1107,19 @@ async function onCompileSuccess(
       outputStatus.injectDurationMs = getNow().getTime() - elmCompiledTimestamp;
 
       switch (postprocess.tag) {
-        case "NoPostprocess": {
-          try {
-            fs.mkdirSync(absoluteDirname(outputPath.theOutputPath), {
-              recursive: true,
-            });
-            fs.writeFileSync(
-              outputPath.theOutputPath,
-              // This will inject `elmCompiledTimestamp` into the built
-              // code, which is later used to detect if recompilations are
-              // needed or not. Note: This needs to be the timestamp of
-              // when Elm finished compiling, not when postprocessing
-              // finished. That’s because we haven’t done the
-              // postprocessing yet, but have to inject before that. So
-              // we’re storing the timestamp when Elm finished rather
-              // than when the entire process was finished.
-              Inject.clientCode(
-                outputPath,
-                elmCompiledTimestamp,
-                outputState.compilationMode,
-                runMode.webSocketConnection,
-                runMode.webSocketToken,
-                terminalConfig.debug,
-              ) + newCode,
-            );
-          } catch (unknownError) {
-            const error = toError(unknownError);
-            outputState.setStatus({
-              tag: "WriteOutputError",
-              error,
-              reasonForWriting: "InjectWebSocketClient",
-            });
-            updateStatusLineHelper();
-            return {
-              tag: "CompileError",
-              elmJsonPath,
-              outputPath,
-              outputState,
-            };
-          }
-          const fileSize = Buffer.byteLength(newCode);
-          outputState.setStatus({
-            tag: "Success",
-            elmFileSize: fileSize,
-            postprocessFileSize: fileSize,
-            elmCompiledTimestamp,
-          });
-          updateStatusLineHelper();
-          return {
-            tag: "FullyCompiledJS",
+        case "NoPostprocess":
+          return writeOutput({
+            terminalConfig,
+            updateStatusLineHelper,
+            runMode,
+            elmJsonPath,
             outputPath,
             outputState,
-            code: newCode,
             elmCompiledTimestamp,
-          };
-        }
+            elmCode: newCode,
+            finalCode: newCode,
+            reasonForWriting: "InjectWebSocketClient",
+          });
 
         case "Postprocess": {
           outputState.setStatus({
@@ -1175,6 +1134,87 @@ async function onCompileSuccess(
       }
     }
   }
+}
+
+function writeOutput({
+  terminalConfig,
+  updateStatusLineHelper,
+  runMode,
+  elmJsonPath,
+  outputPath,
+  outputState,
+  elmCompiledTimestamp,
+  elmCode,
+  finalCode,
+  reasonForWriting,
+}: {
+  terminalConfig: TerminalConfig;
+  updateStatusLineHelper: () => void;
+  runMode: RunModeWithExtraData;
+  elmJsonPath: ElmJsonPath;
+  outputPath: OutputPath;
+  outputState: OutputState;
+  elmCompiledTimestamp: number;
+  elmCode: string;
+  finalCode: string;
+  reasonForWriting: WriteOutputErrorReasonForWriting;
+}): HandleOutputActionResult {
+  try {
+    fs.mkdirSync(absoluteDirname(outputPath.theOutputPath), {
+      recursive: true,
+    });
+    switch (runMode.tag) {
+      case "make":
+        fs.writeFileSync(outputPath.theOutputPath, finalCode);
+        break;
+      case "hot":
+        fs.writeFileSync(
+          outputPath.theOutputPath,
+          // This will inject `elmCompiledTimestamp` into the built code, which
+          // is later used to detect if recompilations are needed or not. Note:
+          // This needs to be the timestamp of when Elm finished compiling, not
+          // when postprocessing finished, since that’s what the code is based
+          // on.
+          Inject.clientCode(
+            outputPath,
+            elmCompiledTimestamp,
+            outputState.compilationMode,
+            runMode.webSocketConnection,
+            runMode.webSocketToken,
+            terminalConfig.debug,
+          ) + finalCode,
+        );
+        break;
+    }
+  } catch (unknownError) {
+    const error = toError(unknownError);
+    outputState.setStatus({
+      tag: "WriteOutputError",
+      error,
+      reasonForWriting,
+    });
+    updateStatusLineHelper();
+    return {
+      tag: "CompileError",
+      elmJsonPath,
+      outputPath,
+      outputState,
+    };
+  }
+  outputState.setStatus({
+    tag: "Success",
+    elmFileSize: Buffer.byteLength(elmCode),
+    postprocessFileSize: Buffer.byteLength(finalCode),
+    elmCompiledTimestamp,
+  });
+  updateStatusLineHelper();
+  return {
+    tag: "FullyCompiledJS",
+    outputPath,
+    outputState,
+    code: finalCode,
+    elmCompiledTimestamp,
+  };
 }
 
 type NeedsToWriteProxyFileResult =
@@ -1273,61 +1313,19 @@ async function postprocessHelper({
       updateStatusLineHelper();
       return { tag: "Nothing" };
 
-    case "Success": {
-      try {
-        fs.mkdirSync(absoluteDirname(outputPath.theOutputPath), {
-          recursive: true,
-        });
-        switch (runMode.tag) {
-          case "make":
-            fs.writeFileSync(outputPath.theOutputPath, postprocessResult.code);
-            break;
-          case "hot": {
-            const clientCode = Inject.clientCode(
-              outputPath,
-              elmCompiledTimestamp,
-              outputState.compilationMode,
-              runMode.webSocketConnection,
-              runMode.webSocketToken,
-              terminal.config.debug,
-            );
-            fs.writeFileSync(
-              outputPath.theOutputPath,
-              clientCode + postprocessResult.code,
-            );
-            break;
-          }
-        }
-      } catch (unknownError) {
-        const error = toError(unknownError);
-        outputState.setStatus({
-          tag: "WriteOutputError",
-          error,
-          reasonForWriting: "Postprocess",
-        });
-        updateStatusLineHelper();
-        return {
-          tag: "CompileError",
-          elmJsonPath,
-          outputPath,
-          outputState,
-        };
-      }
-      outputState.setStatus({
-        tag: "Success",
-        elmFileSize: Buffer.byteLength(code),
-        postprocessFileSize: Buffer.byteLength(postprocessResult.code),
-        elmCompiledTimestamp,
-      });
-      updateStatusLineHelper();
-      return {
-        tag: "FullyCompiledJS",
+    case "Success":
+      return writeOutput({
+        terminalConfig: terminal.config,
+        updateStatusLineHelper,
+        runMode,
+        elmJsonPath,
         outputPath,
         outputState,
-        code: postprocessResult.code,
         elmCompiledTimestamp,
-      };
-    }
+        elmCode: code,
+        finalCode: postprocessResult.code,
+        reasonForWriting: "Postprocess",
+      });
 
     default:
       outputState.setStatus(postprocessResult);
