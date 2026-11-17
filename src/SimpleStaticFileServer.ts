@@ -475,15 +475,34 @@ export function staticFileNotEnabledHtml(configSource: ConfigSource): Html {
     html`
       <h1>Enable elm-watch static file server?</h1>
       <p>
-        If you want, you can enable a simple static file server for your
-        project.
+        This is elm-watch’s server. It always runs, for hot reloading. It can
+        also serve your HTML, CSS, images and compiled Elm code, with CSS hot
+        reloading and support for <code>Browser.application</code>.
       </p>
-      <p>Add the following to ${configSourceStrong(configSource)}:</p>
+      <p>
+        It isn’t on by default, because elm-watch doesn’t know which folder you
+        want to serve. Add the following to ${configSourceStrong(configSource)}:
+      </p>
       <pre><code>${
         configSource.tag === "ElmWatchJson"
           ? html`"serve": "./folder/to/serve/"`
           : html`serve: "./folder/to/serve/",`
       }</code></pre>
+      <p>
+        ${
+          configSource.tag === "ElmWatchJson"
+            ? html`<code>"serve": "."</code> (the folder with elm-watch.json)`
+            : html`<code>serve: "."</code> (your <code>root</code>)`
+        }
+        is convenient, but then your whole project can be downloaded from the
+        server, including source code and files like <code>.env</code>. By
+        default, the server is only available on your computer, so that only
+        matters if you
+        <a href="https://lydell.github.io/elm-watch/server/#network-exposure"
+          >expose it on the network</a
+        >. A folder with only the files your page needs, like
+        <code>public/</code>, is safer.
+      </p>
     `,
   );
 }

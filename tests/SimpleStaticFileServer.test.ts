@@ -211,7 +211,7 @@ describe("SimpleStaticFileServer", () => {
       .toMatchInlineSnapshot(`
         200
         content-type: text/html; charset=utf-8
-        content-length: 2142
+        content-length: 2953
         <!DOCTYPE html>
             <html lang="en">
               <head>…</head>
@@ -219,11 +219,26 @@ describe("SimpleStaticFileServer", () => {
                 <main>
               <h1>Enable elm-watch static file server?</h1>
               <p>
-                If you want, you can enable a simple static file server for your
-                project.
+                This is elm-watch’s server. It always runs, for hot reloading. It can
+                also serve your HTML, CSS, images and compiled Elm code, with CSS hot
+                reloading and support for <code>Browser.application</code>.
               </p>
-              <p>Add the following to your <strong>elm-watch.json</strong> file:</p>
+              <p>
+                It isn’t on by default, because elm-watch doesn’t know which folder you
+                want to serve. Add the following to your <strong>elm-watch.json</strong> file:
+              </p>
               <pre><code>"serve": "./folder/to/serve/"</code></pre>
+              <p>
+                <code>"serve": "."</code> (the folder with elm-watch.json)
+                is convenient, but then your whole project can be downloaded from the
+                server, including source code and files like <code>.env</code>. By
+                default, the server is only available on your computer, so that only
+                matters if you
+                <a href="https://lydell.github.io/elm-watch/server/#network-exposure"
+                  >expose it on the network</a
+                >. A folder with only the files your page needs, like
+                <code>public/</code>, is safer.
+              </p>
             </main>
                 <p style="margin-top: 2em">
                   <small
@@ -1025,11 +1040,26 @@ describe("SimpleStaticFileServer", () => {
 
                   <h1>Enable elm-watch static file server?</h1>
                   <p>
-                    If you want, you can enable a simple static file server for your
-                    project.
+                    This is elm-watch’s server. It always runs, for hot reloading. It can
+                    also serve your HTML, CSS, images and compiled Elm code, with CSS hot
+                    reloading and support for <code>Browser.application</code>.
                   </p>
-                  <p>Add the following to your <strong>elmWatch()</strong> options:</p>
+                  <p>
+                    It isn’t on by default, because elm-watch doesn’t know which folder you
+                    want to serve. Add the following to your <strong>elmWatch()</strong> options:
+                  </p>
                   <pre><code>serve: "./folder/to/serve/",</code></pre>
+                  <p>
+                    <code>serve: "."</code> (your <code>root</code>)
+                    is convenient, but then your whole project can be downloaded from the
+                    server, including source code and files like <code>.env</code>. By
+                    default, the server is only available on your computer, so that only
+                    matters if you
+                    <a href="https://lydell.github.io/elm-watch/server/#network-exposure"
+                      >expose it on the network</a
+                    >. A folder with only the files your page needs, like
+                    <code>public/</code>, is safer.
+                  </p>
           `);
         },
         { staticFilesDir: null, configSource },
