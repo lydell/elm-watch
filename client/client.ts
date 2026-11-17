@@ -351,6 +351,10 @@ const {
 const UPDATE_CONFIG: UpdateConfig = {
   originalCompilationMode: ORIGINAL_COMPILATION_MODE,
   initialElmCompiledTimestamp: INITIAL_ELM_COMPILED_TIMESTAMP,
+  isFileProtocol:
+    // See `getWebSocketUrl` for when `window.location` exists.
+    // oxlint-disable-next-line typescript/no-unnecessary-condition
+    window.location?.protocol === "file:",
 };
 
 const ELM_WATCH_CHANGED_FILE_URL_PATHS_EVENT =
@@ -365,7 +369,8 @@ type Mutable = {
   shouldSkipInitCmds: boolean;
   uiTarget: UiTarget | undefined;
   removeListeners: () => void;
-  webSocket: WebSocket;
+  // `undefined` on file:// pages, which can never connect.
+  webSocket: WebSocket | undefined;
   webSocketTimeoutId: NodeJS.Timeout | undefined;
 };
 
@@ -511,6 +516,7 @@ function statusToReloadStatus(model: Model): ReloadStatus {
     case "CompileError":
     case "TargetError":
     case "EvalError":
+    case "FileProtocol":
     case "Idle":
     case "SleepingBeforeReconnect":
     case "UnexpectedError":
@@ -540,6 +546,7 @@ function statusToStatusType(statusTag: Status["tag"]): StatusType {
     case "CompileError":
     case "TargetError":
     case "EvalError":
+    case "FileProtocol":
     case "UnexpectedError":
       return "Error";
   }
@@ -557,6 +564,7 @@ function statusToSpecialCaseSendKey(status: Status): SendKey | undefined {
 
     // We can’t send messages about anything if we don’t have a connection.
     case "Connecting":
+    case "FileProtocol":
     case "SleepingBeforeReconnect":
     case "WaitingForReload":
     // We can’t really send messages if there are elm.json errors.
@@ -792,12 +800,14 @@ const initMutable =
           removeListener();
         }
       },
-      webSocket: initWebSocket(
-        getNow,
-        INITIAL_ELM_COMPILED_TIMESTAMP,
-        dispatch,
-        (webSocket) => webSocket === mutable.webSocket,
-      ),
+      webSocket: UPDATE_CONFIG.isFileProtocol
+        ? undefined
+        : initWebSocket(
+            getNow,
+            INITIAL_ELM_COMPILED_TIMESTAMP,
+            dispatch,
+            (webSocket) => webSocket === mutable.webSocket,
+          ),
       webSocketTimeoutId: undefined,
     };
 
@@ -1042,13 +1052,15 @@ const initMutable =
     __ELM_WATCH.KILL_MATCHING = (targetName) =>
       new Promise((resolve, reject) => {
         if (targetName.test(TARGET_NAME)) {
+          const { webSocket } = mutable;
           const needsToCloseWebSocket =
-            mutable.webSocket.readyState !== WebSocket.CLOSED;
+            webSocket !== undefined &&
+            webSocket.readyState !== WebSocket.CLOSED;
           if (needsToCloseWebSocket) {
-            mutable.webSocket.addEventListener("close", () => {
+            webSocket.addEventListener("close", () => {
               originalKillMatching(targetName).then(resolve).catch(reject);
             });
-            mutable.webSocket.close();
+            webSocket.close();
           }
           mutable.removeListeners();
           clearWebSocketTimeout(mutable);
@@ -1066,6 +1078,7 @@ const initMutable =
     __ELM_WATCH.DISCONNECT = (targetName) => {
       if (
         targetName.test(TARGET_NAME) &&
+        mutable.webSocket !== undefined &&
         mutable.webSocket.readyState !== WebSocket.CLOSED
       ) {
         mutable.webSocket.close();
@@ -1095,12 +1108,7 @@ function clearWebSocketTimeout(mutable: Mutable): void {
   }
 }
 
-function initWebSocket(
-  getNow: GetNow,
-  elmCompiledTimestamp: number,
-  dispatch: (msg: Msg) => void,
-  isCurrent: (webSocket: WebSocket) => boolean,
-): WebSocket {
+function getWebSocketUrl(elmCompiledTimestamp: number): URL {
   const [hostname, protocol] =
     // Browser: `window.location` always exists.
     // Web Worker: `window` has been set to `globalThis` at the top, which has `.location`.
@@ -1123,8 +1131,16 @@ function initWebSocket(
   url.searchParams.set("webSocketToken", WEBSOCKET_TOKEN);
   url.searchParams.set("targetName", TARGET_NAME);
   url.searchParams.set("elmCompiledTimestamp", elmCompiledTimestamp.toString());
+  return url;
+}
 
-  const webSocket = new WebSocket(url);
+function initWebSocket(
+  getNow: GetNow,
+  elmCompiledTimestamp: number,
+  dispatch: (msg: Msg) => void,
+  isCurrent: (webSocket: WebSocket) => boolean,
+): WebSocket {
+  const webSocket = new WebSocket(getWebSocketUrl(elmCompiledTimestamp));
   // Compiled code is sent as binary messages. Get them synchronously as
   // `ArrayBuffer` instead of the default `Blob`.
   webSocket.binaryType = "arraybuffer";
@@ -1271,7 +1287,7 @@ const runCmd =
       case "Reconnect":
         // The previous web socket should already be closed, but make sure it
         // is, and that its timeout can’t close the new web socket.
-        mutable.webSocket.close();
+        mutable.webSocket?.close();
         clearWebSocketTimeout(mutable);
         mutable.webSocket = initWebSocket(
           getNow,
@@ -1285,7 +1301,10 @@ const runCmd =
         const { model } = cmd;
         const info: Info = {
           version: VERSION,
-          webSocketUrl: new URL(mutable.webSocket.url),
+          webSocketUrl: new URL(
+            mutable.webSocket?.url ??
+              getWebSocketUrl(model.elmCompiledTimestamp),
+          ),
           targetName: TARGET_NAME,
           originalCompilationMode: ORIGINAL_COMPILATION_MODE,
           debugModeToggled: getDebugModeToggled(),
@@ -1314,7 +1333,7 @@ const runCmd =
           cmd.message,
         );
         try {
-          mutable.webSocket.send(json);
+          mutable.webSocket?.send(json);
         } catch (error) {
           // According to MDN, `.send()` throws an exception if the web socket
           // is in the CONNECTING state. We’re not supposed to send messages
@@ -1413,7 +1432,7 @@ const runCmd =
           // `.close()` method seems to never trigger our "close" listener, so
           // always dispatch ourselves. It doesn’t matter if another dispatch
           // is made just after.
-          mutable.webSocket.close();
+          mutable.webSocket?.close();
           dispatch({
             tag: "WebSocketClosed",
             date: getNow(),
@@ -1870,6 +1889,10 @@ function renderMockStatuses(ui: Ui | undefined): void {
     },
     EvalError: {
       tag: "EvalError",
+      date,
+    },
+    FileProtocol: {
+      tag: "FileProtocol",
       date,
     },
     SleepingBeforeReconnect: {

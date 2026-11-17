@@ -100,6 +100,10 @@ export type Status =
       date: Date;
     }
   | {
+      tag: "FileProtocol";
+      date: Date;
+    }
+  | {
       tag: "Idle";
       date: Date;
       sendKey: SendKey;
@@ -2552,6 +2556,13 @@ export function statusIconAndText(
         severity: 4,
       };
 
+    case "FileProtocol":
+      return {
+        icon: "🚫",
+        status: "Opened via file://",
+        severity: 3,
+      };
+
     case "Idle":
       return {
         icon: "✅",
@@ -2883,7 +2894,6 @@ function viewStatusDetails(
           ? [h(HTMLParagraphElement, {}, `Attempt ${status.attemptNumber}.`)]
           : []),
         ...viewHttpsInfo(info.webSocketUrl),
-        ...viewFileProtocolInfo(),
       ];
 
     case "TargetError":
@@ -2898,6 +2908,30 @@ function viewStatusDetails(
         ),
       ];
 
+    case "FileProtocol":
+      return [
+        h(
+          HTMLParagraphElement,
+          {},
+          "elm-watch can’t connect to pages opened via file://, so there is no hot reloading.",
+        ),
+        h(
+          HTMLParagraphElement,
+          {},
+          "Open the page via http:// instead, for example using ",
+          h(
+            HTMLAnchorElement,
+            {
+              href: "https://lydell.github.io/elm-watch/server/",
+              target: "_blank",
+              rel: "noreferrer",
+            },
+            "elm-watch’s server",
+          ),
+          ".",
+        ),
+      ];
+
     case "SleepingBeforeReconnect":
       return [
         h(
@@ -2906,7 +2940,6 @@ function viewStatusDetails(
           `Attempt ${status.attemptNumber} failed. Trying again in ${printRetryWaitMs(status.attemptNumber)}.`,
         ),
         ...viewHttpsInfo(info.webSocketUrl),
-        ...viewFileProtocolInfo(),
         h(
           HTMLButtonElement,
           {
@@ -3074,35 +3107,6 @@ function viewOpenEditorError(message: string): HTMLElement {
     ),
     h(HTMLPreElement, {}, message),
   );
-}
-
-// Pages opened via file:// can’t connect: Browsers send `Origin: null` for
-// them, which elm-watch rejects (see AllowedHosts.ts).
-function viewFileProtocolInfo(): Array<HTMLElement> {
-  return window.location.protocol === "file:"
-    ? [
-        h(
-          HTMLParagraphElement,
-          {},
-          h(HTMLElement, { localName: "strong" }, "Opened via file://?"),
-        ),
-        h(
-          HTMLParagraphElement,
-          {},
-          "elm-watch can’t connect to pages opened via file://. Open the page via http:// instead, for example using ",
-          h(
-            HTMLAnchorElement,
-            {
-              href: "https://lydell.github.io/elm-watch/server/",
-              target: "_blank",
-              rel: "noreferrer",
-            },
-            "elm-watch’s server",
-          ),
-          ".",
-        ),
-      ]
-    : [];
 }
 
 function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {

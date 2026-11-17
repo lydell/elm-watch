@@ -28,6 +28,9 @@ import {
 export type UpdateConfig = {
   originalCompilationMode: CompilationModeWithProxy;
   initialElmCompiledTimestamp: number;
+  // Pages opened via file:// can never connect: Browsers send `Origin: null`
+  // for them, which elm-watch rejects (see AllowedHosts.ts).
+  isFileProtocol: boolean;
 };
 
 export type ReloadReason =
@@ -247,7 +250,9 @@ export const init = (
   elmCompiledTimestampBeforeReload: number | undefined,
 ): [Model, Array<Cmd>] => {
   const model: Model = {
-    status: { tag: "Connecting", date, attemptNumber: 1 },
+    status: config.isFileProtocol
+      ? { tag: "FileProtocol", date }
+      : { tag: "Connecting", date, attemptNumber: 1 },
     compilationMode: config.originalCompilationMode,
     elmCompiledTimestamp: config.initialElmCompiledTimestamp,
     elmCompiledTimestampBeforeReload,
@@ -324,8 +329,10 @@ export function update(
           // message, which makes us still have the Busy status when unlocking the phone.
           // While connecting, sending throws an error, and we would then never get a reply,
           // closing the new connection on timeout. While sleeping, we’ll reconnect anyway.
+          // On file:// there is no connection at all.
           ...(model.status.tag === "Connecting" ||
-          model.status.tag === "SleepingBeforeReconnect"
+          model.status.tag === "SleepingBeforeReconnect" ||
+          model.status.tag === "FileProtocol"
             ? []
             : [
                 {

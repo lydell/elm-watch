@@ -39,6 +39,7 @@ class Simulation {
     this.config = {
       originalCompilationMode: "standard",
       initialElmCompiledTimestamp: 1,
+      isFileProtocol: false,
       ...config,
     };
     const [model, cmds] = init(this.config, this.date(), undefined);
@@ -380,6 +381,28 @@ describe("client update", () => {
       > WebSocketMessageReceived FocusedTabAcknowledged
         status: Busy, mode: standard, timestamp: 1
         cmd: WebSocketTimeoutClear
+    `);
+  });
+
+  test("file:// never connects", () => {
+    expect(
+      new Simulation({ isFileProtocol: true })
+        .send(msg.focused)
+        .send(msg.visible)
+        .send(msg.reconnectNow)
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: FileProtocol, mode: standard, timestamp: 1
+
+      > FocusedTab
+        status: FileProtocol, mode: standard, timestamp: 1
+
+      > PageVisibilityChangedToVisible
+        status: FileProtocol, mode: standard, timestamp: 1
+
+      > UiMsg PressedReconnectNow
+        status: FileProtocol, mode: standard, timestamp: 1
     `);
   });
 
