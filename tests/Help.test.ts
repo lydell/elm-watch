@@ -54,7 +54,9 @@ describe("help", () => {
 
     expect(output).toMatchInlineSnapshot(`
       ⧙elm-watch init [--javascript|--typescript]⧘
-          Create a minimal ⧙elm-watch.json⧘ in the current directory.
+          Create an ⧙elm-watch.json⧘ in the current directory, with a target
+          for each Elm file with ⧙main⧘. If you already have an
+          ⧙elm-watch.json⧘ from elm-watch 1, it is upgraded instead.
           With ⧙--javascript⧘ or ⧙--typescript⧘: Create elm-watch.mjs
           or elm-watch.mts instead, for using the JavaScript API. If you
           already have an ⧙elm-watch.json⧘, it is migrated to the new file.
@@ -145,7 +147,9 @@ describe("help", () => {
     expect(await helpHelper(["help"], { [NO_COLOR]: "1" }))
       .toMatchInlineSnapshot(`
         elm-watch init [--javascript|--typescript]
-            Create a minimal elm-watch.json in the current directory.
+            Create an elm-watch.json in the current directory, with a target
+            for each Elm file with main. If you already have an
+            elm-watch.json from elm-watch 1, it is upgraded instead.
             With --javascript or --typescript: Create elm-watch.mjs
             or elm-watch.mts instead, for using the JavaScript API. If you
             already have an elm-watch.json, it is migrated to the new file.

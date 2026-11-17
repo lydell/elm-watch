@@ -32,7 +32,9 @@ ${Object.values(EMOJI)
 
   return `
 ${bold("elm-watch init [--javascript|--typescript]")}
-    Create a minimal ${elmWatchJson} in the current directory.
+    Create an ${elmWatchJson} in the current directory, with a target
+    for each Elm file with ${bold("main")}. If you already have an
+    ${elmWatchJson} from elm-watch 1, it is upgraded instead.
     With ${bold("--javascript")} or ${bold("--typescript")}: Create elm-watch.mjs
     or elm-watch.mts instead, for using the JavaScript API. If you
     already have an ${elmWatchJson}, it is migrated to the new file.
