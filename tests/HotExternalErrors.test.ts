@@ -155,12 +155,12 @@ describe("hot external errors", () => {
     `);
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">ESBUILD</span><p><button>/Users/you/project/tests/fixtures/hot/error-view/ts/main.ts:12:9</button></p></div>
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">ESBUILD</span><span style="background-color: rgb(32, 30, 30);"><button>ts/main.ts<span>:12:9</span></button></span></div>
       <pre>Expected <span style="font-weight: bold">;</span> but found <span style="color: rgb(205, 49, 49)">foo</span></pre></div>
 
       ================================================================================
       <overlay visible style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204); --backgroundColor: rgb(32, 30, 30);">
-      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><p><button>/Users/you/project/tests/fixtures/hot/error-view/src/A.elm:6:5</button></p></div>
+      <div style="background-color: rgb(32, 30, 30); color: rgb(204, 204, 204);" id="0"><div><span style="background-color: rgb(32, 30, 30);">TYPE MISMATCH</span><span style="background-color: rgb(32, 30, 30);"><button>src/A.elm<span>:6:5</span></button></span></div>
       <pre>Something is off with the body of the \`a\` definition:
 
       6|     1

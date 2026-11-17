@@ -1090,7 +1090,12 @@ const runCmd =
               tag: "CompileError",
               compilationMode: cmd.compilationMode,
               errors: cmd.errors.map((errorTemplate) =>
-                Errors.toHtml(errorTemplate, theme, terminal.config.noColor),
+                Errors.toHtml(
+                  errorTemplate,
+                  theme,
+                  terminal.config.noColor,
+                  mutable.project.root,
+                ),
               ),
               foregroundColor: theme.foreground,
               backgroundColor: theme.background,
@@ -1375,7 +1380,12 @@ function sendExternalErrors(
     sources: sources.map(([source, errors]) => ({
       source,
       errors: errors.map((errorTemplate) =>
-        Errors.toHtml(errorTemplate, theme, terminal.config.noColor),
+        Errors.toHtml(
+          errorTemplate,
+          theme,
+          terminal.config.noColor,
+          mutable.project.root,
+        ),
       ),
     })),
     foregroundColor: theme.foreground,

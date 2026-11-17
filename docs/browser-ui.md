@@ -46,7 +46,7 @@ I often want to play around with my app while making changes. I might refactor s
 
 The error overlay shows one error at a time, so you can focus on fixing it before moving on to the next. If there are several targets on the page, their errors are shown together.
 
-At the bottom of the overlay you can see which error and file you’re at, and which keys you can use. The keys are also buttons, so you can click them.
+Next to the title of the error, you can see which file it is in (relative to the folder with elm-watch.json), and on which line and column. At the bottom of the overlay you can see which error and file you’re at, and which keys you can use. The keys are also buttons, so you can click them.
 
 | Key | Action |
 | --- | --- |

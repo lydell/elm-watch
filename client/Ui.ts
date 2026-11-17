@@ -1725,10 +1725,12 @@ const CLASS = {
   iconButton: "iconButton",
   details: "details",
   dialog: "dialog",
+  dim: "dim",
   editorChooser: "editorChooser",
   editorChooserOptions: "editorChooserOptions",
   errorLocationButton: "errorLocationButton",
   errorTitle: "errorTitle",
+  errorTitleLocation: "errorTitleLocation",
   flash: "flash",
   footer: "footer",
   header: "header",
@@ -1739,6 +1741,7 @@ const CLASS = {
   overlayBottom: "overlayBottom",
   overlayError: "overlayError",
   overlayErrorHeader: "overlayErrorHeader",
+  overlayErrorHeaderInline: "overlayErrorHeaderInline",
   overlayFooter: "overlayFooter",
   overlayKeyHint: "overlayKeyHint",
   overlayKeyHintNote: "overlayKeyHintNote",
@@ -1905,12 +1908,30 @@ supported by browsers, for browsers without popover support.
   word-break: break-word;
 }
 
-.${CLASS.errorTitle} {
+.${CLASS.overlayErrorHeaderInline} {
+  flex-direction: row;
+  flex-wrap: wrap;
+  /* Shows as much of the border between the title and the location as the
+     “──” between them in the terminal. */
+  column-gap: 2ch;
+}
+
+.${CLASS.errorTitle},
+.${CLASS.errorTitleLocation} {
   display: inline-block;
   font-weight: bold;
   --padding: 1ch;
   padding: 0 var(--padding);
   transform: translate(calc(var(--padding) * -1), calc(-50% - var(--border-thickness) / 2));
+}
+
+.${CLASS.errorTitleLocation} {
+  font-weight: normal;
+  min-width: 0;
+}
+
+.${CLASS.dim} {
+  opacity: 0.6;
 }
 
 .${CLASS.errorLocationButton} {
@@ -3279,7 +3300,9 @@ function viewOverlay({
   if (showAll || selection === undefined) {
     const items = group.files.flatMap((file) => file.errors);
     return [
-      ...items.map((item) => viewOverlayError(item, true, onKey, onOpenEditor)),
+      ...items.map((item) =>
+        viewOverlayError(item, true, false, onKey, onOpenEditor),
+      ),
       viewOverlayFooter(
         aboveFooter,
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
@@ -3321,7 +3344,7 @@ function viewOverlay({
   const openInName = editor.current?.name ?? "editor";
 
   return [
-    viewOverlayError(item, expanded, onKey, onOpenEditor),
+    viewOverlayError(item, expanded, true, onKey, onOpenEditor),
     viewOverlayFooter(
       aboveFooter,
       `🚨 ${position}`,
@@ -3471,6 +3494,9 @@ function viewOtherEditor(): Array<HTMLElement> {
 function viewOverlayError(
   item: OverlayErrorItem,
   expanded: boolean,
+  // When showing one error at a time, the location is shown next to the title,
+  // relative to the root, like in the terminal.
+  locationInTitle: boolean,
   onKey: (key: OverlayKey) => void,
   onOpenEditor: (item: OverlayErrorItem, location: LocationToOpen) => void,
 ): HTMLElement {
@@ -3486,7 +3512,11 @@ function viewOverlayError(
     },
     h(
       HTMLDivElement,
-      { className: CLASS.overlayErrorHeader },
+      {
+        className: locationInTitle
+          ? `${CLASS.overlayErrorHeader} ${CLASS.overlayErrorHeaderInline}`
+          : CLASS.overlayErrorHeader,
+      },
       h(
         HTMLSpanElement,
         {
@@ -3499,17 +3529,36 @@ function viewOverlayError(
       ),
       error.location === undefined
         ? undefined
-        : h(
-            HTMLParagraphElement,
-            {},
-            viewErrorLocation(
-              item.sendKey !== undefined,
-              error.location,
-              (location) => {
-                onOpenEditor(item, location);
+        : locationInTitle
+          ? h(
+              HTMLSpanElement,
+              {
+                className: CLASS.errorTitleLocation,
+                style: {
+                  backgroundColor: error.backgroundColor,
+                },
               },
+              viewErrorLocation(
+                item.sendKey !== undefined,
+                error.location,
+                true,
+                (location) => {
+                  onOpenEditor(item, location);
+                },
+              ),
+            )
+          : h(
+              HTMLParagraphElement,
+              {},
+              viewErrorLocation(
+                item.sendKey !== undefined,
+                error.location,
+                false,
+                (location) => {
+                  onOpenEditor(item, location);
+                },
+              ),
             ),
-          ),
     ),
     h(HTMLPreElement, {
       innerHTML: expanded
@@ -3638,6 +3687,7 @@ function viewOverlayFooter(
 function viewErrorLocation(
   clickable: boolean,
   location: ErrorLocation,
+  relative: boolean,
   onOpenEditor: (location: LocationToOpen) => void,
 ): HTMLElement | string {
   switch (location.tag) {
@@ -3645,30 +3695,42 @@ function viewErrorLocation(
       return viewErrorLocationButton(
         clickable,
         { file: location.file, line: 1, column: 1 },
-        location.file,
+        [relative ? location.relativeFile : location.file],
         onOpenEditor,
       );
 
     case "FileWithLineAndColumn": {
+      const lineAndColumn = `:${location.line}:${location.column}`;
       return viewErrorLocationButton(
         clickable,
         location,
-        `${location.file}:${location.line}:${location.column}`,
+        relative
+          ? [
+              location.relativeFile,
+              h(HTMLSpanElement, { className: CLASS.dim }, lineAndColumn),
+            ]
+          : [`${location.file}${lineAndColumn}`],
         onOpenEditor,
       );
     }
 
     case "Target":
-      return `Target: ${location.targetName}`;
+      return relative
+        ? h(
+            HTMLSpanElement,
+            { className: CLASS.dim },
+            `Target: ${location.targetName}`,
+          )
+        : `Target: ${location.targetName}`;
   }
 }
 
 function viewErrorLocationButton(
   clickable: boolean,
   location: LocationToOpen,
-  text: string,
+  children: Array<Node | string>,
   onOpenEditor: (location: LocationToOpen) => void,
-): HTMLButtonElement | string {
+): HTMLElement {
   return clickable
     ? h(
         HTMLButtonElement,
@@ -3682,7 +3744,7 @@ function viewErrorLocationButton(
             });
           },
         },
-        text,
+        ...children,
       )
-    : text;
+    : h(HTMLSpanElement, {}, ...children);
 }

@@ -315,9 +315,12 @@ export function toHtml(
   errorTemplate: ErrorTemplate,
   theme: Theme.Theme,
   noColor: boolean,
+  // File locations also get a path relative to this, for showing one error at
+  // a time (the browser can’t calculate relative paths itself).
+  root: AbsolutePath,
 ): {
   title: string;
-  location?: ErrorLocation;
+  location?: ReturnType<typeof withRelativeFile>;
   htmlContent: string;
   htmlContentCollapsed?: string;
 } {
@@ -335,7 +338,9 @@ export function toHtml(
   );
   return {
     title,
-    ...(location === undefined ? {} : { location }),
+    ...(location === undefined
+      ? {}
+      : { location: withRelativeFile(location, root) }),
     htmlContent: content,
     ...(collapsedContent === undefined
       ? {}
@@ -440,6 +445,24 @@ function renderRelativeErrorLocation(
       ];
     case "Target":
       return [renderErrorLocation(location)];
+  }
+}
+
+function withRelativeFile(
+  location: ErrorLocation,
+  root: AbsolutePath,
+):
+  | (Exclude<ErrorLocation, { tag: "Target" }> & { relativeFile: string })
+  | Extract<ErrorLocation, { tag: "Target" }> {
+  switch (location.tag) {
+    case "FileOnly":
+    case "FileWithLineAndColumn":
+      return {
+        ...location,
+        relativeFile: relativeErrorFile(root, location.file),
+      };
+    case "Target":
+      return location;
   }
 }
 

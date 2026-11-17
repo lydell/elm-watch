@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { Color } from "../src/ElmMakeError.ts";
 import * as Errors from "../src/Errors.ts";
 import type { Theme } from "../src/Theme.ts";
-import { markAsTargetName } from "../src/Types.ts";
+import { markAsAbsolutePath, markAsTargetName } from "../src/Types.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -27,6 +27,8 @@ const COLORS: Array<Color> = [
   "WHITE",
 ];
 
+const root = markAsAbsolutePath("/");
+
 const theme: Theme = {
   foreground: "white",
   background: "black",
@@ -43,7 +45,7 @@ const errorTemplate = Errors.postprocessFunctionError(
 
 describe("toHtml", () => {
   test("escapes HTML", () => {
-    expect(Errors.toHtml(errorTemplate, theme, false).htmlContent)
+    expect(Errors.toHtml(errorTemplate, theme, false, root).htmlContent)
       .toMatchInlineSnapshot(`
         I ran your postprocess function for this target.
 
@@ -54,7 +56,7 @@ describe("toHtml", () => {
   });
 
   test("escapes HTML with NO_COLOR", () => {
-    expect(Errors.toHtml(errorTemplate, theme, true).htmlContent)
+    expect(Errors.toHtml(errorTemplate, theme, true, root).htmlContent)
       .toMatchInlineSnapshot(`
         I ran your postprocess function for this target.
 
