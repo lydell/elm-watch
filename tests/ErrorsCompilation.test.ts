@@ -629,7 +629,7 @@ describe("errors", () => {
         originalStdout: true,
       }),
     ).toMatchInlineSnapshot(`
-      ✅ Main1⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main1⧙                                                     765 ms T ¦  50 ms W⧘
       🚨 Main2
       🚨 Main3
 

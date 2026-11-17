@@ -2236,13 +2236,7 @@ function maybePrintDurations(
     return undefined;
   }
 
-  const newDurations: NonEmptyArray<Duration> = durations.some(
-    (duration) => duration.tag === "QueuedForElmMake",
-  )
-    ? durations
-    : [{ tag: "QueuedForElmMake", durationMs: 0 }, ...durations];
-
-  return mapNonEmptyArray(newDurations, (duration) =>
+  return mapNonEmptyArray(durations, (duration) =>
     printDuration(
       terminalConfig.mockedTimings ? mockDuration(duration) : duration,
       terminalConfig.fancy,

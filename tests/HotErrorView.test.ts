@@ -706,7 +706,7 @@ describe("hot error view", () => {
     expect([...lines.slice(0, 3), "…", ...lines.slice(-2)].join("\n"))
       .toMatchInlineSnapshot(`
         🚨 Main: 3 errors
-        ✅ Other⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
+        ✅ Other⧙                                                     765 ms T ¦  50 ms W⧘
         🌐 http://localhost:59123
         …
         🚨 error 1/3   file 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙enter⧘⧙]⧘ open in editor

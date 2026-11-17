@@ -137,11 +137,11 @@ describe("hot reloading", () => {
     expect(terminal).toMatchInlineSnapshot(`
       🌐 http://localhost:59123
       ⏳ InterruptElm: elm make (typecheck only)
-      ✅ InterruptElm⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ InterruptElm⧙   765 ms T ¦  50 ms W⧘
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed elm.json⧘
       ⏳ InterruptElm: elm make
-      ✅ InterruptElm⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ InterruptElm⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: InterruptElm⧘
     `);

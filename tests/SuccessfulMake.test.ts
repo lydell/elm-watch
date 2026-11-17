@@ -85,7 +85,7 @@ expect.addSnapshotSerializer(stringSnapshotSerializer);
 describe("successful make", () => {
   test("standard mode", async () => {
     expect(await run("successful-make", ["make"])).toMatchInlineSnapshot(`
-      ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
+      ✅ main⧙                                                                 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -94,7 +94,7 @@ describe("successful make", () => {
   test("--debug", async () => {
     expect(await run("successful-make", ["make", "--debug"]))
       .toMatchInlineSnapshot(`
-        ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
+        ✅ main⧙                                                                 1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
       `);
@@ -103,7 +103,7 @@ describe("successful make", () => {
   test("--optimize", async () => {
     expect(await run("successful-make", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
-        ✅ main⧙                                           88.5 KiB     1 ms Q | 1.23 s E⧘
+        ✅ main⧙                                                      88.5 KiB   1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
       `);
@@ -123,7 +123,7 @@ describe("successful make", () => {
          ● elm/json 1.1.3
          ● elm/url 1.0.0
          ● elm/core 1.0.5
-      ✅ main⧙                                                        1 ms Q | 1.23 s E⧘
+      ✅ main⧙                                                                 1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -136,7 +136,7 @@ describe("successful make", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ main: elm make --optimize
-      ✅ main⧙   88.5 KiB     1 ms Q | 1.23 s E⧘
+      ✅ main⧙   88.5 KiB   1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -152,7 +152,7 @@ describe("successful make", () => {
       Dependencies: in progress
       Dependencies: success
       main: elm make --optimize
-      main: success   88.5 KiB     1 ms Q | 1.23 s E
+      main: success   88.5 KiB   1.23 s E
 
       Compilation finished in 123 ms.
     `);
@@ -161,8 +161,8 @@ describe("successful make", () => {
   test("multiple elm.json", async () => {
     expect(await run("multiple-elm-json/config", ["make"]))
       .toMatchInlineSnapshot(`
-        ✅ app⧙                                                         1 ms Q | 1.23 s E⧘
-        ✅ admin⧙                                                       1 ms Q | 1.23 s E⧘
+        ✅ app⧙                                                                  1.23 s E⧘
+        ✅ admin⧙                                                                1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
       `);
@@ -170,8 +170,8 @@ describe("successful make", () => {
 
   test("different compilers for the same elm.json", async () => {
     expect(await run("mixed-compilers", ["make"])).toMatchInlineSnapshot(`
-      ✅ elm⧙                                                         1 ms Q | 1.23 s E⧘
-      ✅ lamdera⧙                                                     1 ms Q | 1.23 s E⧘
+      ✅ elm⧙                                                                  1.23 s E⧘
+      ✅ lamdera⧙                                                              1.23 s E⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -187,8 +187,8 @@ describe("successful make", () => {
 
   test("package target, and an example application using the package", async () => {
     expect(await run("package", ["make"])).toMatchInlineSnapshot(`
-      ✅ Example⧙                                                     1 ms Q | 1.23 s E⧘
-      ✅ Package⧙                                                     1 ms Q | 765 ms T⧘
+      ✅ Example⧙                                                              1.23 s E⧘
+      ✅ Package⧙                                                              765 ms T⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -207,7 +207,7 @@ describe("successful make", () => {
           }),
       }),
     ).toMatchInlineSnapshot(`
-      ✅ Package⧙                                                     1 ms Q | 765 ms T⧘
+      ✅ Package⧙                                                              765 ms T⧘
 
       ✅ Compilation finished in ⧙123 ms⧘.
     `);
@@ -219,7 +219,7 @@ describe("successful make", () => {
     // the screen and overwrite the admin line instead.
     expect(await run("multiple-elm-json/config", ["make"], { rows: 2 }))
       .toMatchInlineSnapshot(`
-        ✅ admin⧙                                                       1 ms Q | 1.23 s E⧘
+        ✅ admin⧙                                                                1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
       `);
@@ -243,7 +243,7 @@ describe("successful make", () => {
       .toMatchInlineSnapshot(`
         ✅ Compilation finished in ⧙123 ms⧘.
         ✅ Dependencies
-        ✅ main⧙     1 ms Q | 1.23 s E | 31.2 s P⧘
+        ✅ main⧙   1.23 s E | 31.2 s P⧘
         ✅ second⧙     1 ms Q | 1.23 s E | 31.2 s P⧘
         ✅ third⧙     1 ms Q | 1.23 s E | 31.2 s P⧘
       `);
@@ -297,7 +297,7 @@ describe("successful make", () => {
   test("no postprocess", async () => {
     expect(await run("successful-make-no-postprocess", ["make"]))
       .toMatchInlineSnapshot(`
-        ✅ 💣  Mine Sweeper Clone⧙                                       1 ms Q | 1.23 s E⧘
+        ✅ 💣  Mine Sweeper Clone⧙                                                1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
       `);
@@ -306,7 +306,7 @@ describe("successful make", () => {
   test("no postprocess with optimize", async () => {
     expect(await run("successful-make-no-postprocess", ["make", "--optimize"]))
       .toMatchInlineSnapshot(`
-        ✅ 💣  Mine Sweeper Clone⧙                          88.5 KiB     1 ms Q | 1.23 s E⧘
+        ✅ 💣  Mine Sweeper Clone⧙                                     88.5 KiB   1.23 s E⧘
 
         ✅ Compilation finished in ⧙123 ms⧘.
       `);
@@ -318,7 +318,7 @@ describe("successful make", () => {
     // - It depends on how the ad-hoc test terminal escape interpreter handles characters of length 2.
     // - The non-emoji symbol used to not count as emoji, but now it does. It’s ok, though.
     expect(await run("emoji", ["make"])).toMatchInlineSnapshot(`
-      ✅ No emoji⧙                                                    1 ms Q | 1.23 s E⧘
+      ✅ No emoji⧙                                                             1.23 s E⧘
       ✅ No emoji but really long target name that needs to be cut off to fit in the …
       ✅ 😎  Cool emoji⧙                                               1 ms Q | 1.23 s E⧘
       ✅ 🇸🇪 Flag emoji and really long target name that needs to be cut off to fit in…
@@ -336,7 +336,7 @@ describe("successful make", () => {
         env: { [NO_COLOR]: "1" },
       }),
     ).toMatchInlineSnapshot(`
-      No emoji: success                                              1 ms Q | 1.23 s E
+      No emoji: success                                                       1.23 s E
       No emoji but really long target name that needs to be cut off to fit in the t...
       Cool emoji: success                                            1 ms Q | 1.23 s E
       Flag emoji and really long target name that needs to be cut off to fit in the...
@@ -363,7 +363,7 @@ describe("successful make", () => {
       ⚪️ 👋🏻 Skin tone: queued
       ⚪️ ↪ Non-emoji symbol: queued
       ⚪️ ↪️ Emoji version of symbol: queued
-      ✅ No emoji⧙     1 ms Q | 1.23 s E⧘
+      ✅ No emoji⧙   1.23 s E⧘
       ⏳ No emoji but really long target name that needs to be cut off to fit in the terminal: elm make
       ✅ No emoji but really long target name that needs to be cut off to fit in the terminal⧙     1 ms Q | 1.23 s E⧘
       ⏳ 😎 Cool emoji: elm make

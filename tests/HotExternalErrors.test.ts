@@ -114,12 +114,12 @@ describe("hot external errors", () => {
     expect(screens.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
       🚨 ⧙esbuild⧘: 1 error ◀
       🚨 Main: 3 errors
-      ✅ Other⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Other⧙                                                     765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
       ================================================================================
       🚨 esbuild: 1 error
       🚨 ⧙Main⧘: 3 errors ◀
-      ✅ Other⧙                                            1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Other⧙                                                     765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
 
       ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘

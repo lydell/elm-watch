@@ -211,25 +211,25 @@ describe("hot", () => {
         .sort()
         .join("\n"),
     ).toMatchInlineSnapshot(`
-        ⏳ One: elm make
-        ⏳ One: elm make (typecheck only)
-        ⏳ Two: elm make
-        ⏳ Two: elm make (typecheck only)
-        ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-        ✅ One⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-        ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
-        ✅ Two⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
-      `);
+      ⏳ One: elm make
+      ⏳ One: elm make (typecheck only)
+      ⏳ Two: elm make
+      ⏳ Two: elm make (typecheck only)
+      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ One⧙   765 ms T ¦  50 ms W⧘
+      ✅ Two⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Two⧙   765 ms T ¦  50 ms W⧘
+    `);
 
     expect(lines.slice(secondRound + 1).join("\n")).toMatchInlineSnapshot(`
       ⏳ Two: elm make
       ⚪️ One: queued
-      ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Two⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ One: elm make
       ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ One: elm make
       ⚪️ Two: queued
-      ✅ One⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ One⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ⏳ Two: elm make
       ✅ Two⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
     `);
@@ -431,7 +431,7 @@ describe("hot", () => {
     expect(cursorVisible()).toBe(true);
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Html⧙                                           1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Html⧘
@@ -464,7 +464,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Html⧙                                           1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ Worker
       ✅ Removed
       ✅ Readonly
@@ -577,7 +577,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙                                           1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed ../elm.json⧘
@@ -606,7 +606,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙                                           1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed ../../src/Answer.elm⧘

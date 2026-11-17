@@ -78,15 +78,15 @@ describe("hot", () => {
       ⏳ Main: elm make (typecheck only)
       ⏳ Main: interrupted
       ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main⧙   765 ms T ¦  50 ms W⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm +1 more⧘
       ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
       ⏳ Main: elm make
       ⏳ Main: interrupted
       ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm +1 more⧘
     `);
 
@@ -119,7 +119,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙                                           1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
@@ -164,13 +164,13 @@ describe("hot", () => {
 
     expect(grep(terminal, /[⏳✅]/u)).toMatchInlineSnapshot(`
       ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main⧙   765 ms T ¦  50 ms W⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
       ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm⧘
     `);
   });
@@ -218,10 +218,10 @@ describe("hot", () => {
 
     expect(grep(terminal, /[⏳✅]/u)).toMatchInlineSnapshot(`
       ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main⧙   765 ms T ¦  50 ms W⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
       ⏳ Main: elm make
       ⏳ Main: interrupted
@@ -270,10 +270,10 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main⧙   765 ms T ¦  50 ms W⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
       ⏳ Main: elm make
       ⏳ Main: interrupted
@@ -321,13 +321,13 @@ describe("hot", () => {
 
     expect(grep(terminal, /[⏳✅]/u)).toMatchInlineSnapshot(`
       ⏳ Main: elm make (typecheck only)
-      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Main⧙   765 ms T ¦  50 ms W⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
       ⏳ Main: elm make
-      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙changed src/Main.elm⧘
     `);
   });

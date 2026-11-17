@@ -555,7 +555,7 @@ describe("hot reloading", () => {
     const { terminal } = await go(() => "Stop");
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ OutputsWithoutAction⧙                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ OutputsWithoutAction⧙                           1.23 s E ¦  55 ms W |   9 ms I⧘
       ✅ OutputsWithoutActionOther1
       🌐 http://localhost:59123
 

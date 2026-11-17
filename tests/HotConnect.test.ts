@@ -33,7 +33,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Html⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Html⧙                                           1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123   ⧙network:⧘ http://192.168.0.1:59123
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Html⧘
@@ -89,11 +89,11 @@ describe("hot", () => {
       ⏳ Dependencies
       ✅ Dependencies
       ⏳ Worker: elm make (typecheck only)
-      ✅ Worker⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ Worker⧙   765 ms T ¦  50 ms W⧘
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
       ⏳ Worker: elm make
-      ✅ Worker⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Worker⧙   1.23 s E ¦  55 ms W |   9 ms I⧘
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Worker⧘
     `);
@@ -188,7 +188,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      Html: success                            1 ms Q | 1.23 s E /  55 ms W |   9 ms I
+      Html: success                                     1.23 s E /  55 ms W |   9 ms I
       http://localhost:59123
 
       13:10:05 Compiled in 123 ms   web socket connected: Html
@@ -217,11 +217,11 @@ describe("hot", () => {
       Dependencies: in progress
       Dependencies: success
       Html: elm make (typecheck only)
-      Html: success     1 ms Q | 765 ms T /  50 ms W
+      Html: success   765 ms T /  50 ms W
 
       13:10:05 Compiled in 123 ms
       Html: elm make
-      Html: success     1 ms Q | 1.23 s E /  55 ms W |   9 ms I
+      Html: success   1.23 s E /  55 ms W |   9 ms I
 
       13:10:05 Compiled in 123 ms   web socket connected: Html
     `);
@@ -262,7 +262,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      ✅ Main⧙                                  1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ Main⧙                                           1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123
 
       ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
