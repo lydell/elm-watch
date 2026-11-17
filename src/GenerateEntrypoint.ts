@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as Codec from "tiny-decoders";
+import * as url from "url";
 
 import type { ElmWatchJsonWithLegacyPostprocess } from "./ElmWatchJson.ts";
 import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
@@ -243,7 +244,7 @@ ${postprocessForSignature}
       runMode,
       argv: [
         ${js(ELM_WATCH_NODE_LEGACY)},
-        path.join(import.meta.dirname, ${js(script)}),${scriptArgs.map((arg) => `\n        ${js(arg)},`).join("")}
+        path.resolve(import.meta.dirname, ${js(script)}),${scriptArgs.map((arg) => `\n        ${js(arg)},`).join("")}
       ],
     });
 }
@@ -294,8 +295,13 @@ ${postprocessForSignature}
 }
 
 function toImportPath(script: string): string {
+  if (path.isAbsolute(script)) {
+    // `C:\...` is not a valid import specifier on Windows.
+    return url.pathToFileURL(script).href;
+  }
   const withSlashes = script.split(path.sep).join("/");
-  return withSlashes.startsWith(".") || withSlashes.startsWith("/")
+  // Must start with `./` or `../` to not be treated as a package name.
+  return withSlashes.startsWith("./") || withSlashes.startsWith("../")
     ? withSlashes
     : `./${withSlashes}`;
 }

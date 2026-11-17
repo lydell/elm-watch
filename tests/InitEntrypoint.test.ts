@@ -4,6 +4,7 @@ import * as path from "path";
 import { describe, expect, test } from "vitest";
 
 import elmWatchCli from "../src/ElmWatch.ts";
+import { generateEntrypoint } from "../src/GenerateEntrypoint.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   assertExitCode,
@@ -13,6 +14,7 @@ import {
   readFile,
   SilentReadStream,
   stringSnapshotSerializer,
+  testExceptWindows,
 } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -478,11 +480,46 @@ describe("init --javascript and --typescript", () => {
             runMode,
             argv: [
               "elm-watch-node",
-              path.join(import.meta.dirname, "scripts/postprocess.js"),
+              path.resolve(import.meta.dirname, "scripts/postprocess.js"),
               "extra-arg",
             ],
           });
       }
+    `);
+  });
+
+  testExceptWindows("elm-watch-node postprocess script paths", () => {
+    const lines = [
+      "post.js",
+      "./post.js",
+      "../post.js",
+      ".post/index.js",
+      "..post.js",
+      "/abs/post.js",
+    ].flatMap((script) =>
+      generateEntrypoint(
+        { targets: {}, postprocess: ["elm-watch-node", script] },
+        "javascript",
+      )
+        .split("\n")
+        .filter((line) =>
+          /^import elmWatchNodePostprocess|path\.\w+\(import/.test(line),
+        )
+        .map((line) => line.trim()),
+    );
+    expect(lines.join("\n")).toMatchInlineSnapshot(`
+      import elmWatchNodePostprocess from "./post.js";
+      path.resolve(import.meta.dirname, "post.js"),
+      import elmWatchNodePostprocess from "./post.js";
+      path.resolve(import.meta.dirname, "./post.js"),
+      import elmWatchNodePostprocess from "../post.js";
+      path.resolve(import.meta.dirname, "../post.js"),
+      import elmWatchNodePostprocess from "./.post/index.js";
+      path.resolve(import.meta.dirname, ".post/index.js"),
+      import elmWatchNodePostprocess from "./..post.js";
+      path.resolve(import.meta.dirname, "..post.js"),
+      import elmWatchNodePostprocess from "file:///abs/post.js";
+      path.resolve(import.meta.dirname, "/abs/post.js"),
     `);
   });
 
@@ -954,7 +991,7 @@ describe("init --javascript and --typescript", () => {
               runMode,
               argv: [
                 "elm-watch-node",
-                path.join(import.meta.dirname, "scripts/postprocess.js"),
+                path.resolve(import.meta.dirname, "scripts/postprocess.js"),
                 "extra-arg",
               ],
             });
