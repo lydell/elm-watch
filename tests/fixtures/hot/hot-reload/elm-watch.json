@@ -72,6 +72,14 @@
             ],
             "output": "build/InitTweakValue.js"
         },
+        "InitTweakThirdConstructor": {
+            "type": "application",
+            "elmJson": "elm.json",
+            "inputs": [
+                "src/InitTweakThirdConstructor.elm"
+            ],
+            "output": "build/InitTweakThirdConstructor.js"
+        },
         "InitNewField": {
             "type": "application",
             "elmJson": "elm.json",

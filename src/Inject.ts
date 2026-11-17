@@ -97,7 +97,9 @@ function _Utils_eqHelp_elmWatchInternal(x, y, depth, stack)
 		// Tasks made with \`_Scheduler_binding\` (\`$: 2\`) get their kill function (\`.c\`) set
 		// when run. A top-level task that has been run might have a function, \`undefined\` or
 		// \`null\` there. Ignore it, since we consider all functions to be equal anyway.
-		if (x.$ === 2 && key === 'c') {
+		// In optimize mode, a custom type’s third variant also has \`$: 2\`, but its
+		// arguments start at \`.a\`.
+		if (x.$ === 2 && key === 'c' && !('a' in x)) {
 			continue;
 		}
 		if (!_Utils_eqHelp_elmWatchInternal(x[key], y[key], depth + 1, stack)) {

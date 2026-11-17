@@ -113,6 +113,39 @@ describe("hot reloading", () => {
     }
   });
 
+  test("Init tweak value in third constructor (optimize)", async () => {
+    const { replace, go } = runHotReload({
+      name: "InitTweakThirdConstructor",
+      programType: "Element",
+      compilationMode: "optimize",
+    });
+
+    const { browserConsole } = await go(({ idle, div }) => {
+      switch (idle) {
+        case 1:
+          assert1(div);
+          replace((content) => content.replace(/-- /g, ""));
+          return "KeepGoing";
+        default:
+          assert2(div);
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+        elm-watch: I did a full page reload because \`Elm.InitTweakThirdConstructor.init\` returned something different than last time. Let's start fresh!
+        (target: InitTweakThirdConstructor)
+      `);
+
+    function assert1(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>123</div>`);
+    }
+
+    function assert2(div: HTMLDivElement): void {
+      expect(div.outerHTML).toMatchInlineSnapshot(`<div>124</div>`);
+    }
+  });
+
   test("Init new field", async () => {
     const { replace, go } = runHotReload({
       name: "InitNewField",
