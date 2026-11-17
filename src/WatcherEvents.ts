@@ -2,6 +2,7 @@ import * as path from "path";
 import * as url from "url";
 
 import * as Compile from "./Compile.ts";
+import { ANY_COMPILER_DIR_REGEX } from "./ElmStuffRecovery.ts";
 import {
   type LatestEvent,
   makeWatcherEvent,
@@ -158,9 +159,7 @@ export function classifyWatcherEvent(
 function isElmStuffCompilerDir(absolutePath: AbsolutePath): boolean {
   return (
     path.basename(path.dirname(absolutePath)) === "elm-stuff" &&
-    /^(?:lamdera-\d+\.\d+\.\d+-)?\d+\.\d+\.\d+$/.test(
-      path.basename(absolutePath),
-    )
+    ANY_COMPILER_DIR_REGEX.test(path.basename(absolutePath))
   );
 }
 

@@ -43,6 +43,9 @@ const compilerDirRegexes: Record<Compiler, RegExp> = {
   lamdera: /^(?:lamdera-\d+\.\d+\.\d+-)?\d+\.\d+\.\d+$/,
 };
 
+// Lamdera’s regex matches Elm’s directories too.
+export const ANY_COMPILER_DIR_REGEX = compilerDirRegexes.lamdera;
+
 // If a killed `elm` does not exit within this time, give up waiting for it.
 // We try to recover before the next `elm` run instead.
 const EXIT_TIMEOUT_MS = 5000;
