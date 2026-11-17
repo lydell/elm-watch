@@ -68,6 +68,12 @@ async function reloadCssIfNeeded(
     return false;
   }
 
+  // The style sheet is parsed by `parseCssWithImports` below, which downloads
+  // it again. But a `<link>` can’t tell us whether the response was
+  // successful: It fires "error" both when the style sheet fails to load and
+  // (in some browsers) when an `@import` fails, which we accept. Updating to an
+  // empty style sheet (for example after a 404 while the file is being saved)
+  // would remove all styles.
   const response = await fetch(url, {
     cache: "reload",
     signal: AbortSignal.timeout(LOAD_TIMEOUT),
@@ -76,9 +82,7 @@ async function reloadCssIfNeeded(
     return false;
   }
 
-  const newCss = await response.text();
-
-  if (isFirefox() && /@import\b/i.test(newCss)) {
+  if (isFirefox() && /@import\b/i.test(await response.text())) {
     // oxlint-disable-next-line no-console
     console.warn(
       "elm-watch: In Firefox, @import:ed CSS files are not hot reloaded due to over eager caching by Firefox. Style sheet:",
