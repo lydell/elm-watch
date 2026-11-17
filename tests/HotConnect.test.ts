@@ -333,8 +333,7 @@ describe("hot", () => {
       🚨 Removed: 1 error
       🌐 http://localhost:59123
 
-      ⧙── TROUBLE READING OUTPUT ──────────────────────────────────────────────────────⧘
-      ⧙Target: Removed⧘
+      ⧙── TROUBLE READING OUTPUT ── ⧘⧙Target: Removed⧘⧙ ───────────────────────────────────⧘
 
       I managed to compile your code. Then I tried to read the output:
 
@@ -382,8 +381,7 @@ describe("hot", () => {
       🚨 Readonly: 1 error
       🌐 http://localhost:59123
 
-      ⧙── TROUBLE WRITING OUTPUT ──────────────────────────────────────────────────────⧘
-      ⧙Target: Readonly⧘
+      ⧙── TROUBLE WRITING OUTPUT ── ⧘⧙Target: Readonly⧘⧙ ──────────────────────────────────⧘
 
       I managed to compile your code and read the generated file:
 

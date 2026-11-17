@@ -1564,6 +1564,7 @@ function renderErrorView(
           })
         : ErrorView.render({
             terminalConfig: terminal.config,
+            root: mutable.project.root,
             expanded: errorView.expanded,
             selection,
             targets,

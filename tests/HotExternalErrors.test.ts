@@ -122,8 +122,7 @@ describe("hot external errors", () => {
       ✅ Other⧙                                                     765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
 
-      ⧙── TYPE MISMATCH ───────────────────────────────────────────────────────────────⧘
-      /Users/you/project/tests/fixtures/hot/error-view/src/A.elm:6:5
+      ⧙── TYPE MISMATCH ── ⧘src/A.elm⧙:6:5⧘⧙ ──────────────────────────────────────────────⧘
 
       Something is off with the body of the \`a\` definition:
 

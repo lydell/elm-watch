@@ -499,8 +499,7 @@ describe("hot", () => {
       });
 
       expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
-        ⧙── INPUTS NOT FOUND ────────────────────────────────────────────────────────────⧘
-        ⧙Target: EnabledNotFound⧘
+        ⧙── INPUTS NOT FOUND ── ⧘⧙Target: EnabledNotFound⧘⧙ ─────────────────────────────────⧘
 
         You asked me to compile these inputs:
 

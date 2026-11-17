@@ -244,7 +244,10 @@ export function toTerminalString(
   errorTemplate: ErrorTemplate,
   width: number,
   noColor: boolean,
-  collapse = false,
+  // When showing one error at a time: Whether to collapse long code excerpts,
+  // and the location goes on the title line, relative to `root` (opening it in
+  // the editor is just a key press away, so the full path is just noise).
+  oneAtATime?: { collapse: boolean; root: AbsolutePath },
 ): string {
   const renderPiece = noColor
     ? (piece: Piece): string => piece.text
@@ -254,19 +257,40 @@ export function toTerminalString(
     width,
     renderPiece,
   );
+
+  const titleLocation =
+    oneAtATime === undefined || location === undefined
+      ? []
+      : renderRelativeErrorLocation(location, oneAtATime.root);
   // Box drawing characters render as a solid line, and are supported by the
   // fonts of the Windows console too.
-  const prefix = `── ${title} `;
-  const line = "─".repeat(Math.max(0, width - prefix.length));
-  const titleWithSeparator = renderPiece(bold(`${prefix}${line}`));
+  const prefix =
+    titleLocation.length === 0 ? `── ${title} ` : `── ${title} ── `;
+  const lineLength =
+    width -
+    prefix.length -
+    titleLocation.reduce((sum, piece) => sum + piece.text.length, 0) -
+    (titleLocation.length === 0 ? 0 : 1);
+  const line =
+    lineLength <= 0
+      ? ""
+      : `${titleLocation.length === 0 ? "" : " "}${"─".repeat(lineLength)}`;
+  const titleWithSeparator =
+    titleLocation.length === 0
+      ? renderPiece(bold(`${prefix}${line}`))
+      : [
+          renderPiece(bold(prefix)),
+          ...titleLocation.map(renderPiece),
+          line === "" ? "" : renderPiece(bold(line)),
+        ].join("");
 
   return [
     titleWithSeparator,
-    ...(location === undefined
+    ...(location === undefined || oneAtATime !== undefined
       ? []
       : [renderPiece(renderErrorLocation(location))]),
     "",
-    collapse ? (collapsedContent ?? content) : content,
+    oneAtATime?.collapse === true ? (collapsedContent ?? content) : content,
   ].join("\n");
 }
 
@@ -400,6 +424,30 @@ function renderErrorLocation(location: ErrorLocation): Piece {
     case "Target":
       return dim(`Target: ${location.targetName}`);
   }
+}
+
+function renderRelativeErrorLocation(
+  location: ErrorLocation,
+  root: AbsolutePath,
+): Array<Piece> {
+  switch (location.tag) {
+    case "FileOnly":
+      return [text(relativeErrorFile(root, location.file))];
+    case "FileWithLineAndColumn":
+      return [
+        text(relativeErrorFile(root, location.file)),
+        dim(`:${location.line}:${location.column}`),
+      ];
+    case "Target":
+      return [renderErrorLocation(location)];
+  }
+}
+
+export function relativeErrorFile(
+  root: AbsolutePath,
+  file: AbsolutePath,
+): string {
+  return path.relative(root, file);
 }
 
 export function readElmWatchJson(
