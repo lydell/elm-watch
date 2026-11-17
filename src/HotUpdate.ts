@@ -484,7 +484,6 @@ export function update(
       const includeInterrupted = model.nextAction.tag !== "Compile";
       const outputActions = Compile.getOutputActions({
         project,
-        runMode: "hot",
         includeInterrupted,
         prioritizedOutputs: msg.prioritizedOutputs,
       });

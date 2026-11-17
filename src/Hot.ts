@@ -598,7 +598,6 @@ const runCmd =
 
         const outputActions = Compile.getOutputActions({
           project: mutable.project,
-          runMode: "hot",
           includeInterrupted: cmd.includeInterrupted,
           prioritizedOutputs: getPrioritizedOutputs(mutable),
         });

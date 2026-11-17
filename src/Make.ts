@@ -36,7 +36,6 @@ export async function run(
 
   const initialOutputActions = Compile.getOutputActions({
     project,
-    runMode: "make",
     includeInterrupted: true,
     prioritizedOutputs: "AllEqualPriority",
   });
@@ -112,7 +111,6 @@ export async function run(
 function getNextOutputActions(project: Project): Compile.OutputActions {
   const nextOutputActions = Compile.getOutputActions({
     project,
-    runMode: "make",
     includeInterrupted: true,
     prioritizedOutputs: "AllEqualPriority",
   });

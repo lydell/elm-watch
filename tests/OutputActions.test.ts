@@ -2,11 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import { getOutputActions, type OutputActions } from "../src/Compile.ts";
 import { getFlatOutputs, type Project } from "../src/Project.ts";
-import {
-  markAsTargetName,
-  type RunMode,
-  type TargetName,
-} from "../src/Types.ts";
+import { markAsTargetName, type TargetName } from "../src/Types.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 import {
   makeProject,
@@ -31,19 +27,16 @@ function priorities(record: Record<string, number>): Map<TargetName, number> {
 
 function run({
   project,
-  runMode = "hot",
   includeInterrupted = true,
   prioritizedOutputs,
 }: {
   project: Project;
-  runMode?: RunMode;
   includeInterrupted?: boolean;
   prioritizedOutputs: Map<TargetName, number> | "AllEqualPriority";
 }): string {
   return describeActions(
     getOutputActions({
       project,
-      runMode,
       includeInterrupted,
       prioritizedOutputs,
     }),
@@ -365,21 +358,27 @@ describe("getOutputActions", () => {
       `);
     });
 
-    test("postprocess goes before elm make, without taking up a slot", () => {
+    // `elm make` runs in a child process, so start it before postprocessing
+    // (which might block our thread for a while), even if it has lower priority.
+    test("elm make goes before postprocess", () => {
       expect(
         run({
           project: makeProject({
             maxParallel: 1,
             elmJsons: {
               a: [["A", "dirty"]],
-              b: [["B", "queuedForPostprocess"]],
+              b: [
+                ["B", "queuedForPostprocess"],
+                ["C", "queuedForPostprocess"],
+              ],
             },
           }),
-          prioritizedOutputs: priorities({ A: 2, B: 1 }),
+          prioritizedOutputs: priorities({ A: 1, B: 2, C: 3 }),
         }),
       ).toMatchInlineSnapshot(`
-        postprocess: B (priority 1)
-        elm make: A (Dirty, priority 2)
+        elm make: A (Dirty, priority 1)
+        postprocess: C (priority 3)
+        postprocess: B (priority 2)
         without action: -
         executing: 0, interrupted: 0, errors: 0
       `);
@@ -471,7 +470,6 @@ describe("getOutputActions", () => {
     test("postprocess does not count towards maxParallel", () => {
       expect(
         run({
-          runMode: "make",
           project: makeProject({
             maxParallel: 2,
             elmJsons: {
@@ -492,29 +490,6 @@ describe("getOutputActions", () => {
         queue: fifth
         without action: main, second
         executing: 2, interrupted: 0, errors: 0
-      `);
-    });
-
-    // In make mode, finding type errors quickly matters more. Starting `elm make`
-    // first lets it run while (synchronous) postprocessing blocks our thread.
-    test("elm make goes before postprocess", () => {
-      expect(
-        run({
-          runMode: "make",
-          project: makeProject({
-            maxParallel: 1,
-            elmJsons: {
-              a: [["A", "dirty"]],
-              b: [["B", "queuedForPostprocess"]],
-            },
-          }),
-          prioritizedOutputs: "AllEqualPriority",
-        }),
-      ).toMatchInlineSnapshot(`
-        elm make: A (Dirty, priority 0)
-        postprocess: B (priority 0)
-        without action: -
-        executing: 0, interrupted: 0, errors: 0
       `);
     });
   });

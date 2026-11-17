@@ -369,12 +369,10 @@ export type OutputActions = {
 
 export function getOutputActions({
   project,
-  runMode,
   includeInterrupted,
   prioritizedOutputs,
 }: {
   project: Project;
-  runMode: RunMode;
   includeInterrupted: boolean;
   prioritizedOutputs: Map<TargetName, number> | "AllEqualPriority";
 }): OutputActions {
@@ -581,7 +579,6 @@ export function getOutputActions({
   }
 
   const prioritizedActions = prioritizeActions(
-    runMode,
     elmMakeActions,
     elmMakeTypecheckOnlyActions,
     elmMakePackageActions,
@@ -708,8 +705,12 @@ export function getOutputActions({
   };
 }
 
+// Elm runs in child processes, so start `elm make` before postprocessing (which
+// might block our thread for a while) so they can work at the same time. In
+// `hot` mode, try to finish each output as fast as possible, rather than make
+// all of them “evenly slow”. No browser waits for packages. (In `make` mode, all
+// outputs have the same priority.)
 function prioritizeActions(
-  runMode: RunMode,
   elmMakeActions: Array<NeedsElmMakeOutputAction>,
   elmMakeTypecheckOnlyActions: Array<NeedsElmMakeTypecheckOnlyOutputAction>,
   elmMakePackageActions: Array<NeedsElmMakePackageOutputAction>,
@@ -720,28 +721,12 @@ function prioritizeActions(
   | NeedsElmMakePackageOutputAction
   | NeedsPostprocessOutputAction
 > {
-  switch (runMode) {
-    // In `make` mode, you want to find type errors as quickly as possible (the
-    // most likely CI failure). Don’t let slow postprocessing delay that.
-    // All outputs have the same priority in `make` mode so don’t bother sorting.
-    case "make":
-      return [
-        ...elmMakeActions,
-        ...elmMakeTypecheckOnlyActions,
-        ...elmMakePackageActions,
-        ...postprocessActions,
-      ];
-
-    // In `hot` mode, try to finish each output as fast as possible, rather than
-    // make all of them “evenly slow”. No browser waits for packages.
-    case "hot":
-      return [
-        ...sortByPriority(postprocessActions),
-        ...sortByPriority(elmMakeActions),
-        ...elmMakeTypecheckOnlyActions,
-        ...elmMakePackageActions,
-      ];
-  }
+  return [
+    ...sortByPriority(elmMakeActions),
+    ...elmMakeTypecheckOnlyActions,
+    ...elmMakePackageActions,
+    ...sortByPriority(postprocessActions),
+  ];
 }
 
 function sortByPriority<T extends { priority: number }>(
