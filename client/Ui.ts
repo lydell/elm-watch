@@ -1787,6 +1787,7 @@ const CLASS = {
   topLayer: "topLayer",
   version: "version",
   visuallyHidden: "visuallyHidden",
+  wrapToPanel: "wrapToPanel",
 };
 
 const DATA_FOCUS_KEY = "data-focus-key";
@@ -2556,6 +2557,14 @@ focus might be inside the panel and must not be lost.
   color: var(--muted);
 }
 
+/* Texts that come and go in common flows (such as reconnecting) don’t make the
+   panel wider. Instead, they wrap at the width of the rest of the panel. That
+   way the panel doesn’t keep changing width. */
+.${CLASS.note},
+.${CLASS.wrapToPanel} {
+  contain: inline-size;
+}
+
 .${CLASS.details} pre {
   margin: 0;
   padding-left: 1ch;
@@ -2980,7 +2989,13 @@ function viewStatusDetails(
     case "Connecting":
       return [
         ...(status.attemptNumber > 1
-          ? [h(HTMLParagraphElement, {}, `Attempt ${status.attemptNumber}.`)]
+          ? [
+              h(
+                HTMLParagraphElement,
+                { className: CLASS.wrapToPanel },
+                `Attempt ${status.attemptNumber}.`,
+              ),
+            ]
           : []),
         ...viewHttpsInfo(info.webSocketUrl),
       ];
@@ -3018,7 +3033,7 @@ function viewStatusDetails(
       return [
         h(
           HTMLParagraphElement,
-          {},
+          { className: CLASS.wrapToPanel },
           `Attempt ${status.attemptNumber} failed. Trying again in ${printRetryWaitMs(status.attemptNumber)}.`,
         ),
         ...viewHttpsInfo(info.webSocketUrl),
@@ -3060,7 +3075,7 @@ function viewStatusDetails(
         : [
             h(
               HTMLParagraphElement,
-              {},
+              { className: CLASS.wrapToPanel },
               waitingForOtherTargets
                 ? "Waiting for other targets…"
                 : "Waiting for page reload…",
@@ -3203,13 +3218,17 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
     ? [
         h(
           HTMLParagraphElement,
-          {},
+          { className: CLASS.wrapToPanel },
           h(HTMLElement, { localName: "strong" }, "Having trouble connecting?"),
         ),
-        h(HTMLParagraphElement, {}, "Setting up HTTPS can be a bit tricky."),
         h(
           HTMLParagraphElement,
-          {},
+          { className: CLASS.wrapToPanel },
+          "Setting up HTTPS can be a bit tricky.",
+        ),
+        h(
+          HTMLParagraphElement,
+          { className: CLASS.wrapToPanel },
           "Read all about ",
           h(
             HTMLAnchorElement,
