@@ -160,13 +160,6 @@ export type CreateServer = (listeners: {
   | ReturnType<typeof createHttpServer>
   | ReturnType<typeof createHttpsServer>;
 
-export function equalsInputPath(
-  elmFile: AbsolutePath,
-  inputPath: InputPath,
-): boolean {
-  return inputPath.theInputPath === elmFile || inputPath.realpath === elmFile;
-}
-
 export type WebSocketToken = Brand<string, "WebSocketToken">;
 export const WebSocketToken = brand<WebSocketToken>();
 export function markAsWebSocketToken(string: string): WebSocketToken {

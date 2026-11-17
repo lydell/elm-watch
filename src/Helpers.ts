@@ -137,10 +137,6 @@ function toFixed(n: number): string {
   return n.toFixed(0);
 }
 
-export function capitalize(string: string): string {
-  return string.slice(0, 1).toUpperCase() + string.slice(1);
-}
-
 export function escapeHtml(string: string): string {
   return string.replace(/[&<>"']/g, (match) => {
     switch (match) {
