@@ -146,6 +146,9 @@ function baseHtml(faviconEmoji: string, title: string, body: Html): Html {
             padding: 1em;
             background-color: #00000020;
             width: max-content;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow-x: auto;
           }
           pre,
           code {

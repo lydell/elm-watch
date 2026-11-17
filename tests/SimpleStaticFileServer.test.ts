@@ -211,7 +211,7 @@ describe("SimpleStaticFileServer", () => {
       .toMatchInlineSnapshot(`
         200
         content-type: text/html; charset=utf-8
-        content-length: 3000
+        content-length: 3095
         <!DOCTYPE html>
             <html lang="en">
               <head>…</head>
