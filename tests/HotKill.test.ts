@@ -174,6 +174,58 @@ describe("hot", () => {
     `);
   });
 
+  test("SIGTERM kills Elm after the timeout, without compiling again", async () => {
+    const fixture = "kill-elm";
+    const dir = fixtureDir(fixture);
+    const input = path.join(dir, "src", "Main.elm");
+    const lock = path.join(dir, "lock");
+    const readLock = (): string => fs.readFileSync(lock, "utf8");
+    fs.writeFileSync(lock, "NoLock");
+
+    const { terminal } = await run({
+      fixture,
+      args: [],
+      scripts: ["main.js"],
+      isTTY: false,
+      bin: "compile-forever",
+      env: {
+        ...TEST_ENV,
+        [__ELM_WATCH_ELM_TIMEOUT_MS]: "0",
+      },
+      init: (node) => {
+        window.Elm?.["Main"]?.init({ node });
+      },
+      onIdle: async ({ idle }) => {
+        switch (idle) {
+          case 1:
+            // Hang on compile.
+            // `bad-bin/compile-forever/elm` then updates `lock` to succeed.
+            fs.writeFileSync(lock, "LockExceptInstall");
+            touch(input);
+            await waitFor(() => readLock() === "NoLock");
+            sendSigterm();
+            return "KeepGoing" as const;
+
+          default:
+            throw new Error("Expected elm-watch to exit after SIGTERM.");
+        }
+      },
+    });
+
+    expect(grep(terminal, /[⏳✅]/u)).toMatchInlineSnapshot(`
+      ⏳ Dependencies
+      ✅ Dependencies
+      ⏳ Main: elm make (typecheck only)
+      ✅ Main⧙     1 ms Q | 765 ms T ¦  50 ms W⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
+      ⏳ Main: elm make
+      ✅ Main⧙     1 ms Q | 1.23 s E ¦  55 ms W |   9 ms I⧘
+      ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘   ⧙web socket connected: Main⧘
+      ⏳ Main: elm make
+      ⏳ Main: interrupted
+    `);
+  });
+
   test("abort signal waits for Elm to finish", async () => {
     const fixture = "kill-elm";
     const dir = fixtureDir(fixture);

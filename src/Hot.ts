@@ -90,6 +90,9 @@ type Mutable = {
   watcherProbe: WatcherProbe | undefined;
   elmWatchStuffJsonWriteError: Error | undefined;
   killInstallDependencies: ((options: { force: boolean }) => void) | undefined;
+  // Set when exiting gracefully, to not start new compilations while waiting
+  // for running ones to finish.
+  isExitingGracefully: boolean;
   unsubscribeFromGracefulExit: () => void;
   unsubscribeFromExternalErrors: () => void;
 };
@@ -366,6 +369,7 @@ const initMutable =
       watcherProbe,
       elmWatchStuffJsonWriteError: undefined,
       killInstallDependencies: undefined,
+      isExitingGracefully: false,
       unsubscribeFromGracefulExit: () => {
         // Replaced below.
       },
@@ -474,6 +478,7 @@ const initMutable =
     // doesn’t run `elm` at the same time as the old one (which can corrupt
     // elm-stuff/). The `signal` option works the same way.
     const exitGracefully = (): void => {
+      mutable.isExitingGracefully = true;
       if (mutable.killInstallDependencies !== undefined) {
         mutable.killInstallDependencies({ force: false });
       }
@@ -584,6 +589,12 @@ const runCmd =
         return;
 
       case "CompileAllOutputsAsNeeded": {
+        // Killed targets are marked as interrupted, which would otherwise
+        // compile them again.
+        if (mutable.isExitingGracefully) {
+          return;
+        }
+
         const outputActions = Compile.getOutputActions({
           project: mutable.project,
           runMode: "hot",
