@@ -1200,7 +1200,12 @@ const runCmd =
           // There might be several targets on the page, all receiving the same
           // changed file url paths. This fires the event only once per batch.
           // (Every target most likely gets the same paths.)
-          if (justChangedFileUrlPaths.size > 0) {
+          // Node.js has no `dispatchEvent` on `globalThis` (but Web Workers do).
+          if (
+            justChangedFileUrlPaths.size > 0 &&
+            // oxlint-disable-next-line typescript/no-unnecessary-condition
+            window.dispatchEvent !== undefined
+          ) {
             for (const path of justChangedFileUrlPaths) {
               __ELM_WATCH.CHANGED_FILE_URL_PATHS.changed.add(path);
             }
