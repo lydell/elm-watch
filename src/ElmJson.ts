@@ -55,7 +55,7 @@ const ElmJsonTypeOnly = Codec.fields(
   { allowExtraFields: true },
 );
 
-export type ReadElmJsonTypeResult =
+type ReadElmJsonTypeResult =
   | { tag: "NotFound" }
   // Unreadable or invalid. We let Elm report that, since it has nice errors.
   | { tag: "Unknown" }

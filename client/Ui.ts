@@ -177,7 +177,7 @@ export type UiTarget = {
   unregister: () => void;
 };
 
-export type UiTargetCallbacks = {
+type UiTargetCallbacks = {
   onUiMsg: (msg: UiMsg) => void;
 };
 

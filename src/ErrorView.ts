@@ -46,7 +46,7 @@ export type ErrorViewKey =
   | "ToggleExpanded"
   | "ToggleShowAll";
 
-export type Digit = `Digit${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`;
+type Digit = `Digit${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}`;
 
 const DIGITS: Array<[string, Digit]> = (
   [1, 2, 3, 4, 5, 6, 7, 8, 9] as const

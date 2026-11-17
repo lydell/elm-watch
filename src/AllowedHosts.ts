@@ -106,7 +106,7 @@ export function allowedHostFromUrl(url: URL): AllowedHost {
   return markAsAllowedHost(normalizeHostname(url.hostname));
 }
 
-export type HostCheckResult = { tag: "Allowed" } | RejectedHost;
+type HostCheckResult = { tag: "Allowed" } | RejectedHost;
 
 export type RejectedHost =
   | { tag: "NotAllowed"; hostname: string }

@@ -17,7 +17,7 @@ import {
 import { killWindowsProcessTree } from "./Spawn.ts";
 import type { AbsolutePath } from "./Types.ts";
 
-export type OpenEditorLocation = {
+type OpenEditorLocation = {
   file: AbsolutePath;
   line: number;
   column: number;

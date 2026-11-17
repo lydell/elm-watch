@@ -77,7 +77,7 @@ export type ParseWebSocketConnectRequestUrlResult =
       elmCompiledTimestamp: number;
     };
 
-export type ParseWebSocketConnectRequestUrlError =
+type ParseWebSocketConnectRequestUrlError =
   | {
       tag: "ParamsDecodeError";
       error: Codec.DecoderError;

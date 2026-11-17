@@ -214,7 +214,7 @@ export type ErrorLocation =
       targetName: TargetName;
     };
 
-export const fancyError =
+const fancyError =
   (title: string, location: FancyErrorLocation) =>
   (strings: ReadonlyArray<string>, ...values: Array<Piece | Template>) =>
   (

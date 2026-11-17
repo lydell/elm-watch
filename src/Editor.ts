@@ -43,7 +43,7 @@ export const EDITOR_PRESETS: Array<EditorPreset> = [
   },
 ];
 
-export type EditorLocation = {
+type EditorLocation = {
   file: string;
   line: number;
   column: number;

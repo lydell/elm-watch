@@ -597,7 +597,7 @@ function findElmFilesWithMain(dir: AbsolutePath): Array<AbsolutePath> {
     });
 }
 
-export function exampleJson(
+function exampleJson(
   cwd: Cwd,
   elmWatchJsonPath: ElmWatchJsonPath,
   elmMakeParsed: ElmMakeParsed,

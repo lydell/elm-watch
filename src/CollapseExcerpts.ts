@@ -16,7 +16,7 @@ import type { MessageChunk } from "./ElmMakeError.ts";
 // last line is marked.
 
 // Roughly how many code lines to show, at most.
-export const MAX_LINES = 10;
+const MAX_LINES = 10;
 
 // When the relevant lines themselves are too many, show their start and this
 // many lines at their end. For a `case` expression, the end is where you’d add

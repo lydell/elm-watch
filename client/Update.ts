@@ -801,9 +801,7 @@ function parseWebSocketMessageData(
   }
 }
 
-export function reloadReasonToString(
-  reason: ReloadReasonWithModuleName,
-): string {
+function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
   switch (reason.tag) {
     case "ElmHotChanged":
       return reason.usesElmHot

@@ -15,7 +15,7 @@ export type Postprocess =
 
 export type PostprocessToRun = Extract<Postprocess, { tag: "Postprocess" }>;
 
-export type PostprocessResult =
+type PostprocessResult =
   | PostprocessError
   | {
       tag: "Killed";

@@ -23,7 +23,7 @@ type ErrorGroupFile<E extends ErrorGroupError> = {
   errors: NonEmptyArray<E>;
 };
 
-export type ErrorGroupError = {
+type ErrorGroupError = {
   // The full error message. Used to identify the error between compilations.
   id: string;
   location: Location | undefined;

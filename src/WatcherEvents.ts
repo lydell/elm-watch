@@ -27,7 +27,7 @@ import type {
 // Decides what a file change means for the project. This doesn’t look at the
 // file system: Whether a path was removed is checked beforehand.
 
-export type DirtyOutput = {
+type DirtyOutput = {
   outputPath: OutputPath;
   outputState: OutputState;
 };
@@ -44,7 +44,7 @@ export type WatcherEventEffect =
   // The event is printed, but nothing needs to be compiled.
   | { tag: "NoEffect" };
 
-export type ClassifiedWatcherEvent = {
+type ClassifiedWatcherEvent = {
   event: Extract<LatestEvent, { tag: "WatcherEvent" }>;
   effect: WatcherEventEffect;
 };

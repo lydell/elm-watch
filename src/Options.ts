@@ -177,7 +177,7 @@ export type OptionsInSyncWithIndexDts = [
   >,
 ];
 
-export type DecodeOptionsResult =
+type DecodeOptionsResult =
   | {
       tag: "DecoderError";
       error: Codec.DecoderError;
