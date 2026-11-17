@@ -1100,7 +1100,11 @@ const runCmd =
           }),
         );
         message.catch(rejectPromise);
-        webSocketSendToOutput(mutable, cmd.outputPath, message);
+        if (cmd.webSocket === undefined) {
+          webSocketSendToOutput(mutable, cmd.outputPath, message);
+        } else {
+          webSocketSend(cmd.webSocket, message);
+        }
         return;
       }
 

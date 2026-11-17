@@ -286,6 +286,8 @@ export type Cmd =
   | {
       tag: "WebSocketSendCompileErrorToOutput";
       outputPath: OutputPath;
+      // `undefined` means all connections for `outputPath`.
+      webSocket: WebSocket | undefined;
       compilationMode: CompilationMode;
       errors: Array<Errors.ErrorTemplate>;
     }
@@ -950,6 +952,7 @@ function handleOutputActionResultToCmd(
       return {
         tag: "WebSocketSendCompileErrorToOutput",
         outputPath: handleOutputActionResult.outputPath,
+        webSocket: undefined,
         compilationMode: handleOutputActionResult.outputState.compilationMode,
         errors: Compile.renderOutputErrors(
           handleOutputActionResult.elmJsonPath,
@@ -1103,6 +1106,7 @@ function onWebSocketConnected(
               {
                 tag: "WebSocketSendCompileErrorToOutput",
                 outputPath,
+                webSocket,
                 compilationMode: outputState.compilationMode,
                 errors: Compile.renderOutputErrors(
                   elmJsonPath,

@@ -223,7 +223,7 @@ function describeCmd(cmd: Cmd): string {
     case "WebSocketSend":
       return `${cmd.tag} ${describeWebSocketMessage(cmd.message)}`;
     case "WebSocketSendCompileErrorToOutput":
-      return `${cmd.tag} ${cmd.outputPath.targetName}`;
+      return `${cmd.tag} ${cmd.outputPath.targetName}${cmd.webSocket === undefined ? "" : " (only the connecting tab)"}`;
     case "WebSocketSendToOutput":
       return `${cmd.tag} ${cmd.outputPath.targetName} ${describeWebSocketMessage(cmd.message)}`;
     default:
@@ -728,6 +728,7 @@ describe("Hot update", () => {
         .send(msg.installDone("Success"))
         .send(msg.compilationPartDone())
         .send(msg.webSocketConnected(project, "Main"))
+        .send(msg.webSocketConnected(project, "Other"))
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
@@ -751,6 +752,12 @@ describe("Hot update", () => {
         cmd: WebSocketSendExternalErrors
         cmd: WebSocketSendOpenEditorSetup
         cmd: WebSocketSend StatusChanged AlreadyUpToDate
+
+      > WebSocketConnected
+        state: Idle, next: NoAction, events: 1, pending: 0
+        cmd: WebSocketSendExternalErrors
+        cmd: WebSocketSendOpenEditorSetup
+        cmd: WebSocketSendCompileErrorToOutput Other (only the connecting tab)
     `);
   });
 });
