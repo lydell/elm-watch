@@ -11,24 +11,18 @@ async function wait(ms) {
   });
 }
 
+// `main` and `second` wait for `third`. If postprocess counted towards
+// `maxParallel` (2 in the tests), `main` and `second` would take up both slots
+// and `third` would never start.
 export default async ({ code, targetName }) => {
   switch (targetName) {
     case "main":
-      while (fs.readFileSync(lock, "utf8") !== "third-elm-done") {
-        await wait(100);
-      }
-      fs.writeFileSync(lock, "main-postprocess-done");
-      return code;
     case "second":
-      while (fs.readFileSync(lock, "utf8") !== "main-postprocess-done") {
+      while (fs.readFileSync(lock, "utf8") !== "third-postprocess-done") {
         await wait(100);
       }
-      fs.writeFileSync(lock, "second-postprocess-done");
       return code;
     case "third":
-      while (fs.readFileSync(lock, "utf8") !== "second-postprocess-done") {
-        await wait(100);
-      }
       fs.writeFileSync(lock, "third-postprocess-done");
       return code;
     default:

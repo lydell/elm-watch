@@ -380,6 +380,9 @@ export function getOutputActions({
 }): OutputActions {
   let index = 0;
   let numExecuting = 0;
+  // Only `elm make` counts towards `maxParallel`. Postprocess functions run in
+  // our own thread (or on threads managed by for example a minifier).
+  let numElmExecuting = 0;
   let numInterrupted = 0;
   let numErrors = 0;
   const elmMakeActions: Array<NeedsElmMakeOutputAction> = [];
@@ -440,6 +443,7 @@ export function getOutputActions({
           // Outputs typechecked together share one `elm make`.
           if (!busyElmJsons.has(key)) {
             numExecuting++;
+            numElmExecuting++;
             busyElmJsons.add(key);
           }
           outputsWithoutAction.push(output);
@@ -533,6 +537,7 @@ export function getOutputActions({
     switch (packageState.status.tag) {
       case "ElmMakeTypecheckOnly":
         numExecuting++;
+        numElmExecuting++;
         outputsWithoutAction.push(output);
         busyElmJsons.add(
           busyKey({ elmJsonPath, compiler: packageState.compiler }),
@@ -592,13 +597,13 @@ export function getOutputActions({
 
   const queueActions: Array<QueueForElmMakeOutputAction> = [];
 
-  const threadsLeft = Math.max(0, project.maxParallel - numExecuting);
+  let threadsLeft = project.maxParallel - numElmExecuting;
 
   for (const action of prioritizedActions) {
     switch (action.tag) {
       case "NeedsElmMake":
         if (
-          actions.length < threadsLeft &&
+          threadsLeft > 0 &&
           !busyElmJsons.has(
             busyKey({
               elmJsonPath: action.elmJsonPath,
@@ -612,6 +617,7 @@ export function getOutputActions({
               compiler: action.output.outputState.compiler,
             }),
           );
+          threadsLeft--;
           actions.push(action);
         } else {
           switch (action.source) {
@@ -630,11 +636,9 @@ export function getOutputActions({
         break;
 
       case "NeedsElmMakeTypecheckOnly":
-        if (
-          actions.length < threadsLeft &&
-          !busyElmJsons.has(busyKey(action))
-        ) {
+        if (threadsLeft > 0 && !busyElmJsons.has(busyKey(action))) {
           busyElmJsons.add(busyKey(action));
+          threadsLeft--;
           actions.push(action);
         } else {
           for (const { output, source } of action.outputs) {
@@ -656,7 +660,7 @@ export function getOutputActions({
 
       case "NeedsElmMakePackage":
         if (
-          actions.length < threadsLeft &&
+          threadsLeft > 0 &&
           !busyElmJsons.has(
             busyKey({
               elmJsonPath: action.elmJsonPath,
@@ -670,6 +674,7 @@ export function getOutputActions({
               compiler: action.package.outputState.compiler,
             }),
           );
+          threadsLeft--;
           actions.push(action);
         } else {
           switch (action.source) {
@@ -688,11 +693,7 @@ export function getOutputActions({
         break;
 
       case "NeedsPostprocess":
-        if (actions.length < threadsLeft) {
-          actions.push(action);
-        } else {
-          outputsWithoutAction.push(action.output);
-        }
+        actions.push(action);
         break;
     }
   }

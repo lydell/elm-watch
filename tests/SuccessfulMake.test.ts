@@ -225,36 +225,28 @@ describe("successful make", () => {
       `);
   });
 
-  test("multiple postprocess, with queued postprocess", async () => {
+  test("postprocess does not count towards maxParallel", async () => {
     const fixture = "multiple-postprocess";
     const lock = path.join(fixtureDir(fixture), "lock");
     fs.writeFileSync(lock, "");
     const output = await run(fixture, [], {
       isTTY: false,
-      bin: "test-bin",
       elmWatchOptions: async (dir) => ({
         ...(await fixtureOptions(dir)),
         runMode: "make",
       }),
     });
 
-    // The order of the lines in the middle depends on timing, so only
-    // snapshot the lines that are deterministic.
-    expect(grep(output, /queued|✅/)).toMatchInlineSnapshot(`
-      ✅ Dependencies
-      ⚪️ second: queued
-      ⚪️ third: queued
-      ✅ main⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
-      ✅ Compilation finished in ⧙123 ms⧘.
-    `);
-
-    // Only 2 things run in parallel (`__ELM_WATCH_MAX_PARALLEL` in the tests),
-    // so postprocess for the third target has to wait until the first one is done.
-    expect(output.indexOf("⏳ third: postprocess")).toBeGreaterThan(
-      output.indexOf("✅ main"),
-    );
+    // The order of the lines depends on timing, so only snapshot the
+    // finished lines, sorted.
+    expect(grep(output, /✅/).split("\n").sort().join("\n"))
+      .toMatchInlineSnapshot(`
+        ✅ Compilation finished in ⧙123 ms⧘.
+        ✅ Dependencies
+        ✅ main⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+        ✅ second⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+        ✅ third⧙     1 ms Q | 1.23 s E |   0 ms R | 31.2 s P⧘
+      `);
   });
 
   test("no postprocess", async () => {
