@@ -302,9 +302,9 @@ function spawnChild(command: Command):
       };
 }
 
-// Like `which`, but for Windows only. We only ever spawn `elm`, so this only
-// supports bare command names without extension. `platformPath` and `isFile`
-// can be swapped out to test this on any platform.
+// Like `which`, but for Windows only. We only ever spawn `elm` and `lamdera`,
+// so this only supports bare command names without extension. `platformPath`
+// and `isFile` can be swapped out to test this on any platform.
 export function findOnWindowsPath(
   command: string,
   cwd: AbsolutePath,

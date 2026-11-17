@@ -1544,10 +1544,10 @@ function moveToTopLayer(
   // popovers. See: https://developer.mozilla.org/en-US/docs/Glossary/Top_layer
   // The latest shown popover gets drawn on top, so we need to enter and exit
   // popover frequently for elm-watch to force it to be on the very top.
-  // `.showPopover()` shipped in Firefox 125, released 2024-04-16.
-  // At the time of writing (2024-10-27) that was a bit too recent to be
-  // required, so we use only call the methods if they exist. The element falls
-  // back to having the highest z-index.
+  // `.showPopover()` shipped in Firefox 125, released 2024-04-16. Older
+  // browsers and JSDOM (used in the tests) don’t have it, so we only call the
+  // methods if they exist. The element falls back to having the highest
+  // z-index.
   if (
     typeof topLayer.hidePopover === "function" &&
     typeof topLayer.showPopover === "function" &&

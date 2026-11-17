@@ -42,10 +42,10 @@ export async function run(
   });
 
   // `make` uses “fail fast.” _One_ of these error categories are shown at a time:
-  // 1. All elm.json errors.
+  // 1. All target errors (like inputs not found).
   // 2. All `elm make` errors.
-  // 3. First postprocess error (likely the same error for all of them (bad
-  //    command), and they might be slow.)
+  // 3. First postprocess error (likely the same error for all of them, and
+  //    they might be slow.)
   if (
     isNonEmptyArray(initialOutputActions.actions) &&
     !isNonEmptyArray(project.targetsErrors)

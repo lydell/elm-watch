@@ -117,8 +117,6 @@ const LOAD_TIMEOUT = 10_000;
 // `const styleSheet = new CSSStyleSheet(); styleSheet.replaceSync(css);`
 // However, that does not support `@import`:
 // https://github.com/WICG/construct-stylesheets/issues/119#issuecomment-588362382
-// Also, at the time of writing, Safari did not support constructing
-// `CSSStyleSheet`.
 // Instead, we load the style sheet in a temporary `<link>`. That way relative
 // `@import`:s are resolved relative to the style sheet, without affecting the
 // rest of the document. (A `<style>` with the CSS text would need a `<base>`

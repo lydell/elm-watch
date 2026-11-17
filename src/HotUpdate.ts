@@ -599,8 +599,9 @@ export function update(
                 ],
               ];
 
-            // We only kill installing dependencies when a restart is needed.
-            // Wait for the restart to happen.
+            // Installing dependencies is killed when restarting (then
+            // `hotState` is "Restarting", handled below) or when exiting
+            // gracefully. There is nothing more to do in either case.
             case "Killed":
               return [{ ...model, hotState: { tag: "Idle" } }, []];
 
