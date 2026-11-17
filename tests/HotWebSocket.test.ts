@@ -460,10 +460,10 @@ describe("hot", () => {
                   )._socket.write(header);
                 }),
               );
-              return "KeepGoing" as const;
+              return "Stop" as const;
             }
             default:
-              return "Stop" as const;
+              throw new Error(`Unexpected idle: ${idle}`);
           }
         },
       });

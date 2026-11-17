@@ -1,6 +1,8 @@
 import * as path from "path";
 import { describe, expect, test } from "vitest";
+import type WebSocket from "ws";
 
+import type { WebSocketToClientMessage } from "../client/WebSocketMessages.ts";
 import type { InstallDependenciesResult } from "../src/Compile.ts";
 import {
   type Cmd,
@@ -84,6 +86,30 @@ const msg = {
     handleOutputActionResult: { tag: "Nothing" },
   }),
   exitRequested: (): Msg => ({ tag: "ExitRequested", date }),
+  // A browser tab with the given target connected, with code compiled at
+  // timestamp 0 (like the outputs from `makeProject`).
+  webSocketConnected: (project: Project, targetName: string): Msg => {
+    for (const [outputsElmJsonPath, outputs] of project.elmJsons) {
+      for (const [outputPath, outputState] of outputs) {
+        if (outputPath.targetName === targetName) {
+          return {
+            tag: "WebSocketConnected",
+            date,
+            // Only passed along in cmds.
+            webSocket: {} as unknown as WebSocket,
+            parseWebSocketConnectRequestUrlResult: {
+              tag: "Success",
+              elmJsonPath: outputsElmJsonPath,
+              outputPath,
+              outputState,
+              elmCompiledTimestamp: 0,
+            },
+          };
+        }
+      }
+    }
+    throw new Error(`Target not found: ${targetName}`);
+  },
   elmWatchStuffJsonWriteFailed: (): Msg => ({
     tag: "ElmWatchStuffJsonWriteFailed",
     date,
@@ -192,9 +218,23 @@ function describeCmd(cmd: Cmd): string {
         .join(", ")})`;
     case "Throw":
       return `${cmd.tag}: ${cmd.error.message}`;
+    // Show who gets the message: The connecting browser tab only, or all
+    // browser tabs with the target.
+    case "WebSocketSend":
+      return `${cmd.tag} ${describeWebSocketMessage(cmd.message)}`;
+    case "WebSocketSendCompileErrorToOutput":
+      return `${cmd.tag} ${cmd.outputPath.targetName}`;
+    case "WebSocketSendToOutput":
+      return `${cmd.tag} ${cmd.outputPath.targetName} ${describeWebSocketMessage(cmd.message)}`;
     default:
       return cmd.tag;
   }
+}
+
+function describeWebSocketMessage(message: WebSocketToClientMessage): string {
+  return message.tag === "StatusChanged"
+    ? `${message.tag} ${message.status.tag}`
+    : message.tag;
 }
 
 function shortPath(absolutePath: AbsolutePath): string {
@@ -675,6 +715,42 @@ describe("Hot update", () => {
 
       > ExitRequested
         state: Idle, next: NoAction, events: 0, pending: 0
+    `);
+  });
+
+  test("connecting browser tab gets the status, not all tabs with the target", () => {
+    const project = idleProject([
+      ["Main", "clean"],
+      ["Other", "error"],
+    ]);
+    expect(
+      new Simulation(project)
+        .send(msg.installDone("Success"))
+        .send(msg.compilationPartDone())
+        .send(msg.webSocketConnected(project, "Main"))
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        state: Dependencies, next: NoAction, events: 0, pending: 0
+        cmd: ClearScreen
+        cmd: InstallDependencies
+
+      > InstallDependenciesDone Success
+        state: Compiling, next: NoAction, events: 0, pending: 0
+        cmd: CompileAllOutputsAsNeeded AfterInstallDependencies
+
+      > CompilationPartDone
+        state: Idle, next: NoAction, events: 0, pending: 0
+        cmd: RespondToOutputRequests RespondIfNotDirty
+        cmd: PrintCompileErrors
+        cmd: HandleElmWatchStuffJsonWriteError
+        cmd: LogInfoMessage: Compiled in 123 ms
+
+      > WebSocketConnected
+        state: Idle, next: NoAction, events: 0, pending: 0
+        cmd: WebSocketSendExternalErrors
+        cmd: WebSocketSendOpenEditorSetup
+        cmd: WebSocketSend StatusChanged AlreadyUpToDate
     `);
   });
 });

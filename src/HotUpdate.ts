@@ -679,6 +679,7 @@ export function update(
         case "Success": {
           const [newModel, latestEvent, cmds] = onWebSocketConnected(
             model,
+            msg.webSocket,
             result.elmJsonPath,
             result.outputPath,
             result.outputState,
@@ -1019,8 +1020,11 @@ function applyWatcherEventEffect(
   }
 }
 
+// The status is only sent to the connecting browser tab. Other tabs with the
+// same target might have a different status, like waiting for a reload.
 function onWebSocketConnected(
   model: Model,
+  webSocket: WebSocket,
   elmJsonPath: ElmJsonPath,
   outputPath: OutputPath,
   outputState: OutputState,
@@ -1057,8 +1061,8 @@ function onWebSocketConnected(
                 undefined,
                 [
                   {
-                    tag: "WebSocketSendToOutput",
-                    outputPath,
+                    tag: "WebSocketSend",
+                    webSocket,
                     message: {
                       tag: "StatusChanged",
                       status: {
