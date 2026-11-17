@@ -14,14 +14,23 @@ export const ENTRYPOINT_NAMES: Record<EntrypointLanguage, string> = {
   typescript: "elm-watch.mts",
 };
 
-// Like `findClosest` for elm-watch.json: The closest elm-watch.mjs or
-// elm-watch.mts in `dir` or a parent directory.
+// We generate .mjs and .mts, since they are ESM regardless of package.json,
+// but people might rename them to .js or .ts (with `"type": "module"`).
+const ENTRYPOINT_NAMES_TO_FIND: Array<string> = [
+  "elm-watch.mjs",
+  "elm-watch.mts",
+  "elm-watch.js",
+  "elm-watch.ts",
+];
+
+// Like `findClosest` for elm-watch.json: The closest JavaScript API
+// entrypoint in `dir` or a parent directory.
 export function findClosestEntrypoint(
   dir: AbsolutePath,
 ): AbsolutePath | undefined {
-  const entrypoint = Object.values(ENTRYPOINT_NAMES)
-    .map((name) => absolutePathFromString(dir, name))
-    .find((entrypointPath) => fs.existsSync(entrypointPath));
+  const entrypoint = ENTRYPOINT_NAMES_TO_FIND.map((name) =>
+    absolutePathFromString(dir, name),
+  ).find((entrypointPath) => fs.existsSync(entrypointPath));
   if (entrypoint !== undefined) {
     return entrypoint;
   }

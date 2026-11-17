@@ -70,6 +70,8 @@ If you already have an `elm-watch.json`, `elm-watch init --javascript` migrates 
 
 Run `elm-watch init --typescript` to create `elm-watch.mts` instead. Node.js can run TypeScript files directly (by default since Node.js 22.18), by stripping the types. It does not type check, though – use your editor or `tsc` for that. (`elm-watch.mjs` is type checked too, if you have type checking enabled for JavaScript files in your editor, thanks to the `// @ts-check` comment at the top.)
 
+The `.mjs` and `.mts` file extensions mean that Node.js always treats the files as ES modules. If your `package.json` has `"type": "module"`, you can rename them to `elm-watch.js` or `elm-watch.ts` if you prefer.
+
 ## node --watch
 
 When using `elm-watch.json`, elm-watch restarts itself when you change it. When using the JavaScript API, let Node.js do that instead: [node --watch] restarts your script when it changes, or any file it imports changes (such as a separate file with your postprocess function).

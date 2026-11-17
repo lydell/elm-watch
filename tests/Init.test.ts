@@ -137,7 +137,7 @@ describe("init", () => {
     expect(await initFailHelper("existing-entrypoint")).toMatchInlineSnapshot(`
       You already use the JavaScript API (instead of ⧙elm-watch.json⧘):
 
-      /Users/you/project/tests/fixtures/init/existing-entrypoint/elm-watch.mjs
+      /Users/you/project/tests/fixtures/init/existing-entrypoint/elm-watch.ts
 
       Documentation: https://lydell.github.io/elm-watch/javascript-api/
     `);
@@ -148,7 +148,7 @@ describe("init", () => {
       .toMatchInlineSnapshot(`
       You already use the JavaScript API (instead of ⧙elm-watch.json⧘):
 
-      /Users/you/project/tests/fixtures/init/existing-entrypoint/elm-watch.mjs
+      /Users/you/project/tests/fixtures/init/existing-entrypoint/elm-watch.ts
 
       Documentation: https://lydell.github.io/elm-watch/javascript-api/
     `);
