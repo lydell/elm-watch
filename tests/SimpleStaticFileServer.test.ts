@@ -211,7 +211,7 @@ describe("SimpleStaticFileServer", () => {
       .toMatchInlineSnapshot(`
         200
         content-type: text/html; charset=utf-8
-        content-length: 3012
+        content-length: 3000
         <!DOCTYPE html>
             <html lang="en">
               <head>…</head>
@@ -219,9 +219,9 @@ describe("SimpleStaticFileServer", () => {
                 <main>
               <h1>Enable elm-watch static file server?</h1>
               <p>
-                This is elm-watch’s server. It always runs, for hot reloading. It can
-                also serve your HTML, CSS, images and compiled Elm code, with CSS hot
-                reloading and support for <code>Browser.application</code>.
+                elm-watch’s server always runs, for hot reloading. It can also serve
+                your HTML, CSS, images and compiled Elm code, with CSS hot reloading and
+                support for <code>Browser.application</code>.
               </p>
               <p>
                 It isn’t on by default, because elm-watch doesn’t know which folder you
@@ -1040,9 +1040,9 @@ describe("SimpleStaticFileServer", () => {
 
                   <h1>Enable elm-watch static file server?</h1>
                   <p>
-                    This is elm-watch’s server. It always runs, for hot reloading. It can
-                    also serve your HTML, CSS, images and compiled Elm code, with CSS hot
-                    reloading and support for <code>Browser.application</code>.
+                    elm-watch’s server always runs, for hot reloading. It can also serve
+                    your HTML, CSS, images and compiled Elm code, with CSS hot reloading and
+                    support for <code>Browser.application</code>.
                   </p>
                   <p>
                     It isn’t on by default, because elm-watch doesn’t know which folder you

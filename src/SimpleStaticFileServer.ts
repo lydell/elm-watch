@@ -478,9 +478,9 @@ export function staticFileNotEnabledHtml(configSource: ConfigSource): Html {
     html`
       <h1>Enable elm-watch static file server?</h1>
       <p>
-        This is elm-watch’s server. It always runs, for hot reloading. It can
-        also serve your HTML, CSS, images and compiled Elm code, with CSS hot
-        reloading and support for <code>Browser.application</code>.
+        elm-watch’s server always runs, for hot reloading. It can also serve
+        your HTML, CSS, images and compiled Elm code, with CSS hot reloading and
+        support for <code>Browser.application</code>.
       </p>
       <p>
         It isn’t on by default, because elm-watch doesn’t know which folder you
