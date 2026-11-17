@@ -3,7 +3,11 @@ import * as path from "path";
 import { describe, expect, test } from "vitest";
 
 import elmWatchCli from "../src/ElmWatch.ts";
-import { ELM_WATCH_OPEN_EDITOR, type Env } from "../src/Env.ts";
+import {
+  __ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS,
+  ELM_WATCH_OPEN_EDITOR,
+  type Env,
+} from "../src/Env.ts";
 import { copyFixture } from "./FixtureCopies.ts";
 import {
   clean,
@@ -13,9 +17,29 @@ import {
   SilentReadStream,
   stringSnapshotSerializer,
   testExceptWindows,
+  wait,
+  waitFor,
 } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
+
+function isRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Starts `node`, which writes its PID to `pid.txt` and then waits for 10 s.
+const WRITE_PID_AND_WAIT = `node -e "fs.writeFileSync('pid.txt', String(process.pid)); setTimeout(() => {}, 10000)"`;
+
+async function readPid(dir: string): Promise<number> {
+  const pidFile = path.join(dir, "pid.txt");
+  await waitFor(() => fs.existsSync(pidFile) && fs.statSync(pidFile).size > 0);
+  return Number(fs.readFileSync(pidFile, "utf8"));
+}
 
 async function editorCommand(
   cwd: string,
@@ -165,6 +189,45 @@ describe("editor", () => {
 
       oops
     `);
+  });
+
+  testExceptWindows("timeout kills the whole command", async () => {
+    // Not just `sh`, but also `node` (which `sh` does not `exec` since it is
+    // followed by `&& true`). `node` also holds stdout and stderr open.
+    const dir = copyFixture("editor-command", "with-elm-watch");
+    const start = Date.now();
+    const result = await editorCommand(dir, {
+      ...process.env,
+      [ELM_WATCH_OPEN_EDITOR]: `${WRITE_PID_AND_WAIT} && true`,
+      [__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS]: "1000",
+    });
+    expect(Date.now() - start).toBeLessThan(5000);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain(
+      "The command took too long to run, and was killed after 1000 ms.",
+    );
+    const pid = await readPid(dir);
+    await waitFor(() => !isRunning(pid));
+  });
+
+  testExceptWindows("command leaving a process in the background", async () => {
+    // Like `my-editor "$file" &`. That counts as done right away, even though
+    // the background process holds stdout and stderr open, and it is not
+    // killed by the timeout.
+    const dir = copyFixture("editor-command", "with-elm-watch");
+    const start = Date.now();
+    const result = await editorCommand(dir, {
+      ...process.env,
+      [ELM_WATCH_OPEN_EDITOR]: `${WRITE_PID_AND_WAIT} &`,
+      [__ELM_WATCH_OPEN_EDITOR_TIMEOUT_MS]: "500",
+    });
+    expect(Date.now() - start).toBeLessThan(5000);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+    const pid = await readPid(dir);
+    await wait(start + 700 - Date.now());
+    expect(isRunning(pid)).toBe(true);
+    process.kill(pid);
   });
 
   testExceptWindows("env var not set", async () => {

@@ -1,4 +1,4 @@
-import type { ExecException, ExecFileException } from "child_process";
+import type { ExecFileException } from "child_process";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -1609,7 +1609,7 @@ However, no target imports that file. For security reasons, I never executed any
 }
 
 export function openEditorCommandFailed({
-  error,
+  exitCode,
   command,
   cwd,
   timeout,
@@ -1617,7 +1617,8 @@ export function openEditorCommandFailed({
   stdout,
   stderr,
 }: {
-  error: ExecException;
+  // `null` if the command could not be started, or was killed by a signal.
+  exitCode: number | null;
   command: string;
   cwd: AbsolutePath;
   // Set if the command timed out.
@@ -1629,8 +1630,8 @@ export function openEditorCommandFailed({
   const errorReason =
     timeout !== undefined
       ? `The command took too long to run, and was killed after ${timeout} ms.`
-      : error.code !== undefined
-        ? `The command exited with code ${error.code}.`
+      : exitCode !== null
+        ? `The command exited with code ${exitCode}.`
         : "The command failed for an unknown reason.";
   return `
 I ran your command for opening an editor (set via the ${ELM_WATCH_OPEN_EDITOR} environment variable):

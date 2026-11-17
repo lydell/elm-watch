@@ -164,41 +164,81 @@ function openEditorWithCommand(
     column0: Math.max(0, location.column - 1).toString(),
   };
   let timedOut = false;
-  const child = childProcess.exec(
-    command,
-    {
-      cwd,
-      env: { ...env, ...extraEnv },
-      encoding: "utf8",
-    },
-    (error, stdout, stderr) => {
-      clearTimeout(timeoutId);
-      if (error === null) {
-        onDone(undefined);
-      } else {
-        onDone({
-          tag: "CommandFailed",
-          message: Errors.openEditorCommandFailed({
-            error,
-            command,
-            cwd,
-            timeout: timedOut ? timeout : undefined,
-            env: extraEnv,
-            stdout,
-            stderr,
-          }),
-        });
-      }
-    },
-  );
-  // Not using the `timeout` option of `exec`, since it only kills the shell,
-  // not the command, on Windows.
+  let done = false;
+  const stdout: Array<string> = [];
+  const stderr: Array<string> = [];
+  // Not using `exec`: It ignores `detached`, and waits for stdout and stderr to
+  // close, which processes started in the background by the command can keep
+  // open (like `my-editor "$file" &`). On POSIX, `detached` puts the shell in a
+  // new process group, so that the timeout can kill everything it started.
+  const child = childProcess.spawn(command, {
+    cwd,
+    env: { ...env, ...extraEnv },
+    shell: true,
+    detached: !IS_WINDOWS,
+  });
+  // `exitCode` is `null` if the command could not be started, or was killed by
+  // a signal.
+  const finish = (exitCode: number | null): void => {
+    if (done) {
+      return;
+    }
+    done = true;
+    clearTimeout(timeoutId);
+    child.stdout.destroy();
+    child.stderr.destroy();
+    if (exitCode === 0) {
+      onDone(undefined);
+    } else {
+      onDone({
+        tag: "CommandFailed",
+        message: Errors.openEditorCommandFailed({
+          exitCode,
+          command,
+          cwd,
+          timeout: timedOut ? timeout : undefined,
+          env: extraEnv,
+          stdout: stdout.join(""),
+          stderr: stderr.join(""),
+        }),
+      });
+    }
+  };
+  child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+    stdout.push(chunk);
+  });
+  child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+    stderr.push(chunk);
+  });
+  child.on("error", () => {
+    finish(null);
+  });
+  child.on("exit", (exitCode) => {
+    clearTimeout(timeoutId);
+    // Give stdout and stderr a moment to be read to the end, but don’t wait
+    // for processes left running in the background, which might hold them open.
+    const graceTimeoutId = setTimeout(() => {
+      finish(exitCode);
+    }, 100);
+    child.once("close", () => {
+      clearTimeout(graceTimeoutId);
+      finish(exitCode);
+    });
+  });
+  // Not using the `timeout` option of `spawn`, since it only kills the shell.
   const timeoutId = setTimeout(() => {
     timedOut = true;
-    if (IS_WINDOWS && child.pid !== undefined) {
+    if (child.pid === undefined) {
+      return;
+    }
+    if (IS_WINDOWS) {
       killWindowsProcessTree(child.pid, { sync: false });
     } else {
-      child.kill();
+      try {
+        process.kill(-child.pid, "SIGTERM");
+      } catch {
+        // The process group is already gone.
+      }
     }
   }, timeout);
 }
