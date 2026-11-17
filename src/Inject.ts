@@ -1308,6 +1308,13 @@ export function getRecordFields(
 // We had a set of record fields (optimize mode), and then got a different set
 // of record fields (also in optimize mode). Mode changes (which results in
 // either side being `undefined`) does not count.
+// Limitation: Elm gives the shortest names to the most used fields (counting
+// the whole program, including packages). If two fields swap names (because
+// one of them got used more), the set stays the same, and so does everything
+// else we could look at in the code: The most used field still has the same
+// name. If the swapped fields are in the return value of `init`, the init
+// check in the browser catches it and reloads the page. Otherwise, the
+// existing model ends up with the values of the two fields swapped.
 export function recordFieldsChanged(
   oldSet: Set<string> | undefined,
   newSet: Set<string> | undefined,
