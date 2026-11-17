@@ -630,10 +630,16 @@ describe("hot reloading", () => {
       init: (node) => window.Elm?.["ProxyMergeOther1"]?.init({ node }),
     });
 
-    const { browserConsole, div, lastRender } = await go(() => "Stop");
+    // The targets are compiled in either order. If `ProxyMerge` is first, its
+    // compile error is an idle state before `ProxyMergeOther` has been compiled
+    // (and the page reloaded). `div` is empty until then.
+    const { browserConsole, div } = await go(({ div: currentDiv }) =>
+      currentDiv.outerHTML === "<div></div>" ? "KeepGoing" : "Stop",
+    );
 
     expect(browserConsole).toMatchInlineSnapshot(`Proxy file reload!`);
-    expect(lastRender).toMatchInlineSnapshot(`▼ 🚨`);
-    expect(div.outerHTML).toMatchInlineSnapshot(`<div>ProxyMergeOther works</div>`);
+    expect(div.outerHTML).toMatchInlineSnapshot(
+      `<div>ProxyMergeOther works</div>`,
+    );
   });
 });
