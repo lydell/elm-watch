@@ -57,8 +57,8 @@ describe("hot error view", () => {
     });
 
     expect(screens.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
-      🚨 ⧙Main⧘: 3 errors ◀
-      🚨 Other: 1 error
+      🚨 ⧙Main⧘: 3 errors ◀⧙                                          765 ms T ¦  50 ms W⧘
+      🚨 Other: 1 error⧙                                            765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
 
       ⧙── TYPE MISMATCH ───────────────────────────────────────────────── ⧘src/A.elm⧙:6:5⧘
@@ -82,8 +82,8 @@ describe("hot error view", () => {
       🚨 error 1/3   file 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
       ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
-      🚨 ⧙Main⧘: 3 errors ◀
-      🚨 Other: 1 error
+      🚨 ⧙Main⧘: 3 errors ◀⧙                                          765 ms T ¦  50 ms W⧘
+      🚨 Other: 1 error⧙                                            765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
 
       ⧙── TYPE MISMATCH ──────────────────────────────────────────────── ⧘src/A.elm⧙:11:5⧘
@@ -107,8 +107,8 @@ describe("hot error view", () => {
       🚨 error 2/3   file 1/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
       ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
-      🚨 ⧙Main⧘: 3 errors ◀
-      🚨 Other: 1 error
+      🚨 ⧙Main⧘: 3 errors ◀⧙                                          765 ms T ¦  50 ms W⧘
+      🚨 Other: 1 error⧙                                            765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
 
       ⧙── TYPE MISMATCH ───────────────────────────────────────────────── ⧘src/B.elm⧙:6:5⧘
@@ -132,8 +132,8 @@ describe("hot error view", () => {
       🚨 error 3/3   file 2/2  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ error   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ file   ⧙[⧘⧙tab⧘⧙]⧘ target
       ⧙[⧘⧙enter⧘⧙]⧘ open in editor   ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
-      🚨 Main: 3 errors
-      🚨 ⧙Other⧘: 1 error ◀
+      🚨 Main: 3 errors⧙                                            765 ms T ¦  50 ms W⧘
+      🚨 ⧙Other⧘: 1 error ◀⧙                                          765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
 
       ⧙── TYPE MISMATCH ──────────────────────────────────────────── ⧘src/Other.elm⧙:7:20⧘
@@ -151,8 +151,8 @@ describe("hot error view", () => {
       🚨 error 1/1  ⧙[⧘⧙←⧘⧙→⧘⧙]⧘ ⧙error⧘   ⧙[⧘⧙↑⧘⧙↓⧘⧙]⧘ ⧙file⧘   ⧙[⧘⧙tab⧘⧙]⧘ target   ⧙[⧘⧙enter⧘⧙]⧘ open in editor
       ⧙[⧘⧙a⧘⧙]⧘ show all
       ================================================================================
-      🚨 Main: 3 errors
-      🚨 Other: 1 error
+      🚨 Main: 3 errors⧙                                            765 ms T ¦  50 ms W⧘
+      🚨 Other: 1 error⧙                                            765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
 
       ⧙── TYPE MISMATCH ───────────────────────────────────────────────── ⧘src/A.elm⧙:6:5⧘
@@ -217,8 +217,8 @@ describe("hot error view", () => {
 
       🚨 4 errors  ⧙[⧘⧙a⧘⧙]⧘ show one error at a time
       ================================================================================
-      🚨 Main: 3 errors
-      🚨 ⧙Other⧘: 1 error ◀
+      🚨 Main: 3 errors⧙                                            765 ms T ¦  50 ms W⧘
+      🚨 ⧙Other⧘: 1 error ◀⧙                                          765 ms T ¦  50 ms W⧘
       🌐 http://localhost:59123
 
       ⧙── TYPE MISMATCH ──────────────────────────────────────────── ⧘src/Other.elm⧙:7:20⧘
@@ -271,7 +271,7 @@ describe("hot error view", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      🚨 ⧙Main⧘: 2 errors ◀
+      🚨 ⧙Main⧘: 2 errors ◀⧙                                          1.23 s E ¦  55 ms W⧘
       🚨 Other: 1 error
       🌐 http://localhost:59123
 
@@ -695,7 +695,7 @@ describe("hot error view", () => {
     const lines = before?.split("\n") ?? [];
     expect([...lines.slice(0, 3), "…", ...lines.slice(-2)].join("\n"))
       .toMatchInlineSnapshot(`
-        🚨 Main: 3 errors
+        🚨 Main: 3 errors⧙                                            765 ms T ¦  50 ms W⧘
         ✅ Other⧙                                                     765 ms T ¦  50 ms W⧘
         🌐 http://localhost:59123
         …

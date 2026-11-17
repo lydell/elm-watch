@@ -329,7 +329,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      🚨 Removed: 1 error
+      🚨 Removed: 1 error⧙                                          1.23 s E ¦  55 ms W⧘
       🌐 http://localhost:59123
 
       ⧙── TROUBLE READING OUTPUT ────────────────────────────────────── ⧘⧙Target: Removed⧘
@@ -377,7 +377,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      🚨 Readonly: 1 error
+      🚨 Readonly: 1 error⧙                              1.23 s E ¦  55 ms W |   9 ms I⧘
       🌐 http://localhost:59123
 
       ⧙── TROUBLE WRITING OUTPUT ───────────────────────────────────── ⧘⧙Target: Readonly⧘

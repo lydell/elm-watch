@@ -362,7 +362,7 @@ describe("errors", () => {
         ⏳ Main: elm make (typecheck only)
         ⏳ Main: interrupted
         ⏳ Main: elm make (typecheck only)
-        🚨 Main
+        🚨 Main⧙   765 ms T ¦  50 ms W⧘
 
         ⧙── ENDLESS STRING ──────────────────────────────────────────── ⧘src/Main.elm⧙:7:17⧘
 
@@ -609,8 +609,8 @@ describe("errors", () => {
       }),
     ).toMatchInlineSnapshot(`
       ✅ Main1⧙                                                     765 ms T ¦  50 ms W⧘
-      🚨 Main2
-      🚨 Main3
+      🚨 Main2⧙                                                     765 ms T ¦  50 ms W⧘
+      🚨 Main3⧙                                                     765 ms T ¦  50 ms W⧘
 
       ⧙── UNKNOWN EXPORT ─────────────────────────────────────────── ⧘src/Main2.elm⧙:1:24⧘
 
@@ -782,7 +782,7 @@ describe("errors", () => {
         ⏳ admin: elm make
         ⚪️ app: queued
         ⚪️ postprocess-error: queued
-        🚨 admin
+        🚨 admin⧙   1.23 s E⧘
         ⏳ app: elm make
         🟢 app: elm make done
         ⏳ postprocess-error: elm make
@@ -831,7 +831,7 @@ describe("errors", () => {
         ⏳ postprocess-error: elm make
         🟢 postprocess-error: elm make done
         ⏳ postprocess-error: postprocess
-        🚨 postprocess-error
+        🚨 postprocess-error⧙   1.23 s E | 31.2 s P⧘
 
         ⧙── POSTPROCESS ERROR ───────────────────────────────── ⧘⧙Target: postprocess-error⧘
 
@@ -868,7 +868,7 @@ describe("errors", () => {
         admin: elm make
         app: queued
         postprocess-error: queued
-        admin: error
+        admin: error   1.23 s E
         app: elm make
         app: elm make done
         postprocess-error: elm make
@@ -922,7 +922,7 @@ describe("errors", () => {
         postprocess-error: elm make
         postprocess-error: elm make done
         postprocess-error: postprocess
-        postprocess-error: error
+        postprocess-error: error   1.23 s E | 31.2 s P
 
         ── POSTPROCESS ERROR ───────────────────────────────── Target: postprocess-error
 

@@ -119,7 +119,7 @@ describe("hot", () => {
     });
 
     expect(terminal).toMatchInlineSnapshot(`
-      Main: 1 error
+      Main: 1 error                                                765 ms T /  50 ms W
       http://localhost:59123
 
       ── TYPE MISMATCH ──────────────────────────────────────────── src/Main.elm:10:31

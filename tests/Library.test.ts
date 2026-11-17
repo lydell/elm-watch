@@ -271,7 +271,7 @@ describe("library", () => {
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
-      🚨 main
+      🚨 main⧙                                                      1.23 s E | 31.2 s P⧘
 
       ⧙── POSTPROCESS ERROR ────────────────────────────────────────────── ⧘⧙Target: main⧘
 
@@ -304,7 +304,7 @@ describe("library", () => {
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
-      🚨 main
+      🚨 main⧙                                                      1.23 s E | 31.2 s P⧘
 
       ⧙── INVALID POSTPROCESS RESULT ───────────────────────────────────── ⧘⧙Target: main⧘
 

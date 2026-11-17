@@ -1560,48 +1560,46 @@ async function typecheck({
       ),
     );
 
-    switch (proxyFileResult.tag) {
-      case "Needed":
-        try {
-          fs.mkdirSync(absoluteDirname(outputPath.theOutputPath), {
-            recursive: true,
-          });
-          fs.writeFileSync(
-            outputPath.theOutputPath,
-            Inject.proxyFile(
-              outputPath,
-              getNow().getTime(),
-              webSocketConnection,
-              webSocketToken,
-              terminal.config.debug,
-            ),
-          );
-          // The proxy file doesn’t count as writing to disk…
-          outputState.setStatus({ tag: "NotWrittenToDisk" });
-        } catch (unknownError) {
-          const error = toError(unknownError);
-          outputState.setStatus({ tag: "WriteProxyOutputError", error });
-        }
-        break;
+    const proxyFileStatus = ((): OutputStatus => {
+      switch (proxyFileResult.tag) {
+        case "Needed":
+          try {
+            fs.mkdirSync(absoluteDirname(outputPath.theOutputPath), {
+              recursive: true,
+            });
+            fs.writeFileSync(
+              outputPath.theOutputPath,
+              Inject.proxyFile(
+                outputPath,
+                getNow().getTime(),
+                webSocketConnection,
+                webSocketToken,
+                terminal.config.debug,
+              ),
+            );
+            // The proxy file doesn’t count as writing to disk…
+            return { tag: "NotWrittenToDisk" };
+          } catch (unknownError) {
+            const error = toError(unknownError);
+            return { tag: "WriteProxyOutputError", error };
+          }
 
-      case "NotNeeded":
-        outputState.setStatus({ tag: "NotWrittenToDisk" });
-        break;
+        case "NotNeeded":
+          return { tag: "NotWrittenToDisk" };
 
-      case "ReadError":
-        outputState.setStatus({
-          tag: "NeedsToWriteProxyFileReadError",
-          error: proxyFileResult.error,
-          triedPath: outputPath.theOutputPath,
-        });
-        break;
-    }
+        case "ReadError":
+          return {
+            tag: "NeedsToWriteProxyFileReadError",
+            error: proxyFileResult.error,
+            triedPath: outputPath.theOutputPath,
+          };
+      }
+    })();
 
     // `elm make` and `getAllRelatedElmFilePaths` errors are more important
-    // than proxy file errors.
-    if (compileError !== undefined) {
-      outputState.setStatus(compileError);
-    }
+    // than proxy file errors. Only set the status once, since setting it
+    // clears the durations of the typecheck unless coming from a busy status.
+    outputState.setStatus(compileError ?? proxyFileStatus);
 
     updateStatusLine({
       terminal,
@@ -1964,8 +1962,10 @@ function statusLine(
     }
 
     // Emojis take two terminal columns, plus a space that we add after.
+    const visibleStartLength = removeColor(start).length;
     const startLength =
-      (terminalConfig.fancy ? start.length + 3 : start.length) + delta;
+      (terminalConfig.fancy ? visibleStartLength + 3 : visibleStartLength) +
+      delta;
     const end = strings.join("   ");
     const max = Math.min(terminalConfig.columns, MAX_ALIGN_COLUMNS);
     const padding = terminalConfig.isTTY
@@ -2047,12 +2047,18 @@ function statusLine(
     case "ReadOutputError":
     case "WriteOutputError":
     case "WriteProxyOutputError":
-      return redraw === undefined
-        ? helper(
-            "Error",
-            terminalConfig.fancy ? targetName : `${targetName}: error`,
-          )
-        : errorStatusLineWithCount(terminalConfig, targetName, delta, redraw);
+      // Durations are shown for errors too, so that you can see how long it
+      // took to get the errors, and so that the error locations (right-aligned
+      // like the durations) look nice.
+      return withExtraDetailsAtEnd(
+        [maybePrintDurations(terminalConfig, getDurations())],
+        "Error",
+        redraw === undefined
+          ? terminalConfig.fancy
+            ? targetName
+            : `${targetName}: error`
+          : errorCount(terminalConfig, targetName, redraw),
+      );
   }
 }
 
@@ -2060,18 +2066,26 @@ function errorStatusLineWithCount(
   terminalConfig: TerminalConfig,
   targetName: TargetName,
   delta: number,
-  { numErrors, selected }: StatusLineRedraw,
+  redraw: StatusLineRedraw,
 ): string {
-  const marker = selected ? (terminalConfig.fancy ? " ◀" : " <") : "";
   return printStatusLine({
     maxWidth: terminalConfig.columns - delta,
     fancy: terminalConfig.fancy,
     isTTY: terminalConfig.isTTY,
     emojiName: "Error",
-    string: `${selected ? bold(targetName) : targetName}: ${numErrors} error${
-      numErrors === 1 ? "" : "s"
-    }${marker}`,
+    string: errorCount(terminalConfig, targetName, redraw),
   });
+}
+
+function errorCount(
+  terminalConfig: TerminalConfig,
+  targetName: TargetName,
+  { numErrors, selected }: StatusLineRedraw,
+): string {
+  const marker = selected ? (terminalConfig.fancy ? " ◀" : " <") : "";
+  return `${selected ? bold(targetName) : targetName}: ${numErrors} error${
+    numErrors === 1 ? "" : "s"
+  }${marker}`;
 }
 
 // Redraw the status lines of all targets, like they were printed during
