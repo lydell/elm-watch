@@ -121,6 +121,9 @@ export function isThemeResponseDone(stdin: string): boolean {
 // happen since `isThemeResponseDone` accepts any response. Mixing the default
 // theme’s foreground or background with the terminal’s colors could be
 // unreadable. (Missing palette colors fall back to the default theme’s, though.)
+// Also returns `undefined` if the foreground and background are (almost) the
+// same, which would be unreadable. For example, elm-watch running in tmux via
+// overmind has been seen reporting black for all colors.
 export function parseTheme(stdin: string): Theme | undefined {
   const theme = { ...DEFAULT_THEME, palette: { ...DEFAULT_THEME.palette } };
   let foundForeground = false;
@@ -146,7 +149,35 @@ export function parseTheme(stdin: string): Theme | undefined {
     }
   }
 
-  return foundForeground && foundBackground ? theme : undefined;
+  return foundForeground &&
+    foundBackground &&
+    contrastRatio(theme.foreground, theme.background) >= MIN_CONTRAST_RATIO
+    ? theme
+    : undefined;
+}
+
+// Even low contrast themes are way above this. Lower contrast than this is
+// most likely not the actual colors of the terminal.
+const MIN_CONTRAST_RATIO = 1.5;
+
+// https://www.w3.org/TR/WCAG21/#dfn-contrast-ratio
+// The colors are in the `#rrggbb` format.
+function contrastRatio(color1: string, color2: string): number {
+  const luminance1 = relativeLuminance(color1);
+  const luminance2 = relativeLuminance(color2);
+  return (
+    (Math.max(luminance1, luminance2) + 0.05) /
+    (Math.min(luminance1, luminance2) + 0.05)
+  );
+}
+
+// https://www.w3.org/TR/WCAG21/#dfn-relative-luminance
+function relativeLuminance(color: string): number {
+  const [r = 0, g = 0, b = 0] = [1, 3, 5].map((index) => {
+    const value = parseInt(color.slice(index, index + 2), 16) / 0xff;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
 // https://github.com/xtermjs/xterm.js/blob/19367a6042a6360e9130fd0fbee0a66cdd75ddd4/src/common/input/XParseColor.ts#L7-L56

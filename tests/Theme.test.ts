@@ -58,4 +58,17 @@ describe("parseTheme", () => {
     // Unparseable background (`isThemeResponseDone` accepts any response).
     expect(parseTheme(`${foreground}\x1B]11;?\x07`)).toBeUndefined();
   });
+
+  test("foreground and background must not be (almost) the same", () => {
+    const parse = (foreground: string, background: string): unknown =>
+      parseTheme(`\x1B]10;rgb:${foreground}\x07\x1B]11;rgb:${background}\x07`);
+    // Reported by elm-watch running in tmux via overmind.
+    expect(parse("0000/0000/0000", "0000/0000/0000")).toBeUndefined();
+    expect(parse("ffff/ffff/ffff", "f0f0/f0f0/f0f0")).toBeUndefined();
+    // A low contrast theme (Solarized Dark) is fine.
+    expect(parse("8383/9494/9696", "0000/2b2b/3636")).toMatchObject({
+      foreground: "#839496",
+      background: "#002b36",
+    });
+  });
 });
