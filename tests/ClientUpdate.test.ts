@@ -291,6 +291,26 @@ describe("client update", () => {
     `);
   });
 
+  test("reconnect waits", () => {
+    expect(
+      [1, 2, 5, 10, 15, 19, 20, 21, 100].map(
+        (attemptNumber) => `${attemptNumber}: ${retryWaitMs(attemptNumber)}`,
+      ),
+    ).toMatchInlineSnapshot(`
+      [
+        1: 1010,
+        2: 1040,
+        5: 1250,
+        10: 2000,
+        15: 3250,
+        19: 4610,
+        20: 5000,
+        21: 5000,
+        100: 5000,
+      ]
+    `);
+  });
+
   test("reconnect now, and when the page becomes visible", () => {
     expect(
       new Simulation()

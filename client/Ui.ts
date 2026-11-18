@@ -1604,8 +1604,10 @@ function moveToTopLayer(
 }
 
 export function retryWaitMs(attemptNumber: number): number {
-  // At least 1010 ms, at most 1 minute.
-  return Math.min(1000 + 10 * attemptNumber ** 2, 1000 * 60);
+  // At least 1010 ms, at most 5 seconds. Retrying is cheap (the server is
+  // usually on the same computer), and it’s nice to reconnect soon after
+  // restarting elm-watch.
+  return Math.min(1000 + 10 * attemptNumber ** 2, 5000);
 }
 
 function printRetryWaitMs(attemptNumber: number): string {
