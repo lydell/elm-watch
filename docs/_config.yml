@@ -4,6 +4,8 @@ permalink: pretty
 aux_links:
   "elm-watch on GitHub":
     - "https://github.com/lydell/elm-watch"
+  "elm-watch 1.x docs":
+    - "https://github.com/lydell/elm-watch/blob/fb83fdabd775e7a7616e0c033a4c0a34114091f8/docs/index.md"
 
 callouts:
   info:
