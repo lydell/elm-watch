@@ -13,6 +13,7 @@ Trade-offs compared to the [Vite in process example](../vite-in-process/):
 - 👍 Vite can print to the terminal as usual.
 - 👎 Two commands to run (but run-pty makes that easy).
 - 👎 Two ports, and the elm-watch port is hard coded in two places. `localhost` is also hard coded, so testing on your phone requires some changes.
+- 👎 elm-watch prints a link to its own server, which only serves the compiled Elm code. Open Vite’s link instead. (Changing the printed link requires the [serverLinks](https://lydell.github.io/elm-watch/v2/javascript-api/#server-links) option of the JavaScript API.)
 - 👎 No minification of the Elm code, since that requires a [postprocess](https://lydell.github.io/elm-watch/v2/postprocess/) function, which in turn requires the [JavaScript API](https://lydell.github.io/elm-watch/v2/javascript-api/). Vite does not touch the Elm code. See the [production example](../production/) for how to do it.
 
 There’s no type checking during development – Vite only removes the types. In a project with not much TypeScript, your editor showing type errors is often enough. Run `node --run check` (which runs `tsc`) before committing, and on CI.
