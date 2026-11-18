@@ -1,3 +1,4 @@
+import * as childProcess from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
@@ -81,15 +82,20 @@ function checkTarget(target: string): string | undefined {
   return undefined;
 }
 
+// Only files that aren't ignored by git: Compiled output (such as the
+// examples’ build folders) contains elm-watch’s client, including the
+// `docsLink` template string.
 function filesIn(dir: string, extensions: Array<string>): Array<string> {
-  return fs
-    .readdirSync(path.join(ROOT, dir), { recursive: true, encoding: "utf8" })
+  return childProcess
+    .execFileSync(
+      "git",
+      ["ls-files", "--cached", "--others", "--exclude-standard", "-z", "."],
+      { cwd: path.join(ROOT, dir), encoding: "utf8" },
+    )
+    .split("\0")
     .filter(
       (file) =>
-        !file
-          .split(path.sep)
-          .some((part) => part === "node_modules" || part === "elm-stuff") &&
-        extensions.some((extension) => file.endsWith(extension)),
+        file !== "" && extensions.some((extension) => file.endsWith(extension)),
     )
     .map((file) => path.join(dir, file));
 }
