@@ -886,7 +886,9 @@ describe("hot reloading", () => {
         }
       });
 
-      expect(terminalColors).toMatchInlineSnapshot(`--fg: rgb(204, 204, 204); --bg: rgb(32, 30, 30); --color-scheme: dark;`);
+      expect(terminalColors).toMatchInlineSnapshot(
+        `--fg: rgb(204, 204, 204); --bg: rgb(32, 30, 30); --color-scheme: dark;`,
+      );
     });
   });
 });
