@@ -9,6 +9,8 @@ export function walkImports(
   inputRealPaths: NonEmptyArray<string>,
 ): WalkImportsResult;
 
+// Hot reloaded code uses the scheduler of the first code evaluated with the
+// same `targetName`, so pass a unique name per compiled file.
 export function inject(
   compilationMode: CompilationMode,
   code: string,

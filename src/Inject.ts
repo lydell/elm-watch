@@ -348,21 +348,36 @@ var _VirtualDom_init = F4(function(virtualNode, flagDecoder, debugMetadata, args
 
   // ### _Platform_export
   // Allow registering the exports, and skipping the usual merging of `window.Elm` (for hot reloading).
-  // Also give elm-watch access to the scheduler: Every evaluated script (the original, and each hot
-  // reload) has its own `_Scheduler_enqueue` with its own queue. Old code keeps running after a hot
-  // reload (for example, an effect manager first added in a hot reload keeps using that script’s
-  // code), so we point every hot reloaded script at the original script’s queue. With more than one
-  // queue, a process can be stepped while it’s already being stepped. For example, a `Time.every`
-  // effect manager added in the first hot reload stopped working after the second hot reload.
+  // Also share the scheduler: Every evaluated script (the original, and each hot reload) has its own
+  // `_Scheduler_enqueue` with its own queue. Old code keeps running after a hot reload (for example,
+  // an effect manager first added in a hot reload keeps using that script’s code), so we point every
+  // hot reloaded script at the original script’s queue. With more than one queue, a process can be
+  // stepped while it’s already being stepped. For example, a `Time.every` effect manager added in the
+  // first hot reload stopped working after the second hot reload. This is done here rather than in
+  // elm-watch’s client, so that it also works for other tools using `inject` from elm-watch-lib
+  // (such as vite-plugin-elm-watch), which do hot reloading without the client. The first script
+  // evaluated for a target name is the original one. (`Html` programs have no scheduler.)
   _Platform_export: `
 function _Platform_export(exports)
 {
 	// added by elm-watch
+	var schedulers = globalThis.__ELM_WATCH_SCHEDULERS;
+	if (!schedulers) {
+		schedulers = Object.create(null);
+		Object.defineProperty(globalThis, '__ELM_WATCH_SCHEDULERS', { value: schedulers });
+	}
+	if (typeof schedulers[_elmWatchTargetName] === 'function') {
+		_Scheduler_enqueue = schedulers[_elmWatchTargetName];
+	} else if (typeof _Scheduler_enqueue === 'function') {
+		schedulers[_elmWatchTargetName] = _Scheduler_enqueue;
+	}
+
+	// added by elm-watch
 	if (globalThis.__ELM_WATCH) {
 		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
-			globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports, _Scheduler_enqueue);
+			globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports);
 		} else {
-			globalThis.__ELM_WATCH.HOT_RELOAD(_elmWatchTargetName, exports, function(enqueue) { _Scheduler_enqueue = enqueue; });
+			globalThis.__ELM_WATCH.HOT_RELOAD(_elmWatchTargetName, exports);
 			return;
 		}
 	}
@@ -849,7 +864,7 @@ function _Platform_export(exports)
 {
 	// added by elm-watch
 	if (globalThis.__ELM_WATCH) {
-		globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports, undefined);
+		globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports);
 	}
 
 ${body}}

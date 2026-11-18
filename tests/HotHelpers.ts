@@ -162,6 +162,9 @@ export async function cleanupAfterEachTest(): Promise<void> {
   window.history.replaceState(null, "", "/");
 
   delete (window as unknown as Record<string, unknown>)["__ELM_WATCH"];
+  delete (window as unknown as Record<string, unknown>)[
+    "__ELM_WATCH_SCHEDULERS"
+  ];
 }
 
 let bodyCounter = 0;
@@ -308,6 +311,8 @@ export async function run({
       document.getElementById(CONTAINER_ID)?.remove();
       delete (window as unknown as Record<string, unknown>)["Elm"];
       (window as unknown as Record<string, unknown>)["__ELM_WATCH"] = {};
+      (window as unknown as Record<string, unknown>)["__ELM_WATCH_SCHEDULERS"] =
+        Object.create(null);
       setBasicElmWatchProperties();
 
       (async () => {
