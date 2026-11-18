@@ -63,10 +63,11 @@ process.exitCode = await elmWatch({
         onRequest(request, response);
       })
       .on("upgrade", onUpgrade),
-  // Print links to both sites.
-  serverLinks: ({ local }) => {
+  // Print links to both sites. On the network (ELM_WATCH_HOST=0.0.0.0),
+  // only the main site is reachable: Phones can’t resolve admin.localhost.
+  serverLinks: ({ local, network }) => {
     const admin = new URL(local);
     admin.hostname = `admin.${local.hostname}`;
-    return [local, admin];
+    return [local, admin, ...network];
   },
 });
