@@ -63,4 +63,10 @@ process.exitCode = await elmWatch({
         onRequest(request, response);
       })
       .on("upgrade", onUpgrade),
+  // Print links to both sites.
+  serverLinks: ({ local }) => {
+    const admin = new URL(local);
+    admin.hostname = `admin.${local.hostname}`;
+    return [local, admin];
+  },
 });

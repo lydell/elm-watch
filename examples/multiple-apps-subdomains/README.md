@@ -27,7 +27,7 @@ Any `*.localhost` host goes to your own computer (no need to edit `/etc/hosts`),
 See [Running an example](../README.md#running-an-example) first.
 
 1. Run `node --run start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.
-2. The previous command prints a link to elm-watch’s server (`localhost`). Open it in a browser.
+2. The previous command prints links to both sites (`localhost` and `admin.localhost`). Open one of them in a browser.
 3. Click around between the main app and the admin app. Try reloading the page.
 4. Edit `src/Shared.elm` and watch both apps be automatically updated (try having both open in different tabs).
 5. Stop elm-watch.
