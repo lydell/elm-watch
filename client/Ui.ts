@@ -95,6 +95,9 @@ export type Status =
       // The attempt in progress. Starts at 1, both on page load and after
       // losing the connection.
       attemptNumber: number;
+      // The errors from before losing the connection, if any. They are most
+      // likely still relevant, so keep showing them until we know more.
+      errors: Map<string, OverlayError> | undefined;
     }
   | {
       tag: "TargetError";
@@ -119,6 +122,8 @@ export type Status =
       date: Date;
       // The attempt that just failed.
       attemptNumber: number;
+      // See `Connecting`.
+      errors: Map<string, OverlayError> | undefined;
     }
   | {
       tag: "UnexpectedError";

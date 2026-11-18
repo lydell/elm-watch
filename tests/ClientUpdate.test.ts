@@ -509,6 +509,54 @@ describe("client update", () => {
     `);
   });
 
+  test("errors are kept while reconnecting", () => {
+    // The errors are most likely still relevant. Keeping them avoids the error
+    // overlay disappearing while disconnected, and blinking when connecting.
+    expect(
+      new Simulation()
+        .send(msg.connected)
+        .receive(compileError)
+        .send(msg.closed)
+        .send(msg.closed)
+        .wait(retryWaitMs(1))
+        .timerFired()
+        .send(msg.connected)
+        .receive(upToDate)
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived StatusChanged CompileError
+        status: CompileError, 1 errors, mode: standard, timestamp: 1
+        cmd: TriggerReachedIdleState CompileError
+
+      > WebSocketClosed
+        status: Connecting, attempt 1, 1 errors, mode: standard, timestamp: 1
+        cmd: Reconnect (timestamp 1)
+
+      > WebSocketClosed
+        status: SleepingBeforeReconnect, attempt 1, 1 errors, mode: standard, timestamp: 1
+        cmd: SleepBeforeReconnect (attempt 1, 1010 ms)
+
+      (1010 ms later)
+
+      > SleepBeforeReconnectDone (attempt 1, sleep started at 0 ms)
+        status: Connecting, attempt 2, 1 errors, mode: standard, timestamp: 1
+        cmd: Reconnect (timestamp 1)
+
+      > WebSocketConnected
+        status: Busy, 1 errors, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived StatusChanged AlreadyUpToDate
+        status: Idle, mode: standard, timestamp: 1
+        cmd: TriggerReachedIdleState AlreadyUpToDate
+    `);
+  });
+
   test("errors are kept while busy", () => {
     expect(
       new Simulation()

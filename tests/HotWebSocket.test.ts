@@ -17,6 +17,7 @@ import {
   expandUi,
   failInit,
   fixtureDir,
+  isOverlayVisible,
   nextMsg,
   run,
   switchCompilationMode,
@@ -1200,6 +1201,57 @@ describe("hot", () => {
       expect(reconnectTime - closeTime).toBeGreaterThanOrEqual(
         goingAwayDelayMs - 1,
       );
+    });
+
+    test("the error overlay stays visible while reconnecting", async () => {
+      setupTestWebSocket();
+      const inputPath = path.join(fixtureDir("basic"), "src", "HtmlMain.elm");
+      const visibility: Array<boolean> = [];
+      const clickableLocations: Array<boolean> = [];
+      const hasClickableLocation = (): boolean =>
+        document
+          .getElementById("elm-watch2")
+          ?.shadowRoot?.querySelector(
+            `[data-test-id="Overlay"] .errorLocationButton`,
+          ) instanceof HTMLButtonElement;
+
+      await run({
+        fixture: "basic",
+        args: ["Reconnect"],
+        scripts: ["Reconnect.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: async ({ idle }) => {
+          switch (idle) {
+            case 1:
+              fs.appendFileSync(inputPath, "\nbroken =\n");
+              return "KeepGoing";
+            case 2: {
+              visibility.push(isOverlayVisible());
+              clickableLocations.push(hasClickableLocation());
+              // Record the visibility after every render from now on: Losing
+              // the connection, reconnecting and getting the errors again.
+              const { ON_RENDER } = window.__ELM_WATCH;
+              window.__ELM_WATCH.ON_RENDER = (targetName) => {
+                ON_RENDER(targetName);
+                visibility.push(isOverlayVisible());
+              };
+              await closeAndWait(getLastWebSocket());
+              // Without a connection, error locations can’t be opened.
+              clickableLocations.push(hasClickableLocation());
+              return "KeepGoing";
+            }
+            default:
+              clickableLocations.push(hasClickableLocation());
+              return "Stop";
+          }
+        },
+      });
+
+      expect(visibility.length).toBeGreaterThan(2);
+      expect(visibility.every((visible) => visible)).toBe(true);
+      expect(clickableLocations).toStrictEqual([true, false, true]);
     });
 
     test("events from previous web sockets are ignored", async () => {

@@ -463,6 +463,8 @@ function run(): void {
       const newModel = modelChanged ? updatedModel : model;
       const oldErrors = getErrors(model.status);
       const newErrors = getErrors(newModel.status);
+      const oldSendKey = statusToSpecialCaseSendKey(model.status);
+      const newSendKey = statusToSpecialCaseSendKey(newModel.status);
       const statusType = statusToStatusType(newModel.status.tag);
       const statusTypeChanged =
         statusType !== statusToStatusType(model.status.tag);
@@ -486,16 +488,19 @@ function run(): void {
             },
             // This needs to be done before Render, since it depends on whether
             // the error overlay is visible or not. The errors are kept as-is
-            // between statuses (such as `Busy`) until there is a new result.
-            oldErrors === newErrors
+            // between statuses (such as `Busy` and `Connecting`) until there
+            // is a new result. The send key still needs updating, though, so
+            // that clicking error locations doesn’t try to send messages
+            // without a connection.
+            oldErrors === newErrors && oldSendKey === newSendKey
               ? { tag: "NoCmd" }
               : {
                   tag: "UpdateErrorOverlay",
                   errors: newErrors ?? new Map<string, OverlayError>(),
-                  sendKey: statusToSpecialCaseSendKey(newModel.status),
+                  sendKey: newSendKey,
                   // New errors open the error overlay, even if the user
                   // closed it before.
-                  open: newErrors !== undefined,
+                  open: newErrors !== undefined && newErrors !== oldErrors,
                 },
             // Before Render, so that the panel is open in the first render
             // of the new status.
@@ -1925,21 +1930,25 @@ function renderMockStatuses(ui: Ui | undefined): void {
       tag: "Connecting",
       date,
       attemptNumber: 1,
+      errors: undefined,
     },
     Connecting2: {
       tag: "Connecting",
       date,
       attemptNumber: 2,
+      errors: undefined,
     },
     Connecting100: {
       tag: "Connecting",
       date,
       attemptNumber: 100,
+      errors: undefined,
     },
     ConnectingWss: {
       tag: "Connecting",
       date,
       attemptNumber: 1,
+      errors: undefined,
       info: {
         ...info,
         webSocketUrl: new URL("wss://localhost:53167"),
@@ -1957,11 +1966,13 @@ function renderMockStatuses(ui: Ui | undefined): void {
       tag: "SleepingBeforeReconnect",
       date,
       attemptNumber: 1,
+      errors: undefined,
     },
     SleepingBeforeReconnectWss: {
       tag: "SleepingBeforeReconnect",
       date,
       attemptNumber: 1,
+      errors: undefined,
       info: {
         ...info,
         webSocketUrl: new URL("wss://localhost:53167"),

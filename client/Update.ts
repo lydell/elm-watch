@@ -255,7 +255,7 @@ export const init = (
   const model: Model = {
     status: config.isFileProtocol
       ? { tag: "FileProtocol", date }
-      : { tag: "Connecting", date, attemptNumber: 1 },
+      : { tag: "Connecting", date, attemptNumber: 1, errors: undefined },
     compilationMode: config.originalCompilationMode,
     elmCompiledTimestamp: config.initialElmCompiledTimestamp,
     elmCompiledTimestampBeforeReload,
@@ -389,7 +389,7 @@ export function update(
 
         // A connection attempt failed: Sleep before trying again.
         case "Connecting": {
-          const { attemptNumber } = model.status;
+          const { attemptNumber, errors } = model.status;
           return [
             {
               ...model,
@@ -397,6 +397,7 @@ export function update(
                 tag: "SleepingBeforeReconnect",
                 date: msg.date,
                 attemptNumber,
+                errors,
               },
             },
             [
@@ -416,7 +417,12 @@ export function update(
           return [
             {
               ...model,
-              status: { tag: "Connecting", date: msg.date, attemptNumber: 1 },
+              status: {
+                tag: "Connecting",
+                date: msg.date,
+                attemptNumber: 1,
+                errors: getErrors(model.status),
+              },
             },
             [
               {
@@ -431,7 +437,14 @@ export function update(
       return [
         {
           ...model,
-          status: { tag: "Busy", date: msg.date, errors: undefined },
+          // Keep the errors from before losing the connection (if any) until
+          // the server tells us the current status, to avoid the error overlay
+          // blinking.
+          status: {
+            tag: "Busy",
+            date: msg.date,
+            errors: getErrors(model.status),
+          },
         },
         [],
       ];
@@ -820,6 +833,7 @@ function reconnect(
             tag: "Connecting",
             date,
             attemptNumber: model.status.attemptNumber + 1,
+            errors: model.status.errors,
           },
         },
         [
