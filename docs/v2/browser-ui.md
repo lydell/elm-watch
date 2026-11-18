@@ -27,14 +27,17 @@ To always hide elm-watch’s UI, for example when recording videos, add this CSS
 
 (Note that you won’t see compilation errors in the browser then!)
 
-Here are all the icons you might see (they’re also explained in the panel):
+Here are all the icons you might see (the panel shows a short status text next to each target’s icon):
 
 ✅ = Successfully compiled  
-🔌 = Connecting  
-⏳ = Waiting for compilation  
-🚨 = Compilation error  
+🔌 = Connecting (or sleeping before trying to reconnect – the panel has a “Reconnect now” button)  
+⏳ = Waiting for compilation (or waiting for the page to reload)  
+🚨 = Compilation error (or an error in `elm.json` or the inputs, or errors from an [errors reporter](../javascript-api/#showing-errors-from-other-tools))  
 ⛔️ = Eval error  
-❌ = Unexpected error
+❌ = Unexpected error (or “Reload trouble”: the page was reloaded, but still got the old JS – probably because of HTTP caching)  
+🚫 = Opened via `file://` – there’s no hot reloading then; open the page via `http://` instead, for example using elm-watch’s [server](../server/)
+
+The panel opens by itself when something needs your attention: Eval errors, unexpected errors and reload trouble.
 
 Pay extra attention to 🚨 (compilation error). If you see it, the latest changes to your Elm files didn’t compile, **so you’re running an older version of your app.** elm-watch then shows the errors directly in the browser, in an overlay (in addition to the terminal).
 
@@ -133,7 +136,7 @@ The editors you can choose from use these URLs:
 | IntelliJ IDEA | `idea://open?file={file}&line={line}&column={column0}`     |
 | WebStorm      | `webstorm://open?file={file}&line={line}&column={column0}` |
 
-Only URLs for opening apps are allowed – not `http:`, `https:`, `file:`, `javascript:` and the like.
+Only URLs for opening apps are allowed – not `http:`, `https:`, `file:`, `javascript:` and the like. The URL must contain `{file}`, and must not contain whitespace.
 
 #### A command
 
@@ -189,6 +192,10 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable in a shell (
   - `line`: 1-based line number of the error location. `1` if the error location has no line number.
   - `column`: 1-based column number of the error location. `1` if the error location has no column number.
   - `line0` and `column0`: The same, but 0-based. For editors that count from 0.
+
+The command must exit with code 0 within 5 seconds. Otherwise elm-watch kills it and shows an error, including its output. So use commands that hand the file over to your editor and exit (like `code --goto`), rather than commands that stay running (like starting vim in the terminal).
+
+For safety, elm-watch only opens files that are part of your project: Elm files of your targets, `elm.json`, `elm-watch.json`, and files with errors from an [errors reporter](../javascript-api/#showing-errors-from-other-tools).
 
 ### With the JavaScript API
 

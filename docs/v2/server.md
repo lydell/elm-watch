@@ -33,6 +33,13 @@ The file server is completely optional. It only serves files. So if you serve yo
 - Responds with an empty 204 (No Content) to `/favicon.ico` if there is no such file, to avoid a 404 or an HTML response when you have no favicon.
 - Hot reloads CSS – when `.css` files in the static files directory that is served change, elm-watch reloads them in the browser.
 - Waits for Elm outputs to be compiled – see [Serving Elm outputs](#serving-elm-outputs).
+- Supports range requests (for `<video>`, for example).
+
+It does _not:_
+
+- List directory contents. Directories are served via the closest `index.html`, or a 404 page if there is none.
+- Serve anything outside the directory (403 Forbidden). See [Symlinks](#symlinks) for an exception.
+- Accept other methods than GET and HEAD (405 Method Not Allowed). Use a [custom server](#custom-server) if you need to proxy POST requests, for example.
 
 ## Serving Elm outputs
 

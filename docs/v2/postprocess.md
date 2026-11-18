@@ -61,8 +61,9 @@ type Postprocess = (
 - `code` is Elm’s JS output. In `"hot"` mode, elm-watch has already added its hot reloading code to it.
 - `info.compilationMode` lets you for example only minify in optimize mode.
 - `info.runMode` is either `"make"` or `"hot"`. I recommend doing the same work for both modes, but in case that’s not feasible you have the possibility.
-- Return the new JS, or a promise of it.
+- Return the new JS (a string), or a promise of it. Returning anything else is an error.
 - Throw an error (or return a rejected promise) on failure. elm-watch shows the error just like a compilation error.
+- In `"make"` mode, postprocessing is skipped as soon as any target has an error, since the build is going to fail anyway.
 - Think of your function as a `String -> String` pure function. Some side effects can be OK, if done with care – see [Side effects](#side-effects).
 
 Since postprocess is per target, you don’t get the target name as a parameter – you already know which target the function is for. To use the same function for several targets, define it once and refer to it from each target. If it needs to behave differently for some targets, either use different functions, or create the function with a little helper that takes the target name.

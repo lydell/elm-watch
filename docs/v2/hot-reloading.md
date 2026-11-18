@@ -32,20 +32,31 @@ That said, hot reloading is essentially a hack. But a pretty good one. As long a
   - That you changed a type from for example `Int` to `String`. elm-watch can detect it.
   - That you changed things with a custom type. This is where it gets tricky. Let’s say you changed from `Maybe Int` to `Maybe String`, but in `init` you always start with `Nothing`. elm-watch will have no clue about the change! However, if your `view` function immediately throws an error due to trying to use a number as a string, elm-watch catches that and reloads the page for you so you don’t waste time in a broken environment. This is where a full `Model` type-wise diff would be needed.
 
+- Other changes elm-watch can detect, and reloads the page for:
+
+  - The flags type changed (the flags your page passes to `init` don’t decode anymore).
+  - The `Program` type changed, for example from `Browser.element` to `Browser.application`.
+  - `Msg` changed in debug mode. The debugger’s message history can’t be kept then.
+
 - Code complexity. If hot reloading was built into Elm, the generated JavaScript could be altered to be easier to hot reload. elm-watch has to bend over backwards a bit to adjust the generated JavaScript after it has been generated. It’s a bit of regex replacements, as well as replacements for whole functions. Regex might sound brittle, but luckily Elm’s generated JavaScript is very predictable. While it’s impossible to do safe replacements on input that can be _any_ JavaScript (written by a human), it’s actually 100 % safe on Elm’s machine written JavaScript. There are no tricky comments that can fool the regexes, and no multiline strings. (`"""` strings are compiled to single lines with `\n`s in them.) And all your functions and variables are prefixed, so they can’t be confused with core functions. By anchoring all regexes to beginnings of lines – and having heaps of tests – elm-watch can ensure it never messes with _your_ code. That’s great because regex is _fast._ Hot reloading isn’t hot if it’s slow.
 
 - You need elm/core 1.0.3 or later (elm-watch tells you if your elm.json has an older version). Perfect time to update, though!
 
 ## The Lamdera compiler
 
-When you compile with the [Lamdera compiler](../elm-watch.json/#lamdera-compiler) (`"compiler": "lamdera"`), the compiled code has hot reloading built in (`Elm.hot`), in Lamdera’s versions of elm/core, elm/browser and elm/virtual-dom. Then elm-watch uses that instead of replacing functions in the compiled JavaScript, and only adds a few small patches. elm-watch still decides when a full page reload is needed, in the same way as described above.
+When you compile with the [Lamdera compiler](../elm-watch.json/#lamdera-compiler) (`"compiler": "lamdera"`), the compiled code has hot reloading built in (`Elm.hot`), in Lamdera’s versions of elm/core, elm/browser and elm/virtual-dom. (Those come from the `hot-reload-stop` branches of [lydell/core], [lydell/browser] and [lydell/virtual-dom], which you can also use with the regular Elm compiler.) elm-watch detects `Elm.hot` in the compiled code, and then uses that instead of replacing functions in the compiled JavaScript, and only adds a few small patches. elm-watch still decides when a full page reload is needed, in the same way as described above.
 
 ## How it works
 
 In case you’re wondering, elm-watch has its own hot reloading implementation, built with Elm’s needs at the core. In other words, elm-watch is _not_ using the common [elm-hot] package (which is more focused on fitting into the hot reloading systems of [webpack] and [Parcel]).
 
-elm-watch’s hot reloading works by injecting an extra little program into your built JavaScript files (when running `elm-watch hot` only, not `elm-watch make`). It renders the browser UI (bottom-left by default), and connects to elm-watch’s WebSocket server. You’re not supposed to really notice or have to think any of that, but it can help to know how the “magic” works when debugging things. Or just for fun.
+elm-watch’s hot reloading works by injecting an extra little program into your built JavaScript files (when running `elm-watch hot` only, not `elm-watch make`). It renders the browser UI (bottom-left by default), and connects to elm-watch’s WebSocket server. You’re not supposed to really notice or have to think about any of that, but it can help to know how the “magic” works when debugging things. Or just for fun.
+
+When hot reloading, elm-watch evaluates the new code as a plain script if possible, and as a module only when it has to (see [window.Elm](../window.Elm/) for why that matters).
 
 [elm-hot]: https://github.com/klazuka/elm-hot
+[lydell/browser]: https://github.com/lydell/browser/tree/hot-reload-stop
+[lydell/core]: https://github.com/lydell/core/tree/hot-reload-stop
+[lydell/virtual-dom]: https://github.com/lydell/virtual-dom/tree/hot-reload-stop
 [parcel]: https://parceljs.org/
 [webpack]: https://webpack.js.org/

@@ -75,7 +75,7 @@ Start watching with hot reloading:
 npx elm-watch hot
 ```
 
-The command prints the link to a [local development HTTP server](../server) (which is completely optional to use, but easy to get started with).
+The command prints the link to a [local development HTTP server](../server/) (which is completely optional to use, but easy to get started with). To let it serve your HTML file, add `"serve": "."` (or the folder containing your HTML file) to `elm-watch.json`, next to `"targets"`.
 
 To build for production:
 

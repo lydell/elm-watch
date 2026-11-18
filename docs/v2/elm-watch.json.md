@@ -169,6 +169,10 @@ elm-watch then runs `lamdera make` instead of `elm make`. Your `elm.json` stays 
 
 In elm-watch 1, targets had no `"type"` and `"elmJson"`: elm-watch used the closest `elm.json` to the inputs, and only supported applications. Run `elm-watch init` to add `"type": "application"` and `"elmJson"` to all targets in your `elm-watch.json` automatically.
 
+`"postprocess"` is no longer supported in `elm-watch.json` – it is an error. Run `elm-watch init --javascript` (or `--typescript`) to switch to the [JavaScript API](../javascript-api/), with your `"postprocess"` turned into a function. See [Migrating from elm-watch 1](../postprocess/#migrating-from-elm-watch-1).
+
+elm-watch 1’s HTTPS server is gone – see [HTTPS](../https/) for how to set up HTTPS yourself.
+
 [lamdera]: https://lamdera.com/
 [lamdera-compiler example]: https://github.com/lydell/elm-watch/tree/main/examples/lamdera-compiler
 [port-blocking]: https://fetch.spec.whatwg.org/#port-blocking
