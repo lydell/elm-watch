@@ -247,10 +247,10 @@ describe("client update", () => {
         .send(msg.closed)
         // Timers can fire a millisecond “early” according to `Date`. That must
         // not stop us from reconnecting.
-        .wait(retryWaitMs(2) - 1)
+        .wait(retryWaitMs(1) - 1)
         .timerFired()
         .send(msg.closed)
-        .wait(retryWaitMs(3))
+        .wait(retryWaitMs(2))
         .timerFired()
         .send(msg.connected)
         .receive(upToDate)
@@ -266,7 +266,7 @@ describe("client update", () => {
       > WebSocketClosed
         status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 1
 
-      (1039 ms later)
+      (1009 ms later)
 
       > SleepBeforeReconnectDone (attempt 1, sleep started at 0 ms)
         status: Connecting, attempt 2, mode: standard, timestamp: 1
@@ -276,9 +276,9 @@ describe("client update", () => {
         status: SleepingBeforeReconnect, attempt 2, mode: standard, timestamp: 1
         cmd: SleepBeforeReconnect (attempt 2, 1040 ms)
 
-      (1090 ms later)
+      (1040 ms later)
 
-      > SleepBeforeReconnectDone (attempt 2, sleep started at 1039 ms)
+      > SleepBeforeReconnectDone (attempt 2, sleep started at 1009 ms)
         status: Connecting, attempt 3, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 
