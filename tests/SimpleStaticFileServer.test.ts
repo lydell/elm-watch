@@ -525,7 +525,7 @@ describe("SimpleStaticFileServer", () => {
             but was served as 200 (OK) instead, because an index.html file was found.
             This is for supporting Browser.application programs.
 
-            If you expected a file to served rather than this HTML,
+            If you expected a file to be served rather than this HTML,
             make sure the URL is correct or that this file exists:
             /tmp/public/a/b/c/d
 
@@ -577,7 +577,7 @@ describe("SimpleStaticFileServer", () => {
             but was served as 200 (OK) instead, because an index.html file was found.
             This is for supporting Browser.application programs.
 
-            If you expected a file to served rather than this HTML,
+            If you expected a file to be served rather than this HTML,
             make sure the URL is correct or that this file exists:
             /tmp/public/日本
 
@@ -627,7 +627,7 @@ describe("SimpleStaticFileServer", () => {
             but was served as 200 (OK) instead, because an index.html file was found.
             This is for supporting Browser.application programs.
 
-            If you expected a file to served rather than this HTML,
+            If you expected a file to be served rather than this HTML,
             make sure the URL is correct or that this file exists:
             /tmp/public/a/favicon.ico
 
@@ -654,7 +654,7 @@ describe("SimpleStaticFileServer", () => {
             but was served as 200 (OK) instead, because an index.html file was found.
             This is for supporting Browser.application programs.
 
-            If you expected a file to served rather than this HTML,
+            If you expected a file to be served rather than this HTML,
             make sure the URL is correct or that this file exists:
             /tmp/public/favicon.ico
 
@@ -742,8 +742,8 @@ describe("SimpleStaticFileServer", () => {
 
                       <h1>Unsupported file system object</h1>
                       <p>
-                        The URL you requested points to a something that is neither or file
-                        nor a directory. elm-watch only serves files.
+                        The URL you requested points to something that is neither a file nor
+                        a directory. elm-watch only serves files.
                       </p>
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/fifo</pre>
@@ -758,7 +758,7 @@ describe("SimpleStaticFileServer", () => {
 
             hacky_hint If_you_see_this_in_a_JS_syntax_error_then_your_JS_file_was_not_found___Click_the_file_name_to_the_right_for_more_information /*
 
-            The URL you requested points to a something that is neither or file
+            The URL you requested points to something that is neither a file
             nor a directory. elm-watch only serves files.
 
             This is the absolute file path the URL resolves to:
@@ -1205,7 +1205,7 @@ describe("SimpleStaticFileServer", () => {
             but was served as 200 (OK) instead, because an index.html file was found.
             This is for supporting Browser.application programs.
 
-            If you expected a file to served rather than this HTML,
+            If you expected a file to be served rather than this HTML,
             make sure the URL is correct or that this file exists:
             /tmp/public/not-found
 
@@ -1303,7 +1303,7 @@ describe("SimpleStaticFileServer", () => {
             but was served as 200 (OK) instead, because an index.html file was found.
             This is for supporting Browser.application programs.
 
-            If you expected a file to served rather than this HTML,
+            If you expected a file to be served rather than this HTML,
             make sure the URL is correct or that this file exists:
             /tmp/public/app/not-found
 

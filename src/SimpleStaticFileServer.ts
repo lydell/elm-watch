@@ -255,8 +255,8 @@ function notFoundHtml(
         html`
           <h1>Unsupported file system object</h1>
           <p>
-            The URL you requested points to a something that is neither or file
-            nor a directory. elm-watch only serves files.
+            The URL you requested points to something that is neither a file nor
+            a directory. elm-watch only serves files.
           </p>
           <p>This is the absolute file path the URL resolves to:</p>
           <pre>${fsPath.theFsPath}</pre>
@@ -391,7 +391,7 @@ This response could have been served as a 404 (Not Found),
 but was served as 200 (OK) instead, because an index.html file was found.
 This is for supporting Browser.application programs.
 
-If you expected a file to served rather than this HTML,
+If you expected a file to be served rather than this HTML,
 make sure the URL is correct or that this file exists:
 ${fsPath.theFsPath}
 
@@ -401,7 +401,7 @@ ${indexFsPath.theIndexFsPath}
 
     case "Other":
       return `
-The URL you requested points to a something that is neither or file
+The URL you requested points to something that is neither a file
 nor a directory. elm-watch only serves files.
 
 This is the absolute file path the URL resolves to:
