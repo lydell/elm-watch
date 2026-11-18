@@ -1377,16 +1377,19 @@ export function createUi(): Ui {
   const flash = (flashType: FlashType): void => {
     const element = toggleButton.querySelector(`.${CLASS.flash}`);
     if (element instanceof HTMLElement) {
-      // With several targets, one might succeed while another fails at about
-      // the same time. Don’t let the success hide the error. (The attribute is
-      // removed when the animation ends.)
+      // With several targets, they often finish at about the same time.
+      // Restarting the animation for each of them looks like stuttering, so
+      // let an already running animation finish instead. And don’t let a
+      // success hide an error. (The attribute is removed when the animation
+      // ends.)
+      const current = element.getAttribute("data-flash");
       if (
-        flashType === "success" &&
-        element.getAttribute("data-flash") === "error"
+        current === flashType ||
+        (flashType === "success" && current === "error")
       ) {
         return;
       }
-      // Restart the animation if it is already running.
+      // Restart the animation if it is already running (error after success).
       element.removeAttribute("data-flash");
       void element.offsetWidth;
       element.setAttribute("data-flash", flashType);
