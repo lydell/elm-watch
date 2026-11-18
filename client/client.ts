@@ -49,6 +49,7 @@ type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
   RETRY_WAIT_MS: (attemptNumber: number) => number;
+  MIN_FAILED_CONNECT_MS: number;
   CHANGED_CSS: Date;
   CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
@@ -228,6 +229,13 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   // Used in tests to not have to wait for so long before reconnecting. The UI
   // still shows the default wait time, to keep test snapshots stable.
   RETRY_WAIT_MS: retryWaitMs,
+
+  // Failed connection attempts are often very quick, especially on localhost.
+  // Then the “Connecting” status would just flash by, and clicking “Reconnect
+  // now” would feel like nothing happened. So make failed attempts take at
+  // least a little while. Successful ones don’t need it: The status changes
+  // to something else anyway. Set to 0 in tests, to not slow them down.
+  MIN_FAILED_CONNECT_MS: 500,
 
   ON_RENDER: () => {
     // Do nothing.
@@ -1151,6 +1159,8 @@ function initWebSocket(
   isCurrent: (webSocket: WebSocket) => boolean,
 ): WebSocket {
   const webSocket = new WebSocket(getWebSocketUrl(elmCompiledTimestamp));
+  const createdTime = getNow().getTime();
+  let opened = false;
   // Compiled code is sent as binary messages. Get them synchronously as
   // `ArrayBuffer` instead of the default `Blob`.
   webSocket.binaryType = "arraybuffer";
@@ -1164,25 +1174,31 @@ function initWebSocket(
     }
   };
 
+  // See `MIN_FAILED_CONNECT_MS`.
+  const dispatchClosed = (): void => {
+    const remaining = opened
+      ? 0
+      : __ELM_WATCH.MIN_FAILED_CONNECT_MS - (getNow().getTime() - createdTime);
+    if (remaining > 0) {
+      setTimeout(dispatchClosed, remaining);
+    } else {
+      dispatchIfCurrent({
+        tag: "WebSocketClosed",
+        date: getNow(),
+      });
+    }
+  };
+
   webSocket.addEventListener("open", () => {
+    opened = true;
     dispatchIfCurrent({ tag: "WebSocketConnected", date: getNow() });
   });
 
-  webSocket.addEventListener("close", () => {
-    dispatchIfCurrent({
-      tag: "WebSocketClosed",
-      date: getNow(),
-    });
-  });
+  webSocket.addEventListener("close", dispatchClosed);
 
   // In Node.js, if you start the Node.js program (with the elm-watch client) before you start `elm-watch` hot,
   // the "error" event is emitted. Treating it like "closed" allows us to try reconnecting.
-  webSocket.addEventListener("error", () => {
-    dispatchIfCurrent({
-      tag: "WebSocketClosed",
-      date: getNow(),
-    });
-  });
+  webSocket.addEventListener("error", dispatchClosed);
 
   webSocket.addEventListener("message", (event) => {
     dispatchIfCurrent({

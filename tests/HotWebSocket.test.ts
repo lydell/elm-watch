@@ -1026,6 +1026,8 @@ describe("hot", () => {
     // oxlint-disable-next-line no-console
     const originalConsoleError = console.error;
     let webSockets: Array<WebSocket> = [];
+    let webSocketCreatedTimes: Array<number> = [];
+    let failConnectionIndex: number | undefined = undefined;
     let sentMessages: Array<string> = [];
     let consoleErrors: Array<string> = [];
 
@@ -1034,13 +1036,17 @@ describe("hot", () => {
       // oxlint-disable-next-line no-console
       console.error = originalConsoleError;
       webSockets = [];
+      webSocketCreatedTimes = [];
+      failConnectionIndex = undefined;
       sentMessages = [];
       consoleErrors = [];
     });
 
-    function setupTestWebSocket({
-      failConnectionIndex,
-    }: { failConnectionIndex?: number } = {}): void {
+    function setupTestWebSocket(
+      options: { failConnectionIndex?: number } = {},
+    ): void {
+      ({ failConnectionIndex } = options);
+
       class TestWebSocket extends WebSocket {
         constructor(url: URL | string) {
           const actualUrl = new URL(url);
@@ -1049,6 +1055,7 @@ describe("hot", () => {
           }
           super(actualUrl);
           webSockets.push(this);
+          webSocketCreatedTimes.push(Date.now());
         }
 
         override send(message: string): void {
@@ -1116,6 +1123,47 @@ describe("hot", () => {
         JSON.stringify({ tag: "FocusedTab" }),
       ]);
       expect(consoleErrors).toStrictEqual([]);
+    });
+
+    test("failed connection attempts take a minimum amount of time", async () => {
+      setupTestWebSocket();
+      const minFailedConnectMs = 200;
+      let closedTime = 0;
+      let numWebSocketsBefore = 0;
+
+      await run({
+        fixture: "basic",
+        args: ["Reconnect"],
+        scripts: ["Reconnect.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: async ({ idle }) => {
+          switch (idle) {
+            case 1:
+              window.__ELM_WATCH.MIN_FAILED_CONNECT_MS = minFailedConnectMs;
+              numWebSocketsBefore = webSockets.length;
+              // The first reconnect fails, the second succeeds.
+              failConnectionIndex = numWebSocketsBefore;
+              await closeAndWait(getLastWebSocket());
+              closedTime = Date.now();
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+
+      expect(webSockets).toHaveLength(numWebSocketsBefore + 2);
+      const [failedTime = 0, succeededTime = 0] =
+        webSocketCreatedTimes.slice(numWebSocketsBefore);
+      // A connection that was open reports being closed right away.
+      expect(failedTime - closedTime).toBeLessThan(minFailedConnectMs);
+      // A connection attempt that fails is reported after the minimum time.
+      // (Allow timers to fire a millisecond “early” according to `Date`.)
+      expect(succeededTime - failedTime).toBeGreaterThanOrEqual(
+        minFailedConnectMs - 1,
+      );
     });
 
     test("events from previous web sockets are ignored", async () => {
