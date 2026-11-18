@@ -24,6 +24,8 @@ elm-watch’s static file server serves one folder. [elm-watch.mjs](./elm-watch.
 
 Any `*.localhost` host goes to your own computer (no need to edit `/etc/hosts`), and elm-watch’s server [allows](https://lydell.github.io/elm-watch/v2/server/#allowed-hosts) them by default. If you want to use other hosts, such as `admin.example.test`, add them to `allowedHosts`.
 
+Subdomains are a convenience on your own computer, though. Other devices, like your phone, can’t resolve `admin.localhost`, and IP addresses can’t have subdomains. So elm-watch.mjs also serves the admin app on its own port, 8001. When you [expose elm-watch on the local network](https://lydell.github.io/elm-watch/v2/server/#network-exposure) with `ELM_WATCH_HOST=0.0.0.0`, elm-watch prints links to both apps for each IP address of your computer: elm-watch’s port for the main app, and port 8001 for the admin app. (The links between the apps only work via subdomains.)
+
 See [Running an example](../README.md#running-an-example) first.
 
 1. Run `node --run start` (which runs `node --watch elm-watch.mjs hot`) to start elm-watch for development.

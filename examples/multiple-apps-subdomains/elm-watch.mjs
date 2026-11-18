@@ -22,6 +22,18 @@ if (runMode !== "hot" && runMode !== "make") {
   process.exit(1);
 }
 
+// Other devices, like your phone, can’t resolve admin.localhost, and subdomains
+// don’t work with IP addresses. So for testing on other devices
+// (ELM_WATCH_HOST=0.0.0.0), the admin site is also served on its own port. The
+// main site is the default on elm-watch’s port.
+const ADMIN_PORT = 8001;
+
+// Listen on the same host as elm-watch.
+const host = process.env["ELM_WATCH_HOST"] || "127.0.0.1";
+
+/** @type {http.Server | undefined} */
+let adminServer;
+
 process.exitCode = await elmWatch({
   root: import.meta.dirname,
   runMode,
@@ -47,8 +59,15 @@ process.exitCode = await elmWatch({
       output: "public/admin/build/admin.js",
     },
   ],
-  createServer: ({ onRequest, onUpgrade }) =>
-    http
+  createServer: ({ onRequest, onUpgrade }) => {
+    adminServer = http
+      .createServer((request, response) => {
+        request.url = `/admin${request.url}`;
+        onRequest(request, response);
+      })
+      .listen(ADMIN_PORT, host);
+
+    return http
       .createServer((request, response) => {
         // Each site has its own folder in `public/`. Serve the folder for the
         // host of the request, by putting the folder name first in the URL:
@@ -62,12 +81,23 @@ process.exitCode = await elmWatch({
         request.url = `/${site}${request.url}`;
         onRequest(request, response);
       })
-      .on("upgrade", onUpgrade),
-  // Print links to both sites. On the network (ELM_WATCH_HOST=0.0.0.0),
-  // only the main site is reachable: Phones can’t resolve admin.localhost.
+      .on("upgrade", onUpgrade);
+  },
+  // Print links to both sites: Via subdomains on your computer, and via ports
+  // on the network.
   serverLinks: ({ local, network }) => {
     const admin = new URL(local);
     admin.hostname = `admin.${local.hostname}`;
-    return [local, admin, ...network];
+    return [
+      local,
+      admin,
+      ...network.flatMap((url) => {
+        const networkAdmin = new URL(url);
+        networkAdmin.port = String(ADMIN_PORT);
+        return [url, networkAdmin];
+      }),
+    ];
   },
 });
+
+adminServer?.close();
