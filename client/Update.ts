@@ -289,6 +289,7 @@ export function update(
             },
             [
               { tag: "OpenPanel" },
+              { tag: "Flash", flashType: "error" },
               {
                 tag: "TriggerReachedIdleState",
                 reason: "EvalErrored",
@@ -324,6 +325,9 @@ export function update(
               },
             },
             [
+              // Only flash on actual hot reloads, not when (re)connecting to
+              // find that we already have the latest code.
+              { tag: "Flash", flashType: "success" },
               {
                 tag: "TriggerReachedIdleState",
                 reason: "EvalSucceeded",
@@ -470,7 +474,7 @@ export function update(
                 message: result.message,
               },
             },
-            [{ tag: "OpenPanel" }],
+            [{ tag: "OpenPanel" }, { tag: "Flash", flashType: "error" }],
           ];
       }
     }
@@ -744,6 +748,7 @@ function statusChanged(
         },
         [
           { tag: "OpenPanel" },
+          { tag: "Flash", flashType: "error" },
           {
             tag: "TriggerReachedIdleState",
             reason: "ClientError",
@@ -764,6 +769,7 @@ function statusChanged(
           compilationMode: status.compilationMode,
         },
         [
+          { tag: "Flash", flashType: "error" },
           {
             tag: "TriggerReachedIdleState",
             reason: "CompileError",
@@ -778,6 +784,7 @@ function statusChanged(
           status: { tag: "TargetError", date, error: status.error },
         },
         [
+          { tag: "Flash", flashType: "error" },
           {
             tag: "TriggerReachedIdleState",
             reason: "TargetError",

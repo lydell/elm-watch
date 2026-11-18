@@ -151,6 +151,8 @@ function describeCmd(cmd: Cmd): string {
       return `${cmd.tag} (attempt ${cmd.attemptNumber}, ${retryWaitMs(cmd.attemptNumber)} ms)`;
     case "Reconnect":
       return `${cmd.tag} (timestamp ${cmd.elmCompiledTimestamp})`;
+    case "Flash":
+      return `${cmd.tag} ${cmd.flashType}`;
     case "TriggerReachedIdleState":
       return `${cmd.tag} ${cmd.reason}`;
     case "Eval":
@@ -449,7 +451,67 @@ describe("client update", () => {
 
       > EvalSucceeded
         status: Idle, mode: standard, timestamp: 2
+        cmd: Flash success
         cmd: TriggerReachedIdleState EvalSucceeded
+    `);
+  });
+
+  test("flashes on hot reloads and errors, but not on reconnect", () => {
+    expect(
+      new Simulation()
+        .send(msg.connected)
+        .receive(upToDate)
+        .receive(successfullyCompiled)
+        .send(msg.evalSucceeded)
+        .send(msg.closed)
+        .send(msg.connected)
+        .receive(upToDate)
+        .receive(compileError)
+        .send(() => ({ tag: "ReloadAllCssDone", didChange: true }))
+        .send(() => ({ tag: "ReloadAllCssDone", didChange: false }))
+        .toString(),
+    ).toMatchInlineSnapshot(`
+      > init
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 1
+
+      > WebSocketMessageReceived StatusChanged AlreadyUpToDate
+        status: Idle, mode: standard, timestamp: 1
+        cmd: TriggerReachedIdleState AlreadyUpToDate
+
+      > WebSocketMessageReceived SuccessfullyCompiled
+        status: Idle, mode: standard, timestamp: 2
+        cmd: Eval /* new code */
+
+      > EvalSucceeded
+        status: Idle, mode: standard, timestamp: 2
+        cmd: Flash success
+        cmd: TriggerReachedIdleState EvalSucceeded
+
+      > WebSocketClosed
+        status: Connecting, attempt 1, mode: standard, timestamp: 2
+        cmd: Reconnect (timestamp 2)
+
+      > WebSocketConnected
+        status: Busy, mode: standard, timestamp: 2
+
+      > WebSocketMessageReceived StatusChanged AlreadyUpToDate
+        status: Idle, mode: standard, timestamp: 2
+        cmd: TriggerReachedIdleState AlreadyUpToDate
+
+      > WebSocketMessageReceived StatusChanged CompileError
+        status: CompileError, 1 errors, mode: standard, timestamp: 2
+        cmd: Flash error
+        cmd: TriggerReachedIdleState CompileError
+
+      > ReloadAllCssDone
+        status: CompileError, 1 errors, mode: standard, timestamp: 2
+        cmd: Flash success
+
+      > ReloadAllCssDone
+        status: CompileError, 1 errors, mode: standard, timestamp: 2
     `);
   });
 
@@ -532,6 +594,7 @@ describe("client update", () => {
 
       > WebSocketMessageReceived StatusChanged CompileError
         status: CompileError, 1 errors, mode: standard, timestamp: 1
+        cmd: Flash error
         cmd: TriggerReachedIdleState CompileError
 
       > WebSocketClosed
@@ -581,6 +644,7 @@ describe("client update", () => {
 
       > WebSocketMessageReceived StatusChanged CompileError
         status: CompileError, 1 errors, mode: standard, timestamp: 1
+        cmd: Flash error
         cmd: TriggerReachedIdleState CompileError
 
       > UiMsg ChangedCompilationMode
@@ -617,6 +681,7 @@ describe("client update", () => {
       > EvalErrored
         status: EvalError, mode: standard, timestamp: 2
         cmd: OpenPanel
+        cmd: Flash error
         cmd: TriggerReachedIdleState EvalErrored
     `);
   });
@@ -763,6 +828,7 @@ describe("client update", () => {
 
       > WebSocketMessageReceived StatusChanged CompileError
         status: CompileError, 1 errors, mode: standard, timestamp: 1
+        cmd: Flash error
         cmd: TriggerReachedIdleState CompileError
 
       > WebSocketMessageReceived OpenEditorFailed
@@ -772,6 +838,7 @@ describe("client update", () => {
 
       > WebSocketMessageReceived StatusChanged CompileError
         status: CompileError, 1 errors, mode: standard, timestamp: 1
+        cmd: Flash error
         cmd: TriggerReachedIdleState CompileError
 
       > WebSocketMessageReceived StatusChanged AlreadyUpToDate
@@ -833,6 +900,7 @@ describe("client update", () => {
       > WebSocketMessageReceived Nope
         status: UnexpectedError, mode: standard, timestamp: 1
         cmd: OpenPanel
+        cmd: Flash error
     `);
   });
 });

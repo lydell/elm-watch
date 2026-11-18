@@ -11,7 +11,6 @@ import {
 import { reloadAllCssIfNeeded, runSerially, type SerialState } from "./css.ts";
 import {
   createUi,
-  type FlashType,
   type Info,
   type OverlayError,
   retryWaitMs,
@@ -469,22 +468,13 @@ function run(): void {
       const newErrors = getErrors(newModel.status);
       const oldSendKey = statusToSpecialCaseSendKey(model.status);
       const newSendKey = statusToSpecialCaseSendKey(newModel.status);
-      const statusType = statusToStatusType(newModel.status.tag);
-      const statusTypeChanged =
-        statusType !== statusToStatusType(model.status.tag);
-      const statusFlashType = getStatusFlashType({
-        statusType,
-        statusTypeChanged,
-        hasReceivedHotReload:
-          newModel.elmCompiledTimestamp !== INITIAL_ELM_COMPILED_TIMESTAMP,
-      });
-      const flashCmd: Array<Cmd> =
-        statusFlashType === undefined || cmds.some((cmd) => cmd.tag === "Flash")
-          ? []
-          : [{ tag: "Flash", flashType: statusFlashType }];
+      // Flash after Render, so that the toggle button has been rendered and
+      // is visible.
+      const flashCmds = cmds.filter((cmd) => cmd.tag === "Flash");
+      const otherCmds = cmds.filter((cmd) => cmd.tag !== "Flash");
       const allCmds: Array<Cmd> = modelChanged
         ? [
-            ...cmds,
+            ...otherCmds,
             {
               tag: "UpdateGlobalStatus",
               reloadStatus: statusToReloadStatus(newModel),
@@ -517,12 +507,12 @@ function run(): void {
                   } as const,
                 ]
               : []),
-            ...flashCmd,
+            ...flashCmds,
             reloadTrouble
               ? { tag: "TriggerReachedIdleState", reason: "ReloadTrouble" }
               : { tag: "NoCmd" },
           ]
-        : [...cmds, ...flashCmd];
+        : cmds;
       logDebug(`${msg.tag} (${TARGET_NAME})`, msg, newModel, allCmds);
       return [newModel, allCmds];
     },
@@ -1611,10 +1601,9 @@ async function evalModuleFirst(code: string): Promise<void> {
     // and then the very last line might be `this.FOO = 1337`, which then fails
     // as `this` is `undefined` in modules. Then trying script mode is going to
     // succeed, but in practice all the code ran twice. That should be fine though –
-    // an unnecessary hot reload shouldn’t cause any trouble. One known effect
-    // is that the green animation does not appear. However, since we switch back to
-    // `evalScriptFirst` it’s going to work next time. And I don’t think it’s very likely
-    // this will happen.
+    // an unnecessary hot reload shouldn’t cause any trouble (the green animation might
+    // play twice). Since we switch back to `evalScriptFirst` it won’t happen next time.
+    // And I don’t think it’s very likely this will happen.
     try {
       // oxlint-disable-next-line typescript/no-implied-eval
       const f = new Function(code);
@@ -1768,25 +1757,6 @@ function modelToSnapshot(model: Model, info: Info): TargetSnapshot {
     openEditor: model.openEditor,
     terminalColors: model.terminalColors,
   };
-}
-
-function getStatusFlashType({
-  statusType,
-  statusTypeChanged,
-  hasReceivedHotReload,
-}: {
-  statusType: StatusType;
-  statusTypeChanged: boolean;
-  hasReceivedHotReload: boolean;
-}): FlashType | undefined {
-  switch (statusType) {
-    case "Success":
-      return statusTypeChanged && hasReceivedHotReload ? "success" : undefined;
-    case "Error":
-      return statusTypeChanged ? "error" : undefined;
-    case "Waiting":
-      return undefined;
-  }
 }
 
 const noDebuggerYetReason = "The Elm debugger isn't available at this point.";
