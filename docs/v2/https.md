@@ -21,7 +21,7 @@ elm-watch runs an HTTP server, because WebSockets connect over HTTP before switc
 
 - elm-watch 1.0.2 and older only runs an HTTP server.
 - elm-watch 1.1.0 added some support for HTTPS: It runs both and HTTP server and an HTTPS server.
-- elm-watch beta removes the HTTPS server, but lets you set that up yourself.
+- elm-watch 2 removes the HTTPS server, but lets you set that up yourself.
 
 ## elm-watch 1.1
 
@@ -29,13 +29,13 @@ If you use `https://`, then the first time you visit your page you’ll see how 
 
 Click elm-watch’s [browser UI](../browser-ui/) to expand it. There’s a link there that goes to the WebSocket server. When you click it, your browser will show a scary-looking security screen. That’s because elm-watch uses a self-signed certificate, which isn’t secure. However, there’s no security to worry about here – elm-watch just needs a certificate to be able to use `wss://` (which is basically required on `https://` pages – more on that below). Click a few buttons to proceed to the page anyway. Once you’ve done that once, the browser remembers your choice. Go back to your page (and possibly refresh the page) and now the WebSocket should connect! If you’ve ever created a self-signed certificate yourself for development – that’s exactly what’s happening here. elm-watch ships with a generic self-signed certificate created with `openssl`.
 
-Using a self-signed certificate isn’t ideal, and cannot be used by everyone. Also, running both HTTP and HTTPS in elm-watch is pretty complicated. This is why `elm-watch@beta` switched to a new approach, where you are in full control over HTTPS.
+Using a self-signed certificate isn’t ideal, and cannot be used by everyone. Also, running both HTTP and HTTPS in elm-watch is pretty complicated. This is why elm-watch 2 switched to a new approach, where you are in full control over HTTPS.
 
-## elm-watch beta
+## elm-watch 2
 
-`elm-watch@beta` puts its HTTP server to more use than just connecting WebSockets: It also optionally [serves static files](../server/). That static file server is HTTP, not HTTPS, but the code for choosing between `ws://` and `wss://` based on if you’re on an `https://` page is still there. How can it be `https://` then? That’s if you serve the files yourself on your own HTTPS server (or if you run elm-watch in a certain way – which I’ll get back to).
+elm-watch 2 puts its HTTP server to more use than just connecting WebSockets: It also optionally [serves static files](../server/). That static file server is HTTP, not HTTPS, but the code for choosing between `ws://` and `wss://` based on if you’re on an `https://` page is still there. How can it be `https://` then? That’s if you serve the files yourself on your own HTTPS server (or if you run elm-watch in a certain way – which I’ll get back to).
 
-Like in elm-watch 1.1, if you use `https://` then you might see how elm-watch’s WebSocket gets stuck in the 🔌 connecting state. That’s because it tries to connect with `wss://` over HTTPS, but elm-watch only runs an HTTP server. In the [browser UI](../browser-ui/), instead of showing a link to a page where you can accept a self-signed certificate, `elm-watch@beta` now just links to this page instead, where you can read up on how to get HTTPS going.
+Like in elm-watch 1.1, if you use `https://` then you might see how elm-watch’s WebSocket gets stuck in the 🔌 connecting state. That’s because it tries to connect with `wss://` over HTTPS, but elm-watch only runs an HTTP server. In the [browser UI](../browser-ui/), instead of showing a link to a page where you can accept a self-signed certificate, elm-watch 2 now just links to this page instead, where you can read up on how to get HTTPS going.
 
 If you use your own HTTPS server, you can set the `"webSocketUrl"` option in [elm-watch.json](../elm-watch.json/) (or the `webSocketUrl` option of the [JavaScript API](../javascript-api/)) or the `ELM_WATCH_WEBSOCKET_URL` environment variable to make elm-watch connect to your HTTPS server instead of directly to elm-watch’s HTTP server. In your HTTPS server you need to proxy the WebSocket to elm-watch. Alternatively, you can set up a separate HTTPS proxy server just for elm-watch’s WebSocket if you prefer. The host of `"webSocketUrl"` is automatically [allowed](../server/#allowed-hosts). If your page is served on another host, you need to add it to [allowedHosts](../server/#allowed-hosts).
 

@@ -19,10 +19,10 @@ type NonEmptyArray<T> = [T, ...Array<T>];
 
 type ElmWatchJson = {
   port?: number;
-  host?: string; // ⚠️ elm-watch@beta only
-  webSocketUrl?: string; // ⚠️ elm-watch@beta only
-  serve?: string; // ⚠️ elm-watch@beta only
-  allowedHosts?: Array<string>; // ⚠️ elm-watch@beta only
+  host?: string;
+  webSocketUrl?: string;
+  serve?: string;
+  allowedHosts?: Array<string>;
   targets: {
     [name: string]:
       | {
@@ -73,10 +73,10 @@ Example:
 | --- | --- | --- | --- |
 | [targets](#targets) | `Record<string, object>` | _Required_ | What to compile: The input Elm files and the output JavaScript files to write to (or [packages](#package-targets) to typecheck). At least one target is required. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | The port for elm-watch’s HTTP and WebSocket server, used for hot reloading and as a simple file server. In case you _have_ to have the exact same port every time. The port is not remembered: If you remove `"port"` later, elm-watch goes back to the port it used before. Note that [some ports cannot be used][port-blocking]. |
-| ⚠️ host | `string` | `"127.0.0.1"` | **Only available in `elm-watch@beta`.** The host for elm-watch’s HTTP and WebSocket server to listen on. Use `"0.0.0.0"` to expose the server on the local network. See [Network exposure](../server/#network-exposure). The `ELM_WATCH_HOST` environment variable takes precedence. |
-| ⚠️ webSocketUrl | `string` | `` `ws://${currentHostname}:${port}/elm-watch` `` (sort of) | **Only available in `elm-watch@beta`.** This lets you customize how the elm-watch client connects its WebSocket for advanced use cases. You can also use the `ELM_WATCH_WEBSOCKET_URL` environment variable for dynamically setting it (the environment variable takes precedence). The value must be a valid URL starting with `ws:` or `wss:`. |
-| ⚠️ serve | `string` | unset | **Only available in `elm-watch@beta`.** A directory of static files to [serve](../server/). |
-| ⚠️ allowedHosts | `Array<string>` | `[]` | **Only available in `elm-watch@beta`.** Extra host names that elm-watch’s server accepts requests for, in addition to localhost, `*.localhost`, `*.local`, IP addresses and the host of `webSocketUrl`. Exact host names only, like `"dev.example.com"`. You can also use the `ELM_WATCH_ALLOWED_HOSTS` environment variable (comma separated), which is combined with this setting. See [Allowed hosts](../server/#allowed-hosts). |
+| host | `string` | `"127.0.0.1"` | The host for elm-watch’s HTTP and WebSocket server to listen on. Use `"0.0.0.0"` to expose the server on the local network. See [Network exposure](../server/#network-exposure). The `ELM_WATCH_HOST` environment variable takes precedence. |
+| webSocketUrl | `string` | `` `ws://${currentHostname}:${port}/elm-watch` `` (sort of) | This lets you customize how the elm-watch client connects its WebSocket for advanced use cases. You can also use the `ELM_WATCH_WEBSOCKET_URL` environment variable for dynamically setting it (the environment variable takes precedence). The value must be a valid URL starting with `ws:` or `wss:`. |
+| serve | `string` | unset | A directory of static files to [serve](../server/). |
+| allowedHosts | `Array<string>` | `[]` | Extra host names that elm-watch’s server accepts requests for, in addition to localhost, `*.localhost`, `*.local`, IP addresses and the host of `webSocketUrl`. Exact host names only, like `"dev.example.com"`. You can also use the `ELM_WATCH_ALLOWED_HOSTS` environment variable (comma separated), which is combined with this setting. See [Allowed hosts](../server/#allowed-hosts). |
 
 ## Environment variables
 
