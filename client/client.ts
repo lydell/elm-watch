@@ -3,7 +3,11 @@ import * as Codec from "tiny-decoders";
 import type { ClientConfig } from "../src/ClientConfig.ts";
 import { formatTime } from "../src/Helpers.ts";
 import { runTeaProgram } from "../src/TeaProgram.ts";
-import type { CompilationMode, GetNow } from "../src/Types.ts";
+import {
+  type CompilationModeWithProxy,
+  type GetNow,
+  markAsAbsolutePath,
+} from "../src/Types.ts";
 import { reloadAllCssIfNeeded, runSerially, type SerialState } from "./css.ts";
 import {
   createUi,
@@ -1822,11 +1826,25 @@ function renderMockStatuses(ui: Ui | undefined): void {
     debugModeToggled: { tag: "Enabled" },
   };
 
+  const mockError: OverlayError = {
+    title: "TYPE MISMATCH",
+    location: {
+      tag: "FileWithLineAndColumn",
+      file: markAsAbsolutePath("/Users/you/project/src/Main.elm"),
+      relativeFile: "src/Main.elm",
+      line: 12,
+      column: 5,
+    },
+    htmlContent: "The 1st argument to `text` is not what I expect.",
+    htmlContentCollapsed: undefined,
+  };
+
   const mockStatuses: Record<
     string,
     Status & {
       info?: Omit<Info, "targetName">;
-      compilationMode?: CompilationMode;
+      compilationMode?: CompilationModeWithProxy;
+      elmCompiledTimestampBeforeReload?: number;
     }
   > = {
     Busy: {
@@ -1839,39 +1857,18 @@ function renderMockStatuses(ui: Ui | undefined): void {
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
     },
-    "Really long target name that is annoying to work display correctly": {
+    "Really long target name that is annoying to display correctly": {
       tag: "Idle",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
     },
-    LongSubdomain: {
-      tag: "Idle",
-      date,
-      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      info: {
-        ...info,
-        webSocketUrl: new URL(
-          "ws://development.admin.example.com.localhost:53167",
-        ),
-      },
-    },
-    IPAdress: {
-      tag: "Idle",
-      date,
-      sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      info: {
-        ...info,
-        webSocketUrl: new URL("ws://192.168.123.123:53167"),
-      },
-    },
-    NoDebuggerYetWithDebugLogOptimizeError: {
+    OptimizeNoDebuggerYet: {
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
       errors: new Map(),
       info: {
         ...info,
-        originalCompilationMode: "standard",
         debugModeToggled: {
           tag: "Disabled",
           reason: noDebuggerYetReason,
@@ -1915,16 +1912,34 @@ function renderMockStatuses(ui: Ui | undefined): void {
         },
       },
     },
+    Proxy: {
+      tag: "Busy",
+      date,
+      errors: undefined,
+      info: {
+        ...info,
+        originalCompilationMode: "proxy",
+      },
+      compilationMode: "proxy",
+    },
     CompileError: {
       tag: "CompileError",
       date,
       sendKey: SEND_KEY_DO_NOT_USE_ALL_THE_TIME,
-      errors: new Map(),
+      errors: new Map([["mock-elm", mockError]]),
     },
     TargetError: {
       tag: "TargetError",
       date,
-      error: "Elm.json error",
+      error: `
+── elm.json NOT FOUND ────────────────────────────────────── Target: TargetError
+
+I could not find the elm.json for this target:
+
+/Users/you/project/elm.json
+
+Is "elmJson" misspelled? Or do you need to run elm init to create it?
+      `.trim(),
     },
     Connecting: {
       tag: "Connecting",
@@ -1936,12 +1951,6 @@ function renderMockStatuses(ui: Ui | undefined): void {
       tag: "Connecting",
       date,
       attemptNumber: 2,
-      errors: undefined,
-    },
-    Connecting100: {
-      tag: "Connecting",
-      date,
-      attemptNumber: 100,
       errors: undefined,
     },
     ConnectingWss: {
@@ -1966,6 +1975,12 @@ function renderMockStatuses(ui: Ui | undefined): void {
       tag: "SleepingBeforeReconnect",
       date,
       attemptNumber: 1,
+      errors: undefined,
+    },
+    SleepingBeforeReconnect100: {
+      tag: "SleepingBeforeReconnect",
+      date,
+      attemptNumber: 100,
       errors: undefined,
     },
     SleepingBeforeReconnectWss: {
@@ -1993,27 +2008,66 @@ Maybe the JavaScript code running in the browser was compiled with an older vers
       `.trim(),
       date,
     },
+    // Shows “Waiting for other targets…” since there are `Busy` and
+    // `Connecting` targets. Comment those out to see “Waiting for page
+    // reload…”.
     WaitingForReload: {
       tag: "WaitingForReload",
       date,
       reasons: [],
     },
+    WaitingForReloadTrouble: {
+      tag: "WaitingForReload",
+      date,
+      reasons: [],
+      elmCompiledTimestampBeforeReload: 0,
+    },
   };
+
+  let lastUiTarget: UiTarget | undefined = undefined;
 
   for (const [targetName, status] of Object.entries(mockStatuses)) {
     const uiTarget = ui.register(targetName);
+    const sendKey = statusToSpecialCaseSendKey(status);
     uiTarget.render({
       status,
       compilationMode: status.compilationMode ?? "standard",
       elmCompiledTimestamp: 0,
-      elmCompiledTimestampBeforeReload: undefined,
+      elmCompiledTimestampBeforeReload: status.elmCompiledTimestampBeforeReload,
       info: { ...(status.info ?? info), targetName },
-      sendKey: statusToSpecialCaseSendKey(status),
+      sendKey,
       openEditor: undefined,
       terminalColors: undefined,
     });
+    if (status.tag === "CompileError") {
+      uiTarget.setErrors(status.errors, sendKey, { open: false });
+    }
     uiTarget.openPanel();
+    lastUiTarget = uiTarget;
   }
+
+  // External errors are the same for all targets, so set them only once.
+  // New errors open the error overlay, so open the panel again afterwards.
+  lastUiTarget?.setExternalErrors(
+    [
+      {
+        source: "esbuild",
+        errors: new Map([
+          [
+            "mock-esbuild",
+            {
+              title: "esbuild",
+              location: undefined,
+              htmlContent: `Could not resolve "./missing.js"`,
+              htmlContentCollapsed: undefined,
+            },
+          ],
+        ]),
+      },
+    ],
+    undefined,
+  );
+  lastUiTarget?.openPanel();
 }
 
 void renderMockStatuses;
