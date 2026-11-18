@@ -500,9 +500,15 @@ describe("hot reloading", () => {
       switch (idle) {
         case 1:
           assert1(div);
-          window.__ELM_WATCH.HOT_RELOAD = () => {
-            throw error;
-          };
+          {
+            const hooks = window.__ELM_WATCH.TARGETS.get("HtmlMain");
+            if (hooks === undefined) {
+              throw new Error("HtmlMain is not registered.");
+            }
+            hooks.hotReload = () => {
+              throw error;
+            };
+          }
           replace((content) =>
             content.replace("hot reload", "simple text change"),
           );

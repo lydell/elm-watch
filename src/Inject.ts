@@ -168,7 +168,8 @@ function _Platform_initialize(programType, isDebug, debugMetadata, flagDecoder, 
 
 	setUpdateAndSubscriptions();
 
-	var skippedInitCmds = globalThis.__ELM_WATCH ? globalThis.__ELM_WATCH.SHOULD_SKIP_INIT_CMDS(_elmWatchTargetName) : false;
+	var elmWatchHooks = _elmWatchHooks();
+	var skippedInitCmds = elmWatchHooks ? elmWatchHooks.shouldSkipInitCmds() : false;
 
 	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, subscriptions(model));
 
@@ -373,13 +374,13 @@ function _Platform_export(exports)
 	}
 
 	// added by elm-watch
-	if (globalThis.__ELM_WATCH) {
-		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
-			globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports);
-		} else {
-			globalThis.__ELM_WATCH.HOT_RELOAD(_elmWatchTargetName, exports);
+	var elmWatchHooks = _elmWatchHooks();
+	if (elmWatchHooks) {
+		if (elmWatchHooks.isRegistered()) {
+			elmWatchHooks.hotReload(exports);
 			return;
 		}
+		elmWatchHooks.register(exports);
 	}
 
 	scope['Elm']
@@ -813,23 +814,29 @@ export function inject(
   targetName?: TargetName,
 ): string {
   // Set in the replacements rather than with a separate pass over all of `code`.
-  const targetNameDeclaration = `var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};`;
+  const targetDeclarations = `
+var _elmWatchTargetName = ${Codec.JSON.stringify(Codec.string, targetName ?? "")};
+
+// The hooks of this target in elm-watch’s client, if it is running. See
+// \`TargetHooks\` in client.ts.
+function _elmWatchHooks()
+{
+	return globalThis.__ELM_WATCH ? globalThis.__ELM_WATCH.TARGETS.get(_elmWatchTargetName) : undefined;
+}
+`.trim();
   switch (compilationMode) {
     case "debug":
     case "standard":
       return usesElmHot(code)
-        ? injectElmHot(code, targetNameDeclaration)
-        : injectReplacements(code, targetNameDeclaration);
+        ? injectElmHot(code, targetDeclarations)
+        : injectReplacements(code, targetDeclarations);
 
     case "optimize":
-      return injectOptimize(code, targetNameDeclaration);
+      return injectOptimize(code, targetDeclarations);
   }
 }
 
-function injectReplacements(
-  code: string,
-  targetNameDeclaration: string,
-): string {
+function injectReplacements(code: string, targetDeclarations: string): string {
   return code.replace(
     REPLACEMENT_REGEX,
     (match, name1: string, name: string = name1) => {
@@ -842,7 +849,7 @@ function injectReplacements(
             name === "_Platform_initialize"
               ? replacement.replace(
                   'var _elmWatchTargetName = "";',
-                  () => targetNameDeclaration,
+                  () => targetDeclarations,
                 )
               : replacement,
           );
@@ -853,18 +860,19 @@ function injectReplacements(
 // There is no hot reloading in `--optimize` mode, only full page reloads. So
 // the only thing needed is registering with elm-watch, which keeps track of the
 // initialized apps. This works the same with and without `Elm.hot`.
-function injectOptimize(code: string, targetNameDeclaration: string): string {
+function injectOptimize(code: string, targetDeclarations: string): string {
   return code.replace(ELM_HOT_PLATFORM_EXPORT_REGEX, (_, body: string) =>
     `
 // added by elm-watch
-${targetNameDeclaration}
+${targetDeclarations}
 
 // This function was changed by elm-watch.
 function _Platform_export(exports)
 {
 	// added by elm-watch
-	if (globalThis.__ELM_WATCH) {
-		globalThis.__ELM_WATCH.REGISTER(_elmWatchTargetName, exports);
+	var elmWatchHooks = _elmWatchHooks();
+	if (elmWatchHooks) {
+		elmWatchHooks.register(exports);
 	}
 
 ${body}}
@@ -908,12 +916,12 @@ export function usesElmHot(code: string): boolean {
   return ELM_HOT_REGEX.test(code);
 }
 
-function injectElmHot(code: string, targetNameDeclaration: string): string {
+function injectElmHot(code: string, targetDeclarations: string): string {
   const newCode = code
     .replace(ELM_HOT_PLATFORM_EXPORT_REGEX, (_, body: string) =>
       `
 // added by elm-watch
-${targetNameDeclaration}
+${targetDeclarations}
 
 // This function was changed by elm-watch. The original function body is in \`original\`.
 // For hot reloads, it sets \`scope\` to a new object. That’s the same as evaluating the code
@@ -926,14 +934,15 @@ ${body}	}
 
 	var initData = _elmWatchInitData('Elm', exports, {});
 
-	if (globalThis.__ELM_WATCH) {
-		if (globalThis.__ELM_WATCH.IS_REGISTERING) {
-			original();
-			globalThis.__ELM_WATCH.REGISTER_ELM_HOT(_elmWatchTargetName, scope['Elm'], initData, _Utils_eq_elmWatchInternal);
-		} else {
+	var elmWatchHooks = _elmWatchHooks();
+	if (elmWatchHooks) {
+		if (elmWatchHooks.isRegistered()) {
 			scope = {};
 			original();
-			globalThis.__ELM_WATCH.HOT_RELOAD_ELM_HOT(_elmWatchTargetName, scope['Elm'], initData, _Utils_eq_elmWatchInternal);
+			elmWatchHooks.hotReloadElmHot(scope['Elm'], initData, _Utils_eq_elmWatchInternal);
+		} else {
+			original();
+			elmWatchHooks.registerElmHot(scope['Elm'], initData, _Utils_eq_elmWatchInternal);
 		}
 	} else {
 		original();
@@ -1021,7 +1030,8 @@ function injectElmHotInitCmds(newCode: string): string {
     initCmdsMatch,
     `
 	// changed by elm-watch
-	var skippedInitCmds = globalThis.__ELM_WATCH ? globalThis.__ELM_WATCH.SHOULD_SKIP_INIT_CMDS(_elmWatchTargetName) : false;
+	var elmWatchHooks = _elmWatchHooks();
+	var skippedInitCmds = elmWatchHooks ? elmWatchHooks.shouldSkipInitCmds() : false;
 	_Platform_enqueueEffects(managers, skippedInitCmds ? _Platform_batch(_List_Nil) : initPair.b, ${subscriptions});
 `.slice(1, -1),
   );

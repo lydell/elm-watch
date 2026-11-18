@@ -77,7 +77,7 @@ describe("proxyFile", () => {
       false,
     );
     expect(code).toContain(
-      `globalThis.__ELM_WATCH.REGISTER(${JSON.stringify(targetName)}, {});`,
+      `globalThis.__ELM_WATCH.TARGETS.get(${JSON.stringify(targetName)}).register({});`,
     );
   });
 });

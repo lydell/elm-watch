@@ -36,7 +36,7 @@ them first.
   });
 }
 
-globalThis.__ELM_WATCH.REGISTER("%TARGET_NAME%", {});
+globalThis.__ELM_WATCH.TARGETS.get("%TARGET_NAME%").register({});
 
 // In scripts, assign Elm like normal.
 if (this !== undefined) {
