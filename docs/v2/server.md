@@ -230,7 +230,7 @@ These hosts are always allowed:
 
 - `localhost` and `*.localhost`
 - `*.local` (for example `my-macbook.local`, for testing on your phone)
-- IP addresses (for example `127.0.0.1` or `192.168.1.10`)
+- IP addresses that can’t be on the public internet: loopback (`127.0.0.1`, `::1`), private networks (`10.x.x.x`, `172.16.x.x`–`172.31.x.x`, `192.168.x.x`, `fc00::/7`), link-local (`169.254.x.x`, `fe80::/10`), and `100.64.x.x`–`100.127.x.x` (carrier-grade NAT, used by Tailscale, for example). Public IP addresses are not always allowed, since a web site served on a public IP address could otherwise connect to elm-watch’s WebSocket. Add them to `"allowedHosts"` if needed (for example when developing on a server and visiting it via its IP address).
 - The host of the [webSocketUrl](../elm-watch.json/) setting, if you use it. (If the `ELM_WATCH_WEBSOCKET_URL` environment variable is set, it takes precedence, and its host is allowed instead.)
 
 To allow more hosts, add them to `"allowedHosts"` in [elm-watch.json](../elm-watch.json/):

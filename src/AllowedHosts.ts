@@ -1,4 +1,4 @@
-import { isIP } from "net";
+import { BlockList, isIP } from "net";
 import * as Codec from "tiny-decoders";
 
 import { docsLink } from "./DocsLinks.ts";
@@ -16,7 +16,10 @@ import type { Brand } from "./Types.ts";
 //   via a `<script>` tag.
 //
 // Some hosts are always allowed, since they can’t be registered in public DNS:
-// localhost, *.localhost, *.local (mDNS) and IP addresses. More hosts can be
+// localhost, *.localhost, *.local (mDNS) and IP addresses that can’t be on the
+// public internet (loopback, private networks and so on). Public IP addresses
+// are not allowed: A web site served on a public IP address could otherwise
+// connect to the WebSocket. More hosts (including IP addresses) can be
 // allowed via "allowedHosts" in elm-watch.json, the `ELM_WATCH_ALLOWED_HOSTS`
 // environment variable, and "webSocketUrl" (its hostname is allowed).
 // Wildcards are not supported on purpose: They are unsafe for shared domains
@@ -63,6 +66,15 @@ function parseAllowedHost(
       message:
         "Wildcards are not supported. List each host exactly instead, for example: dev.example.com",
     };
+  }
+  // IPv6 addresses contain colons, so check them before the port check below.
+  // Both `::1` and `[::1]` are accepted.
+  const unbracketed = unbracketIpv6(string);
+  if (isIP(unbracketed) === 6) {
+    const hostname = parseHostname(`[${unbracketed}]`);
+    if (hostname !== undefined) {
+      return { tag: "Valid", value: markAsAllowedHost(hostname) };
+    }
   }
   if (NOT_A_BARE_HOSTNAME_REGEX.test(string)) {
     return {
@@ -165,17 +177,45 @@ function checkHostname(
 }
 
 function isAlwaysAllowed(hostname: string): boolean {
-  // IPv6 addresses are wrapped in brackets in URLs.
-  const unbracketed =
-    hostname.startsWith("[") && hostname.endsWith("]")
-      ? hostname.slice(1, -1)
-      : hostname;
+  const unbracketed = unbracketIpv6(hostname);
+  const ipVersion = isIP(unbracketed);
   return (
-    isIP(unbracketed) !== 0 ||
+    (ipVersion !== 0 &&
+      NON_PUBLIC_IPS.check(unbracketed, ipVersion === 4 ? "ipv4" : "ipv6")) ||
     hostname === "localhost" ||
     hostname.endsWith(".localhost") ||
     hostname.endsWith(".local")
   );
+}
+
+// IPv6 addresses are wrapped in brackets in URLs.
+function unbracketIpv6(hostname: string): string {
+  return hostname.startsWith("[") && hostname.endsWith("]")
+    ? hostname.slice(1, -1)
+    : hostname;
+}
+
+// IP addresses that can’t be used by public web sites. (`BlockList` also
+// matches IPv4-mapped IPv6 addresses, like `::ffff:127.0.0.1`.)
+const NON_PUBLIC_IPS = new BlockList();
+for (const [network, prefix] of [
+  ["0.0.0.0", 8], // “This host”
+  ["10.0.0.0", 8], // Private network
+  ["100.64.0.0", 10], // Carrier-grade NAT (used by Tailscale, for example)
+  ["127.0.0.0", 8], // Loopback
+  ["169.254.0.0", 16], // Link-local
+  ["172.16.0.0", 12], // Private network
+  ["192.168.0.0", 16], // Private network
+] as const) {
+  NON_PUBLIC_IPS.addSubnet(network, prefix, "ipv4");
+}
+for (const [network, prefix] of [
+  ["::", 128], // Unspecified
+  ["::1", 128], // Loopback
+  ["fc00::", 7], // Unique local addresses (private network)
+  ["fe80::", 10], // Link-local
+] as const) {
+  NON_PUBLIC_IPS.addSubnet(network, prefix, "ipv6");
 }
 
 // Parses things like `example.com`, `example.com:8000` and `[::1]:8000`.

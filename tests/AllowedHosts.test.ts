@@ -50,6 +50,22 @@ describe("AllowedHosts", () => {
       ]);
     });
 
+    test("IP addresses", () => {
+      expect(
+        decodeAllowedHosts([
+          "203.0.113.5",
+          "2001:DB8::0001",
+          "[2001:db8::1]",
+          "::ffff:203.0.113.5",
+        ]),
+      ).toStrictEqual([
+        "203.0.113.5",
+        "[2001:db8::1]",
+        "[2001:db8::1]",
+        "[::ffff:cb00:7105]",
+      ]);
+    });
+
     test("wildcards", () => {
       expect(decodeError(".example.com")).toMatchInlineSnapshot(`
         At root:
@@ -72,7 +88,7 @@ describe("AllowedHosts", () => {
         "dev.example.com?query",
         "dev.example.com#hash",
         "user@dev.example.com",
-        "[::1]",
+        "[::1]:8000",
         "dev example.com",
         "dev.example.com ",
       ]) {
@@ -137,11 +153,29 @@ describe("AllowedHosts", () => {
         "127.0.0.1",
         "127.0.0.1:8000",
         "192.168.0.1:8000",
+        "10.20.30.40",
+        "172.16.0.1",
+        "172.31.255.255",
+        "169.254.1.2",
+        "100.101.102.103",
+        "0.0.0.0:8000",
         "[::1]",
         "[::1]:8000",
+        "[::]:8000",
+        "[::ffff:127.0.0.1]:8000",
         "[fe80::1]:8000",
+        "[fd12:3456::1]:8000",
       ]) {
         expect(checkHostHeader([], host)).toStrictEqual({ tag: "Allowed" });
+      }
+    });
+
+    test("allowed IP addresses", () => {
+      const allowedIps = decodeAllowedHosts(["203.0.113.5", "2001:db8::1"]);
+      for (const host of ["203.0.113.5:8000", "[2001:db8::1]:8000"]) {
+        expect(checkHostHeader(allowedIps, host)).toStrictEqual({
+          tag: "Allowed",
+        });
       }
     });
 
@@ -168,6 +202,12 @@ describe("AllowedHosts", () => {
         ["localhost.evil.com", "localhost.evil.com"],
         ["local", "local"],
         ["evil-local", "evil-local"],
+        ["203.0.113.5", "203.0.113.5"],
+        ["203.0.113.5:8000", "203.0.113.5"],
+        ["172.32.0.1", "172.32.0.1"],
+        ["100.128.0.1", "100.128.0.1"],
+        ["[2001:db8::1]:8000", "[2001:db8::1]"],
+        ["[::ffff:203.0.113.5]", "[::ffff:cb00:7105]"],
       ] as const) {
         expect(checkHostHeader(allowedHosts, host)).toStrictEqual({
           tag: "NotAllowed",
@@ -223,6 +263,9 @@ describe("AllowedHosts", () => {
         ["https://savr-someone.ngrok.dev", "savr-someone.ngrok.dev"],
         ["http://localhost.evil.com:8000", "localhost.evil.com"],
         ["chrome-extension://abcdef", "abcdef"],
+        ["http://203.0.113.5", "203.0.113.5"],
+        ["https://203.0.113.5:8443", "203.0.113.5"],
+        ["http://[2001:db8::1]:3000", "[2001:db8::1]"],
       ] as const) {
         expect(checkOriginHeader(allowedHosts, origin)).toStrictEqual({
           tag: "NotAllowed",
