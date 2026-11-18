@@ -262,7 +262,7 @@ describe("editor", () => {
 
       ⧙3. Restart the shell and elm-watch⧘
 
-      More info: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      More info: https://lydell.github.io/elm-watch/v2/browser-ui/#clickable-error-locations
     `);
   });
 
@@ -298,7 +298,7 @@ describe("editor", () => {
 
       ⧙3. Restart elm-watch⧘
 
-      More info: https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations
+      More info: https://lydell.github.io/elm-watch/v2/browser-ui/#clickable-error-locations
     `);
   });
 

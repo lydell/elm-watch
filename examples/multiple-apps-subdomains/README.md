@@ -20,9 +20,9 @@ public/
    └── style.css
 ```
 
-elm-watch’s static file server serves one folder. [elm-watch.mjs](./elm-watch.mjs) uses a custom server that puts the site’s folder name first in the URL, based on the host of the request, before letting elm-watch’s server do its thing. So `admin.localhost:8000/users` serves `public/admin/users`, which doesn’t exist, so elm-watch serves the [closest index.html](https://lydell.github.io/elm-watch/server/#indexhtml): `public/admin/index.html`.
+elm-watch’s static file server serves one folder. [elm-watch.mjs](./elm-watch.mjs) uses a custom server that puts the site’s folder name first in the URL, based on the host of the request, before letting elm-watch’s server do its thing. So `admin.localhost:8000/users` serves `public/admin/users`, which doesn’t exist, so elm-watch serves the [closest index.html](https://lydell.github.io/elm-watch/v2/server/#indexhtml): `public/admin/index.html`.
 
-Any `*.localhost` host goes to your own computer (no need to edit `/etc/hosts`), and elm-watch’s server [allows](https://lydell.github.io/elm-watch/server/#allowed-hosts) them by default. If you want to use other hosts, such as `admin.example.test`, add them to `allowedHosts`.
+Any `*.localhost` host goes to your own computer (no need to edit `/etc/hosts`), and elm-watch’s server [allows](https://lydell.github.io/elm-watch/v2/server/#allowed-hosts) them by default. If you want to use other hosts, such as `admin.example.test`, add them to `allowedHosts`.
 
 See [Running an example](../README.md#running-an-example) first.
 

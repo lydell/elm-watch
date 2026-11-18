@@ -23,7 +23,7 @@ import type { Brand } from "./Types.ts";
 // useful for hosts that change).
 
 export const ALLOWED_HOSTS_DOCS_LINK =
-  "https://lydell.github.io/elm-watch/server/#allowed-hosts";
+  "https://lydell.github.io/elm-watch/v2/server/#allowed-hosts";
 
 // A normalized hostname: Lowercase, punycode and no trailing dot.
 export type AllowedHost = Brand<string, "AllowedHost">;

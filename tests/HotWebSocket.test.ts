@@ -404,11 +404,11 @@ describe("hot", () => {
       });
 
       expect(grep(terminal, /rejected/)).toMatchInlineSnapshot(`
-        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: Host header not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: Host header not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/v2/server/#allowed-hosts)⧘
         ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: invalid Host header: "evil.com/"⧘
-        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "https://evil.com": origin not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "https://evil.com": origin not allowed – add "evil.com" to allowedHosts (see https://lydell.github.io/elm-watch/v2/server/#allowed-hosts)⧘
         ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "not a url": invalid origin: "not a url"⧘
-        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "null": pages opened via file:// (and sandboxed iframes) cannot connect – open the page via http:// instead, for example using elm-watch's server (see https://lydell.github.io/elm-watch/server/#allowed-hosts)⧘
+        ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from "null": pages opened via file:// (and sandboxed iframes) cannot connect – open the page via http:// instead, for example using elm-watch's server (see https://lydell.github.io/elm-watch/v2/server/#allowed-hosts)⧘
         ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: wrong URL prefix – "/elm-watch?" != "/nope?elmWa"⧘
         ✅ ⧙13:10:05⧘ Up to date   ⧙rejected web socket from unknown origin: invalid security token⧘
       `);

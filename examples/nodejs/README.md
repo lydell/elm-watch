@@ -1,6 +1,6 @@
 # elm-watch Node.js example
 
-This example runs a [Platform.worker](https://package.elm-lang.org/packages/elm/core/latest/Platform#worker) program in Node.js, with hot reloading. See [Workers](https://lydell.github.io/elm-watch/workers/) for background.
+This example runs a [Platform.worker](https://package.elm-lang.org/packages/elm/core/latest/Platform#worker) program in Node.js, with hot reloading. See [Workers](https://lydell.github.io/elm-watch/v2/workers/) for background.
 
 - [src/Main.elm](./src/Main.elm) is a worker program that receives messages from JavaScript via a port, and replies via another port.
 - [program.js](./program.js) runs the compiled Elm code, reads lines from stdin, sends them to Elm and prints the replies.

@@ -4,8 +4,8 @@
 
 elm-watch recompiles whenever your Elm files change and reloads the compiled JS in the browser.
 
-- 👉 [Getting started](https://lydell.github.io/elm-watch/getting-started/)
-- 👉 [What elm-watch is](https://lydell.github.io/elm-watch/what-elm-watch-is/)
+- 👉 [Getting started](https://lydell.github.io/elm-watch/v2/getting-started/)
+- 👉 [What elm-watch is](https://lydell.github.io/elm-watch/v2/what-elm-watch-is/)
 
 ## Installation
 

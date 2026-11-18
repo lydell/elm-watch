@@ -210,7 +210,7 @@ Instead, create a JavaScript file that imports elm-watch and calls \`elmWatch()\
 with your targets, and give each target a \`postprocess\` function.
 Run \`elm-watch init --javascript\` to create such a file from your
 elm-watch.json.
-Learn more: https://lydell.github.io/elm-watch/postprocess/`,
+Learn more: https://lydell.github.io/elm-watch/v2/postprocess/`,
       got: value,
       path: [],
     },

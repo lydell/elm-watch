@@ -2,7 +2,7 @@
 
 This example turns the compiled Elm code into an ECMAScript module (ESM), so that it can be imported with `import Elm from "./build/main.js"` – using the browser’s native `import`, without any bundler.
 
-Elm’s output is a _script_ which sets `this.Elm`, not a _module_ (see [window.Elm](https://lydell.github.io/elm-watch/window.Elm/) for details). The [postprocess](https://lydell.github.io/elm-watch/postprocess/) function in [elm-watch.mjs](./elm-watch.mjs) turns it into a module with a one-liner:
+Elm’s output is a _script_ which sets `this.Elm`, not a _module_ (see [window.Elm](https://lydell.github.io/elm-watch/v2/window.Elm/) for details). The [postprocess](https://lydell.github.io/elm-watch/v2/postprocess/) function in [elm-watch.mjs](./elm-watch.mjs) turns it into a module with a one-liner:
 
 ```js
 const output = {};

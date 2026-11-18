@@ -2,8 +2,8 @@
 
 This example shows:
 
-- A [Browser.application](https://lydell.github.io/elm-watch/server/#browserapplication) program, served by elm-watch’s [static file server](https://lydell.github.io/elm-watch/server/). Reloading the page works on any URL, thanks to the [index.html](https://lydell.github.io/elm-watch/server/#indexhtml) conventions.
-- Proxying API requests (URLs starting with `/api/`) to a backend, by passing a [custom server](https://lydell.github.io/elm-watch/server/#custom-server) to elm-watch in [elm-watch.mjs](./elm-watch.mjs). No dependencies needed. That way, the Elm app can make requests to the same origin, just like in production.
+- A [Browser.application](https://lydell.github.io/elm-watch/v2/server/#browserapplication) program, served by elm-watch’s [static file server](https://lydell.github.io/elm-watch/v2/server/). Reloading the page works on any URL, thanks to the [index.html](https://lydell.github.io/elm-watch/v2/server/#indexhtml) conventions.
+- Proxying API requests (URLs starting with `/api/`) to a backend, by passing a [custom server](https://lydell.github.io/elm-watch/v2/server/#custom-server) to elm-watch in [elm-watch.mjs](./elm-watch.mjs). No dependencies needed. That way, the Elm app can make requests to the same origin, just like in production.
 - Running elm-watch and the backend ([backend.js](./backend.js)) with one command, using [run-pty].
 
 See [Running an example](../README.md#running-an-example) first.

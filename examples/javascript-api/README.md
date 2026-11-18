@@ -1,6 +1,6 @@
 # elm-watch JavaScript API example
 
-This is the [minimal example](../minimal/), but using elm-watch’s [JavaScript API](https://lydell.github.io/elm-watch/javascript-api/) instead of `elm-watch.json`.
+This is the [minimal example](../minimal/), but using elm-watch’s [JavaScript API](https://lydell.github.io/elm-watch/v2/javascript-api/) instead of `elm-watch.json`.
 
 [elm-watch.mjs](./elm-watch.mjs) was created by running `elm-watch init --javascript` in a copy of the minimal example. That command converted `elm-watch.json` into `elm-watch.mjs`, and it has not been changed since. It works just like the `elm-watch` command (including target name filtering and `--debug`/`--optimize`), but now it’s just code that you can change however you like. The other examples build on this.
 

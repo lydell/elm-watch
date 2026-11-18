@@ -139,7 +139,7 @@ describe("init", () => {
 
       /Users/you/project/tests/fixtures/init/existing-entrypoint/elm-watch.ts
 
-      Documentation: https://lydell.github.io/elm-watch/javascript-api/
+      Documentation: https://lydell.github.io/elm-watch/v2/javascript-api/
     `);
   });
 
@@ -150,7 +150,7 @@ describe("init", () => {
 
       /Users/you/project/tests/fixtures/init/existing-entrypoint/elm-watch.ts
 
-      Documentation: https://lydell.github.io/elm-watch/javascript-api/
+      Documentation: https://lydell.github.io/elm-watch/v2/javascript-api/
     `);
   });
 
@@ -206,7 +206,7 @@ describe("init", () => {
       Created a minimal ⧙elm-watch.json⧘ in the current directory to get you started.
       Go check it out!
 
-      Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+      Documentation: https://lydell.github.io/elm-watch/v2/elm-watch.json/
 
     `);
 
@@ -238,7 +238,7 @@ describe("init", () => {
 
       Go check it out, and adjust the outputs to where you want them!
 
-      Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+      Documentation: https://lydell.github.io/elm-watch/v2/elm-watch.json/
     `);
     expect(json).toMatchInlineSnapshot(`
       {
@@ -306,7 +306,7 @@ describe("init", () => {
       Created a minimal ⧙elm-watch.json⧘ in the current directory to get you started.
       Go check it out!
 
-      Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+      Documentation: https://lydell.github.io/elm-watch/v2/elm-watch.json/
     `);
     expect(json).toMatchInlineSnapshot(`
       {
@@ -330,7 +330,7 @@ describe("init", () => {
       Created a minimal ⧙elm-watch.json⧘ in the current directory to get you started.
       Go check it out!
 
-      Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+      Documentation: https://lydell.github.io/elm-watch/v2/elm-watch.json/
     `);
     expect(json).toMatchInlineSnapshot(`
       {
@@ -365,9 +365,9 @@ describe("init", () => {
         and output need an elm.json with "type": "application" now. To typecheck the
         package, change the target to "type": "package" (and remove "inputs" and
         "output"). To compile an example using the package, give the example its own
-        elm.json: https://lydell.github.io/elm-watch/elm-watch.json/#package-targets
+        elm.json: https://lydell.github.io/elm-watch/v2/elm-watch.json/#package-targets
 
-        Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+        Documentation: https://lydell.github.io/elm-watch/v2/elm-watch.json/
       `);
       expect(first.json).toMatchInlineSnapshot(`
         {
@@ -446,7 +446,7 @@ describe("init", () => {
         ⧙(not found)⧘ means that I couldn’t find an elm.json for the target.
         Please update "elmJson" yourself!
 
-        Documentation: https://lydell.github.io/elm-watch/elm-watch.json/
+        Documentation: https://lydell.github.io/elm-watch/v2/elm-watch.json/
       `);
       expect(json).toMatchInlineSnapshot(`
         {

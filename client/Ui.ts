@@ -3256,7 +3256,7 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
           h(
             HTMLAnchorElement,
             {
-              href: "https://lydell.github.io/elm-watch/https/",
+              href: "https://lydell.github.io/elm-watch/v2/https/",
               target: "_blank",
               rel: "noreferrer",
             },

@@ -92,7 +92,7 @@ export async function editorCommand(
 const URL_EXAMPLE = "pycharm://open?file={file}&line={line}&column={column0}";
 
 const DOCS_URL =
-  "https://lydell.github.io/elm-watch/browser-ui/#clickable-error-locations";
+  "https://lydell.github.io/elm-watch/v2/browser-ui/#clickable-error-locations";
 
 function gettingStarted(env: Env): string {
   const variables = EDITOR_PLACEHOLDERS.map((placeholder) =>

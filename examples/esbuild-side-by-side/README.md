@@ -6,7 +6,7 @@ This example uses [esbuild] to compile TypeScript and bundle npm packages, by ru
 - esbuild compiles [ts/main.ts](./ts/main.ts) (which uses the [js-confetti] npm package) to `public/build/app.js`. elm-watch serves that file too.
 - `tsc --watch` type checks the TypeScript code. esbuild only removes the types, without checking them. In a project with not much TypeScript, you might find that your editor showing type errors (plus running `tsc` on CI) is enough, and skip `tsc --watch`.
 - [run-pty] runs all three with one command, with a tab for each.
-- [index.html](./public/index.html) loads the compiled Elm code and the compiled TypeScript code in separate script tags (see [window.Elm](https://lydell.github.io/elm-watch/window.Elm/)). It also listens for the `elm-watch:changed-file-url-paths` event to reload the page when esbuild has rebuilt `app.js` (see [Reacting to changed files](https://lydell.github.io/elm-watch/server/#reacting-to-changed-files)).
+- [index.html](./public/index.html) loads the compiled Elm code and the compiled TypeScript code in separate script tags (see [window.Elm](https://lydell.github.io/elm-watch/v2/window.Elm/)). It also listens for the `elm-watch:changed-file-url-paths` event to reload the page when esbuild has rebuilt `app.js` (see [Reacting to changed files](https://lydell.github.io/elm-watch/v2/server/#reacting-to-changed-files)).
 
 See [Running an example](../README.md#running-an-example) first.
 

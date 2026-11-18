@@ -2,7 +2,7 @@
 
 This example shows how to make a production build:
 
-- Minify the compiled Elm code with [SWC] in a [postprocess](https://lydell.github.io/elm-watch/postprocess/) function, in `--optimize` mode. SWC does its work on other threads, so it doesn’t block elm-watch.
+- Minify the compiled Elm code with [SWC] in a [postprocess](https://lydell.github.io/elm-watch/v2/postprocess/) function, in `--optimize` mode. SWC does its work on other threads, so it doesn’t block elm-watch.
 - After `make` is done, copy everything to `dist/` and add content hashes to file names (like `main.f7225565.js`), so that browsers can cache them forever. This is done after elm-watch is done (rather than in the postprocess function), since it needs to know about all files at once to update `index.html`.
 
 Everything is in [elm-watch.mjs](./elm-watch.mjs).

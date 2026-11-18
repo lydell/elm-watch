@@ -1,6 +1,6 @@
 # Minimal elm-watch example
 
-This is a minimal example of how to use elm-watch: An [elm-watch.json](./elm-watch.json) file, and an [index.html](./index.html) file that loads the compiled Elm code. `"serve": "."` in `elm-watch.json` enables elm-watch’s [static file server](https://lydell.github.io/elm-watch/server/), so you don’t need a server of your own. It also gives you CSS hot reloading, and supports `Browser.application`.
+This is a minimal example of how to use elm-watch: An [elm-watch.json](./elm-watch.json) file, and an [index.html](./index.html) file that loads the compiled Elm code. `"serve": "."` in `elm-watch.json` enables elm-watch’s [static file server](https://lydell.github.io/elm-watch/v2/server/), so you don’t need a server of your own. It also gives you CSS hot reloading, and supports `Browser.application`.
 
 See [Running an example](../README.md#running-an-example) first.
 

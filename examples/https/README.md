@@ -1,6 +1,6 @@
 # elm-watch HTTPS example
 
-This example serves the page over `https://` instead of `http://`, by giving elm-watch an HTTPS server via the `createServer` option in [elm-watch.mjs](./elm-watch.mjs). See [HTTPS](https://lydell.github.io/elm-watch/https/) in the docs for background.
+This example serves the page over `https://` instead of `http://`, by giving elm-watch an HTTPS server via the `createServer` option in [elm-watch.mjs](./elm-watch.mjs). See [HTTPS](https://lydell.github.io/elm-watch/v2/https/) in the docs for background.
 
 You usually don’t need HTTPS for local development: browsers treat `http://localhost` as secure. But if you need HTTPS, for example for testing on your phone via the local network with web features that only work on secure pages, this is how.
 
