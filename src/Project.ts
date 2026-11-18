@@ -24,7 +24,12 @@ import {
   getSnapshot,
 } from "./ExternalErrors.ts";
 import { silentlyReadIntEnvValue, toError } from "./Helpers.ts";
-import { type Host, type HostSource, resolveHost } from "./Host.ts";
+import {
+  type Host,
+  type HostSource,
+  resolveHost,
+  type ServerLinks,
+} from "./Host.ts";
 import type { WalkImportsError } from "./ImportWalker.ts";
 import { isNonEmptyArray, type NonEmptyArray } from "./NonEmptyArray.ts";
 import {
@@ -87,6 +92,7 @@ export type Project = {
   // elm-stuff/elm-watch/stuff.json. Only used if `openEditor` is `NotSet`.
   editor: EditorPreset | undefined;
   errorReporter: ErrorReporter | undefined;
+  serverLinks: ServerLinks | undefined;
   // The external errors as of the last time the status lines were printed.
   // See `ExternalErrors.ts`.
   externalErrors: ExternalErrorsSnapshot;
@@ -656,6 +662,7 @@ export function initProject({
           ? undefined
           : findPreset(elmWatchStuffJson.editor),
       errorReporter: config.errorReporter,
+      serverLinks: config.serverLinks,
       externalErrors: getSnapshot(config.errorReporter),
     },
   };

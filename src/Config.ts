@@ -1,6 +1,6 @@
 import type { AllowedHost } from "./AllowedHosts.ts";
 import type { ErrorReporter } from "./ExternalErrors.ts";
-import type { Host } from "./Host.ts";
+import type { Host, ServerLinks } from "./Host.ts";
 import type { NonEmptyArray } from "./NonEmptyArray.ts";
 import type { Port } from "./Port.ts";
 import type {
@@ -25,6 +25,7 @@ export type Config = {
   serve: string | undefined;
   allowedHosts: Array<AllowedHost>;
   errorReporter: ErrorReporter | undefined;
+  serverLinks: ServerLinks | undefined;
 };
 
 export type ConfigSource =

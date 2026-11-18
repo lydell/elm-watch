@@ -8,6 +8,7 @@ import {
   markAsHost,
   printServerLinks,
   resolveHost,
+  type ServerLinks,
 } from "../src/Host.ts";
 
 describe("getHostFromEnv", () => {
@@ -109,13 +110,18 @@ describe("getNetworkIps", () => {
 });
 
 describe("printServerLinks", () => {
-  function print(host: string, networkIps: Array<string>): string {
+  function print(
+    host: string,
+    networkIps: Array<string>,
+    serverLinks?: ServerLinks,
+  ): string | undefined {
     return printServerLinks({
       protocol: "http",
       port: 1234,
       host: markAsHost(host),
       networkIps,
-    }).replace(/\x1B\[\d*m/g, "");
+      serverLinks,
+    })?.replace(/\x1B\[\d*m/g, "");
   }
 
   test("localhost", () => {
@@ -146,5 +152,83 @@ describe("printServerLinks", () => {
     expect(print("0.0.0.0", ["192.168.0.1", "192.168.139.3"])).toBe(
       "http://localhost:1234   network: http://192.168.0.1:1234   http://192.168.139.3:1234",
     );
+  });
+
+  describe("serverLinks", () => {
+    test("default links as URLs, printed without trailing slash", () => {
+      const calls: Array<unknown> = [];
+      expect(
+        print("0.0.0.0", ["192.168.0.1"], (links) => {
+          calls.push(links);
+          return [links.local, ...links.network];
+        }),
+      ).toBe("http://localhost:1234   http://192.168.0.1:1234");
+      expect(calls).toStrictEqual([
+        {
+          local: new URL("http://localhost:1234"),
+          network: [new URL("http://192.168.0.1:1234")],
+        },
+      ]);
+    });
+
+    test("network is empty unless listening on all interfaces", () => {
+      expect(
+        print("::1", ["192.168.0.1"], ({ local, network }) => [
+          local,
+          ...network,
+        ]),
+      ).toBe("http://[::1]:1234");
+    });
+
+    test("empty array hides the line", () => {
+      expect(print("127.0.0.1", [], () => [])).toBeUndefined();
+    });
+
+    test("modified URLs and strings", () => {
+      expect(
+        print("127.0.0.1", [], ({ local }) => {
+          const admin = new URL(local);
+          admin.hostname = `admin.${local.hostname}`;
+          local.pathname = "/app/";
+          return [local, admin, "http://localhost:5173", "https://x.test:443"];
+        }),
+      ).toBe(
+        "http://localhost:1234/app/   http://admin.localhost:1234   http://localhost:5173   https://x.test",
+      );
+    });
+
+    test("fresh URL instances on every call", () => {
+      const serverLinks: ServerLinks = ({ local }) => {
+        local.port = String(Number(local.port) + 1);
+        return [local];
+      };
+      expect(print("127.0.0.1", [], serverLinks)).toBe("http://localhost:1235");
+      expect(print("127.0.0.1", [], serverLinks)).toBe("http://localhost:1235");
+    });
+
+    test("throws", () => {
+      expect(
+        print("127.0.0.1", [], () => {
+          throw new Error("Oops\nsecond line");
+        }),
+      ).toBe("serverLinks threw an error: Oops");
+    });
+
+    test("returns a non-array", () => {
+      expect(
+        print("127.0.0.1", [], () => "http://localhost" as unknown as []),
+      ).toBe('serverLinks must return an array, but got: "http://localhost"');
+    });
+
+    test("returns an invalid URL", () => {
+      expect(
+        print("127.0.0.1", [], () => [
+          "http://localhost:1234",
+          "localhost:5173",
+        ]),
+      ).toBe(
+        'serverLinks must return http(s) URLs (URL objects or strings), but got: "localhost:5173"',
+      );
+    });
   });
 });

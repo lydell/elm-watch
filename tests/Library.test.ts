@@ -3,6 +3,7 @@ import * as net from "net";
 import * as path from "path";
 import { describe, expect, test } from "vitest";
 
+import type { ServerLinks } from "../index.d.ts";
 import type { HotTestHooks } from "../src/Hot.ts";
 import { createErrorReporter, elmWatch } from "../src/index.ts";
 import { copyFixture } from "./FixtureCopies.ts";
@@ -130,6 +131,7 @@ describe("library", () => {
       webSocketUrl: undefined,
       allowedHosts: undefined,
       createServer: undefined,
+      serverLinks: undefined,
     }));
 
     expect(stdout).toMatchInlineSnapshot(`
@@ -156,6 +158,74 @@ describe("library", () => {
     }));
 
     expect(stdout).toBe("");
+  });
+
+  describe("serverLinks option", () => {
+    async function runHot(serverLinks: ServerLinks): Promise<string> {
+      const root = copyFixture(".", "library");
+      let port = "";
+      let isIdle = false;
+      const hotTestHooks: HotTestHooks = {
+        kill: undefined,
+        onUpdate: (_msg, idle) => {
+          isIdle = idle;
+        },
+      };
+      const stdout = new CursorWriteStream();
+      stdout.columns = 120;
+      const stderr = new MemoryWriteStream();
+      const done = elmWatch({
+        root,
+        runMode: "hot",
+        targets: [
+          {
+            type: "application",
+            name: "main",
+            elmJson: "elm.json",
+            inputs: ["src/Main.elm"],
+            output: "build/main.js",
+          },
+        ],
+        serverLinks: (links: Parameters<ServerLinks>[0]) => {
+          ({ port } = links.local);
+          return serverLinks(links);
+        },
+        env: { ...process.env, ...TEST_ENV },
+        stdin: new SilentReadStream(),
+        stdout,
+        stderr,
+        logDebug,
+        hotTestHooks,
+      });
+      await waitFor(() => isIdle && stdout.getOutput().includes("✅"));
+      await hotTestHooks.kill?.();
+      await done;
+      expect(stderr.content).toBe("");
+      return clean(stdout.getOutput().split(port).join("PORT"));
+    }
+
+    test("custom links", async () => {
+      const stdout = await runHot(({ local }) => {
+        const admin = new URL(local);
+        admin.hostname = "admin.localhost";
+        return [local, admin, "http://localhost:5173/app/"];
+      });
+      expect(stdout).toMatchInlineSnapshot(`
+        ✅ main⧙                                                                          765 ms T ¦  50 ms W⧘
+        🌐 http://localhost:PORT   http://admin.localhost:PORT   http://localhost:5173/app/
+
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
+      `);
+    });
+
+    test("empty array hides the line", async () => {
+      const stdout = await runHot(() => []);
+      expect(stdout).toMatchInlineSnapshot(`
+        ✅ main⧙                                                                          765 ms T ¦  50 ms W⧘
+
+        ✅ ⧙13:10:05⧘ Compiled in ⧙123 ms⧘
+      `);
+    });
   });
 
   describe("port option in hot mode", () => {
@@ -448,6 +518,7 @@ describe("library", () => {
           "allowedHosts",
           "errors",
           "createServer",
+          "serverLinks",
           "signal",
           "env",
           "stdin",
@@ -538,6 +609,7 @@ describe("library", () => {
           "allowedHosts",
           "errors",
           "createServer",
+          "serverLinks",
           "signal",
           "env",
           "stdin",

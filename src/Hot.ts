@@ -23,7 +23,7 @@ import * as ErrorSelection from "./ErrorSelection.ts";
 import * as ErrorView from "./ErrorView.ts";
 import * as ExternalErrors from "./ExternalErrors.ts";
 import { silentlyReadIntEnvValue, toError } from "./Helpers.ts";
-import { getNetworkIps, type Host, printServerLinks } from "./Host.ts";
+import { getNetworkIps, printServerLinks } from "./Host.ts";
 import {
   type Cmd,
   getNextActionSleepMs,
@@ -421,13 +421,14 @@ const initMutable =
         // This has to be done once the server is ready – we don’t know the
         // final port number to print until then.
         if (!terminal.config.isTTY && isNewDevServer) {
-          terminal.write(
-            printServerLine(
-              terminal.config,
-              mutable.devServer,
-              mutable.project.host,
-            ),
+          const serverLine = printServerLine(
+            terminal.config,
+            mutable.devServer,
+            mutable.project,
           );
+          if (serverLine !== undefined) {
+            terminal.write(serverLine);
+          }
         }
       })
       .catch(rejectPromise);
@@ -767,12 +768,13 @@ const runCmd =
           return;
         }
 
+        const serverLine = printServerLine(
+          terminal.config,
+          mutable.devServer,
+          mutable.project,
+        );
         const fullMessage = [
-          printServerLine(
-            terminal.config,
-            mutable.devServer,
-            mutable.project.host,
-          ),
+          ...(serverLine === undefined ? [] : [serverLine]),
           "",
           infoLine,
         ].join("\n");
@@ -1464,23 +1466,28 @@ function webSocketSendToOutput(
   }
 }
 
+// Returns `undefined` if the `serverLinks` option hides the line.
 function printServerLine(
   terminalConfig: TerminalConfig,
   devServer: DevServer,
-  host: Host,
-): string {
-  return Compile.printStatusLine({
-    maxWidth: terminalConfig.columns,
-    fancy: terminalConfig.fancy,
-    isTTY: terminalConfig.isTTY,
-    emojiName: "Server",
-    string: printServerLinks({
-      protocol: devServer.isHTTPS ? "https" : "http",
-      port: devServer.port,
-      host,
-      networkIps: getNetworkIps(os.networkInterfaces()),
-    }),
+  project: Project,
+): string | undefined {
+  const links = printServerLinks({
+    protocol: devServer.isHTTPS ? "https" : "http",
+    port: devServer.port,
+    host: project.host,
+    networkIps: getNetworkIps(os.networkInterfaces()),
+    serverLinks: project.serverLinks,
   });
+  return links === undefined
+    ? undefined
+    : Compile.printStatusLine({
+        maxWidth: terminalConfig.columns,
+        fancy: terminalConfig.fancy,
+        isTTY: terminalConfig.isTTY,
+        emojiName: "Server",
+        string: links,
+      });
 }
 
 // Store the editor chosen in the terminal or the browser, and let all browsers
@@ -1593,9 +1600,14 @@ function renderErrorView(
         0,
       selected: highlightSelected && selection.targetName === targetName,
     }));
-    terminal.write(
-      printServerLine(terminal.config, mutable.devServer, mutable.project.host),
+    const serverLine = printServerLine(
+      terminal.config,
+      mutable.devServer,
+      mutable.project,
     );
+    if (serverLine !== undefined) {
+      terminal.write(serverLine);
+    }
     terminal.write("");
 
     terminal.writeWithoutTrailingNewline(

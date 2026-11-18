@@ -164,6 +164,7 @@ Type definition: `import type { Options } from "elm-watch"`.
 | webSocketUrl | `string` | unset | Like `"webSocketUrl"` in elm-watch.json. The `ELM_WATCH_WEBSOCKET_URL` environment variable takes precedence. |
 | allowedHosts | `Array<string>` | `[]` | Like `"allowedHosts"` in elm-watch.json. See [Allowed hosts](../server/#allowed-hosts). The `ELM_WATCH_ALLOWED_HOSTS` environment variable adds more hosts. |
 | createServer | `function` | `http.createServer` | See [Custom server](../server/#custom-server). |
+| serverLinks | `function` | `({ local, network }) => [local, ...network]` | The links printed on the 🌐 line in the terminal. See [Server links](#server-links). |
 | errors | `ErrorReporter` | unset | Errors from other tools, shown like Elm’s errors. See [Showing errors from other tools](#showing-errors-from-other-tools). |
 | signal | `AbortSignal` | unset | Abort to make elm-watch exit (in `"hot"` mode). See [Stopping elm-watch](#stopping-elm-watch). |
 | env | `Record<string, string \| undefined>` | `process.env` | Environment variables, such as `NO_COLOR`. See [Environment variables](#environment-variables). |
@@ -290,6 +291,41 @@ process.exitCode = await elmWatch({
 
 See the [esbuild in-process example](https://github.com/lydell/elm-watch/tree/main/examples/esbuild-in-process#readme) and the [code generation example](https://github.com/lydell/elm-watch/tree/main/examples/code-generation#readme).
 
+## Server links
+
+In `"hot"` mode, elm-watch prints a link to its server on the 🌐 line in the terminal. With `"host": "0.0.0.0"`, it also prints links for the local network. When the page to open isn’t served directly by elm-watch, those links can be confusing for the people using your setup. Use the `serverLinks` option to print other links, or none:
+
+```js
+process.exitCode = await elmWatch({
+  // ...
+
+  // Vite (or a backend) serves the page, elm-watch is only used for its WebSocket:
+  // Hide the line.
+  serverLinks: () => [],
+
+  // Point to the server people should actually open.
+  serverLinks: ({ local, network }) =>
+    [local, ...network].map((url) => {
+      url.port = "5173";
+      return url;
+    }),
+
+  // Several apps on different subdomains.
+  serverLinks: ({ local }) => {
+    const admin = new URL(local);
+    admin.hostname = "admin.localhost";
+    return [local, admin];
+  },
+});
+```
+
+- `local` is a [URL] for elm-watch’s server, like `http://localhost:63454`.
+- `network` contains one URL per IPv4 network address of your computer, like `http://192.168.1.12:63454`, when `host` is `"0.0.0.0"`. Otherwise it is empty.
+- Return an array of URLs, or strings with URLs. They must start with `http:` or `https:`. An empty array hides the 🌐 line.
+- You get new URL instances on every call, so it is safe to modify them. But if you need the same URL more than once, make copies with `new URL(url)`.
+- The function is called whenever the 🌐 line is printed (which can be often), so keep it fast. If it throws or returns something invalid, the 🌐 line shows the error instead.
+- This only changes what is printed. It doesn’t change which hosts elm-watch’s server accepts requests for (see [Allowed hosts](../server/#allowed-hosts)).
+
 ## Stopping elm-watch
 
 In `"hot"` mode, elm-watch runs until you press ctrl+c, or until it receives SIGTERM (which `node --watch` sends when restarting). To stop it from code, pass an [AbortSignal] as the `signal` option. Just like for SIGTERM, elm-watch lets running `elm` processes finish before exiting, and the promise returned by `elmWatch()` then resolves to 0.
@@ -312,4 +348,5 @@ process.exitCode = await elmWatch({
 [abortsignal]: https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal
 [fs.globsync]: https://nodejs.org/api/fs.html#fsglobsyncpattern-options
 [node --watch]: https://nodejs.org/api/cli.html#--watch
+[url]: https://developer.mozilla.org/en-US/docs/Web/API/URL
 [util.parseArgs]: https://nodejs.org/api/util.html#utilparseargsconfig

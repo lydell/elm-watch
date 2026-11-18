@@ -66,6 +66,7 @@ const project: Project = {
   hostSource: "Default",
   editor: undefined,
   errorReporter: undefined,
+  serverLinks: undefined,
   externalErrors: EMPTY_SNAPSHOT,
   disabledOutputs: [
     {

@@ -463,6 +463,7 @@ function toConfig(
     serve: json.serve,
     allowedHosts: json.allowedHosts ?? [],
     errorReporter: undefined,
+    serverLinks: undefined,
   };
 }
 

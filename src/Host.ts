@@ -2,7 +2,7 @@ import type * as os from "os";
 import * as Codec from "tiny-decoders";
 
 import { ELM_WATCH_HOST, type Env, getEnvValue } from "./Env.ts";
-import { dim } from "./Helpers.ts";
+import { dim, sanitizeTerminalText, toError } from "./Helpers.ts";
 
 export type Host = string & {
   readonly Host: never;
@@ -42,39 +42,97 @@ export function getHostFromEnv(env: Env): Host | undefined {
   return string === undefined ? undefined : markAsHost(string);
 }
 
+// Returns `undefined` if there is nothing to print (`serverLinks` returned an
+// empty array).
 export function printServerLinks({
   protocol,
   port,
   host,
   networkIps,
+  serverLinks,
 }: {
   protocol: "http" | "https";
   port: number;
   host: Host;
   networkIps: Array<string>;
-}): string {
-  if (host !== "0.0.0.0") {
-    // `localhost` is easier to read, and the same thing in practice.
-    const hostname =
-      host === "127.0.0.1"
-        ? "localhost"
-        : host.includes(":")
-          ? `[${host}]` // IPv6
-          : host;
-    return `${protocol}://${hostname}:${port}`;
+  serverLinks: ServerLinks | undefined;
+}): string | undefined {
+  // `localhost` is easier to read, and the same thing in practice.
+  const hostname =
+    host === "0.0.0.0" || host === "127.0.0.1"
+      ? "localhost"
+      : host.includes(":")
+        ? `[${host}]` // IPv6
+        : host;
+  const makeLink = (urlHost: string): string =>
+    `${protocol}://${urlHost}:${port}`;
+
+  if (serverLinks === undefined) {
+    const local = makeLink(hostname);
+    if (host !== "0.0.0.0" || networkIps.length === 0) {
+      return local;
+    }
+    const network = networkIps.map(makeLink).join(SEPARATOR);
+    return `${local}${SEPARATOR}${dim("network:")} ${network}`;
   }
 
-  const local = `${protocol}://localhost:${port}`;
-
-  if (networkIps.length === 0) {
-    return local;
+  // Fresh instances on every call, since `URL`s are mutable. (`new URL` is
+  // inside the `try`, since it throws for some valid hosts, like IPv6 addresses
+  // with zone IDs.)
+  let links: unknown;
+  try {
+    links = serverLinks({
+      local: new URL(makeLink(hostname)),
+      network:
+        host === "0.0.0.0" ? networkIps.map((ip) => new URL(makeLink(ip))) : [],
+    });
+  } catch (error) {
+    return `serverLinks threw an error: ${firstLine(toError(error).message)}`;
   }
 
-  const network = networkIps
-    .map((ip) => `${protocol}://${ip}:${port}`)
-    .join("   ");
+  if (!Array.isArray(links)) {
+    return `serverLinks must return an array, but got: ${firstLine(Codec.repr(links))}`;
+  }
 
-  return `${local}   ${dim("network:")} ${network}`;
+  const formatted: Array<string> = [];
+  for (const link of links as Array<unknown>) {
+    const url =
+      link instanceof URL
+        ? link
+        : typeof link === "string" && URL.canParse(link)
+          ? new URL(link)
+          : undefined;
+    // Without `http:` or `https:`, terminals don’t make the link clickable.
+    // (`new URL("localhost:5173")` has the protocol `localhost:`.)
+    if (
+      url === undefined ||
+      (url.protocol !== "http:" && url.protocol !== "https:")
+    ) {
+      return `serverLinks must return http(s) URLs (URL objects or strings), but got: ${firstLine(Codec.repr(link))}`;
+    }
+    formatted.push(formatUrl(url));
+  }
+
+  return formatted.length === 0 ? undefined : formatted.join(SEPARATOR);
+}
+
+export type ServerLinks = (defaultLinks: {
+  local: URL;
+  network: Array<URL>;
+}) => Array<URL | string>;
+
+const SEPARATOR = "   ";
+
+// `new URL("http://localhost:1234").href` is "http://localhost:1234/". Print it
+// without the trailing slash, like people usually write it.
+function formatUrl(url: URL): string {
+  return url.pathname === "/" && url.search === "" && url.hash === ""
+    ? url.href.slice(0, -1)
+    : url.href;
+}
+
+function firstLine(string: string): string {
+  return sanitizeTerminalText(string).plain.trim().split("\n")[0] ?? "";
 }
 
 // The IPv4 addresses to print as links when listening on all interfaces.

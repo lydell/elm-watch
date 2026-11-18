@@ -193,6 +193,7 @@ export function makeProject({
     hostSource: "Default",
     editor: undefined,
     errorReporter: undefined,
+    serverLinks: undefined,
     externalErrors: EMPTY_SNAPSHOT,
   };
 }

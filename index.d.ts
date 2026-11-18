@@ -34,6 +34,19 @@ export type CreateServer = (listeners: {
   | ReturnType<typeof http.createServer>
   | ReturnType<typeof https.createServer>;
 
+// Useful when the page to open isn’t served directly by elm-watch’s server, for
+// example when it lives on another server, host or path. This only changes what
+// is printed, not which hosts the server accepts (see `allowedHosts`).
+// You get fresh `URL` instances on every call – use `new URL(url)` to make
+// copies. Called whenever the 🌐 line is printed, so keep it fast.
+export type ServerLinks = (defaultLinks: {
+  // elm-watch’s server, like http://localhost:63454.
+  local: URL;
+  // When `host` is "0.0.0.0": One link per IPv4 network address of this
+  // computer, like http://192.168.1.12:63454. Otherwise empty.
+  network: Array<URL>;
+}) => Array<URL | string>;
+
 // Transforms Elm’s JavaScript output. Runs in the same thread as elm-watch, so
 // avoid heavy synchronous work (a minifier that runs on its own thread, like
 // SWC, is fine). If it throws, the error is shown just like a compilation error.
@@ -122,6 +135,11 @@ export type Options = {
   allowedHosts?: Array<string> | undefined;
 
   createServer?: CreateServer | undefined;
+
+  // The links printed on the 🌐 line in the terminal in "hot" mode. Return an
+  // empty array to hide the line.
+  // Default: `({ local, network }) => [local, ...network]`
+  serverLinks?: ServerLinks | undefined;
 
   // Errors from other tools, shown like Elm’s errors. See `createErrorReporter`.
   errors?: ErrorReporter | undefined;

@@ -11,7 +11,7 @@ import {
   TargetName,
 } from "./ElmWatchJson.ts";
 import { isErrorReporter, setTargetNames } from "./ExternalErrors.ts";
-import { Host } from "./Host.ts";
+import { Host, type ServerLinks } from "./Host.ts";
 import { NonEmptyArray } from "./NonEmptyArray.ts";
 import { Port } from "./Port.ts";
 import {
@@ -146,6 +146,7 @@ const Options = Codec.fields(
     errors: optionalField(ErrorReporterCodec),
     // These are validated by TypeScript only.
     createServer: optionalField(functionCodec<object>()),
+    serverLinks: optionalField(functionCodec<ServerLinks>()),
     signal: optionalField(Codec.unknown),
     env: optionalField(Codec.unknown),
     stdin: optionalField(Codec.unknown),
@@ -250,6 +251,7 @@ export function decodeOptions(options: unknown): DecodeOptionsResult {
           serve: value.serve,
           allowedHosts: value.allowedHosts ?? [],
           errorReporter: value.errors,
+          serverLinks: value.serverLinks,
         },
       };
     }
