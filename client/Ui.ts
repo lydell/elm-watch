@@ -1377,6 +1377,15 @@ export function createUi(): Ui {
   const flash = (flashType: FlashType): void => {
     const element = toggleButton.querySelector(`.${CLASS.flash}`);
     if (element instanceof HTMLElement) {
+      // With several targets, one might succeed while another fails at about
+      // the same time. Don’t let the success hide the error. (The attribute is
+      // removed when the animation ends.)
+      if (
+        flashType === "success" &&
+        element.getAttribute("data-flash") === "error"
+      ) {
+        return;
+      }
       // Restart the animation if it is already running.
       element.removeAttribute("data-flash");
       void element.offsetWidth;
