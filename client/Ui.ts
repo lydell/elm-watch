@@ -2330,7 +2330,7 @@ default popover styles.
   overflow: hidden;
   background-color: var(--bg);
   border: var(--border);
-  border-radius: 0;
+  border-radius: 4px;
   /* Stand out a bit more from the page behind. */
   box-shadow: 0 0.125em 0.75em rgb(0 0 0 / 0.25);
   outline: none;
