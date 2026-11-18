@@ -9,9 +9,14 @@ export function walkImports(
   inputRealPaths: NonEmptyArray<string>,
 ): WalkImportsResult;
 
-export function inject(compilationMode: CompilationMode, code: string): string;
+export function inject(
+  compilationMode: CompilationMode,
+  code: string,
+  targetName?: string,
+): string;
 
 export function elmMake(options: {
+  compiler?: Compiler;
   elmJsonPath: string;
   compilationMode: CompilationMode;
   inputs: NonEmptyArray<string>;
@@ -27,6 +32,8 @@ export type NonEmptyArray<T> = [T, ...Array<T>];
 export type Env = Record<string, string | undefined>;
 
 export type CompilationMode = "debug" | "standard" | "optimize";
+
+export type Compiler = "elm" | "lamdera";
 
 export type ElmJsonParseResult =
   | ElmJsonParseError
