@@ -11,6 +11,10 @@ export function walkImports(
 
 // Hot reloaded code uses the scheduler of the first code evaluated with the
 // same `targetName`, so pass a unique name per compiled file.
+// Code with built-in hot reloading (`Elm.hot`, used by Lamdera and the
+// `hot-reload-stop` forks of elm/core etc.) gets a different injection, which
+// only supports hot reloading together with elm-watch’s client. It lacks
+// `init("__elmWatchReturnData")` and `app.__elmWatchHotReload`.
 export function inject(
   compilationMode: CompilationMode,
   code: string,
