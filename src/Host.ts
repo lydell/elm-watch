@@ -55,7 +55,12 @@ export function printServerLinks({
 }): string {
   if (host !== "0.0.0.0") {
     // `localhost` is easier to read, and the same thing in practice.
-    const hostname = host === "127.0.0.1" ? "localhost" : host;
+    const hostname =
+      host === "127.0.0.1"
+        ? "localhost"
+        : host.includes(":")
+          ? `[${host}]` // IPv6
+          : host;
     return `${protocol}://${hostname}:${port}`;
   }
 

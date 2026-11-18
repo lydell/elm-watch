@@ -128,6 +128,10 @@ describe("printServerLinks", () => {
     );
   });
 
+  test("IPv6 host", () => {
+    expect(print("::1", [])).toBe("http://[::1]:1234");
+  });
+
   test("all interfaces, no network addresses", () => {
     expect(print("0.0.0.0", [])).toBe("http://localhost:1234");
   });
