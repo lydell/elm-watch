@@ -47,7 +47,7 @@ export type UiMsg =
       sendKey: SendKey;
     }
   | {
-      tag: "PressedReconnectNow";
+      tag: "PressedConnectNow";
     };
 
 // See `OpenEditorSetupChanged`.
@@ -92,7 +92,8 @@ export type Status =
   | {
       tag: "Connecting";
       date: Date;
-      // The number of failed attempts so far (0 for the first connection).
+      // The attempt in progress. Starts at 1, both on page load and after
+      // losing the connection.
       attemptNumber: number;
     }
   | {
@@ -116,6 +117,7 @@ export type Status =
   | {
       tag: "SleepingBeforeReconnect";
       date: Date;
+      // The attempt that just failed.
       attemptNumber: number;
     }
   | {
@@ -2681,7 +2683,9 @@ export function statusIconAndText(
     case "SleepingBeforeReconnect":
       return {
         icon: "🔌",
-        status: "Sleeping",
+        // This is shown as "Connecting" rather than "Sleeping" to avoid the UI jumping
+        // as we switch between those two states.
+        status: "Connecting",
         severity: 2,
       };
 
@@ -2997,14 +3001,7 @@ function viewStatusDetails(
       return [];
 
     case "Connecting":
-      return status.attemptNumber > 0
-        ? viewReconnecting(
-            info,
-            status.attemptNumber,
-            "Trying again now…",
-            undefined,
-          )
-        : viewHttpsInfo(info.webSocketUrl);
+      return viewConnecting(info, status.attemptNumber, undefined);
 
     case "TargetError":
       return [h(HTMLPreElement, {}, status.error)];
@@ -3036,12 +3033,7 @@ function viewStatusDetails(
     }
 
     case "SleepingBeforeReconnect":
-      return viewReconnecting(
-        info,
-        status.attemptNumber,
-        `Trying again in ${printRetryWaitMs(status.attemptNumber)}.`,
-        dispatch,
-      );
+      return viewConnecting(info, status.attemptNumber, dispatch);
 
     case "UnexpectedError":
       return [
@@ -3199,40 +3191,47 @@ function viewOpenEditorError(message: string): HTMLElement {
   );
 }
 
-// elm-watch’s HTTP server is on the same host and port as its WebSocket.
-// Sleeping and Connecting (after a failed attempt) have the same lines, which
-// are short enough not to wrap, so that the panel doesn’t keep changing height
-// while reconnecting.
-function viewReconnecting(
+// Sleeping and Connecting have the same lines, which are short enough not to
+// wrap, so that the panel doesn’t keep changing height while reconnecting.
+function viewConnecting(
   info: Info,
   attemptNumber: number,
-  tryingAgain: string,
-  // `undefined` disables the “Reconnect now” button.
+  // `undefined` disables the “Connect now” button.
   dispatch: ((msg: UiMsg) => void) | undefined,
 ): Array<HTMLElement> {
+  const sleeping = dispatch !== undefined;
   return [
     h(
       HTMLParagraphElement,
       { className: CLASS.wrapToPanel },
-      `Attempt ${attemptNumber} failed.`,
+      `Attempt ${attemptNumber}${sleeping ? " failed" : ""}.`,
     ),
-    h(HTMLParagraphElement, { className: CLASS.wrapToPanel }, tryingAgain),
+    h(
+      HTMLParagraphElement,
+      { className: CLASS.wrapToPanel },
+      sleeping
+        ? `Trying again after ${printRetryWaitMs(attemptNumber)}.`
+        : attemptNumber === 1
+          ? "Connecting now…"
+          : "Trying again now…",
+    ),
     ...viewHttpsInfo(info.webSocketUrl),
     h(
       HTMLButtonElement,
       {
         className: CLASS.button,
-        disabled: dispatch === undefined,
-        attrs: { [DATA_FOCUS_KEY]: `reconnect:${info.targetName}` },
+        disabled: !sleeping,
+        attrs: { [DATA_FOCUS_KEY]: `connect:${info.targetName}` },
         onclick: () => {
-          dispatch?.({ tag: "PressedReconnectNow" });
+          dispatch?.({ tag: "PressedConnectNow" });
         },
       },
-      "Reconnect now",
+      "Connect now",
     ),
   ];
 }
 
+// elm-watch’s HTTP server is on the same host and port as its WebSocket.
 function webSocketUrlToServerUrl(webSocketUrl: URL): string {
   const url = new URL(webSocketUrl);
   url.protocol = webSocketUrl.protocol === "wss:" ? "https:" : "http:";

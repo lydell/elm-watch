@@ -255,7 +255,7 @@ export const init = (
   const model: Model = {
     status: config.isFileProtocol
       ? { tag: "FileProtocol", date }
-      : { tag: "Connecting", date, attemptNumber: 0 },
+      : { tag: "Connecting", date, attemptNumber: 1 },
     compilationMode: config.originalCompilationMode,
     elmCompiledTimestamp: config.initialElmCompiledTimestamp,
     elmCompiledTimestampBeforeReload,
@@ -380,31 +380,51 @@ export function update(
       return onUiMsg(msg.date, msg.msg, model);
 
     case "WebSocketClosed":
-      // This message is triggered from both the WebSocket "error" and "closed" events.
-      // Sometimes, both events happen at the same time. We only want to start reconnecting once,
-      // so check if we’re already sleeping before doing anything.
-      if (model.status.tag === "SleepingBeforeReconnect") {
-        return [model, []];
-      } else {
-        const attemptNumber =
-          "attemptNumber" in model.status ? model.status.attemptNumber + 1 : 1;
-        return [
-          {
-            ...model,
-            status: {
-              tag: "SleepingBeforeReconnect",
-              date: msg.date,
-              attemptNumber,
-            },
-          },
-          [
+      switch (model.status.tag) {
+        // This message is triggered from both the WebSocket "error" and "closed" events.
+        // Sometimes, both events happen at the same time. We only want to start reconnecting once,
+        // so check if we’re already sleeping before doing anything.
+        case "SleepingBeforeReconnect":
+          return [model, []];
+
+        // A connection attempt failed: Sleep before trying again.
+        case "Connecting": {
+          const { attemptNumber } = model.status;
+          return [
             {
-              tag: "SleepBeforeReconnect",
-              attemptNumber,
-              sleepStartDate: msg.date,
+              ...model,
+              status: {
+                tag: "SleepingBeforeReconnect",
+                date: msg.date,
+                attemptNumber,
+              },
             },
-          ],
-        ];
+            [
+              {
+                tag: "SleepBeforeReconnect",
+                attemptNumber,
+                sleepStartDate: msg.date,
+              },
+            ],
+          ];
+        }
+
+        // We lost the connection: Try to connect again right away. (The
+        // connection is never reported closed too soon after connecting, so
+        // this can’t loop too fast. See `MIN_CLOSE_MS` in client.ts.)
+        default:
+          return [
+            {
+              ...model,
+              status: { tag: "Connecting", date: msg.date, attemptNumber: 1 },
+            },
+            [
+              {
+                tag: "Reconnect",
+                elmCompiledTimestamp: model.elmCompiledTimestamp,
+              },
+            ],
+          ];
       }
 
     case "WebSocketConnected":
@@ -508,7 +528,7 @@ function onUiMsg(date: Date, msg: UiMsg, model: Model): [Model, Array<Cmd>] {
         ],
       ];
 
-    case "PressedReconnectNow":
+    case "PressedConnectNow":
       return reconnect(model, date, { force: true });
   }
 }
@@ -785,7 +805,7 @@ function reconnect(
     | { force: false; attemptNumber: number; sleepStartDate: Date },
 ): [Model, Array<Cmd>] {
   // We never clear reconnect `setTimeout`s. Instead, check that the timeout
-  // belongs to the current sleep. This is needed since we have the “Reconnect
+  // belongs to the current sleep. This is needed since we have the “Connect
   // now” button. Don’t check that enough time has passed using `Date`: Timers
   // can fire a millisecond “early” according to `Date`, and some browsers
   // reduce the precision of `Date`. Then we would never reconnect.
@@ -799,7 +819,7 @@ function reconnect(
           status: {
             tag: "Connecting",
             date,
-            attemptNumber: model.status.attemptNumber,
+            attemptNumber: model.status.attemptNumber + 1,
           },
         },
         [

@@ -30,7 +30,7 @@ To always hide elm-watch’s UI, for example when recording videos, add this CSS
 Here are all the icons you might see (the panel shows a short status text next to each target’s icon):
 
 ✅ = Successfully compiled  
-🔌 = Connecting (or sleeping before trying to reconnect – the panel has a “Reconnect now” button)  
+🔌 = Connecting (or sleeping before trying to reconnect – the panel has a “Connect now” button)  
 ⏳ = Waiting for compilation (or waiting for the page to reload)  
 🚨 = Compilation error (or an error in `elm.json` or the inputs, or errors from an [errors reporter](../javascript-api/#showing-errors-from-other-tools))  
 ⛔️ = Eval error  

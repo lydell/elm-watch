@@ -49,7 +49,7 @@ type __ELM_WATCH = {
   MOCKED_TIMINGS: boolean;
   WEBSOCKET_TIMEOUT: number;
   RETRY_WAIT_MS: (attemptNumber: number) => number;
-  MIN_FAILED_CONNECT_MS: number;
+  MIN_CLOSE_MS: number;
   CHANGED_CSS: Date;
   CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
@@ -230,12 +230,15 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   // still shows the default wait time, to keep test snapshots stable.
   RETRY_WAIT_MS: retryWaitMs,
 
-  // Failed connection attempts are often very quick, especially on localhost.
-  // Then the “Connecting” status would just flash by, and clicking “Reconnect
-  // now” would feel like nothing happened. So make failed attempts take at
-  // least a little while. Successful ones don’t need it: The status changes
-  // to something else anyway. Set to 0 in tests, to not slow them down.
-  MIN_FAILED_CONNECT_MS: 500,
+  // A web socket is never reported closed earlier than this after it was
+  // created. Failed connection attempts are often very quick, especially on
+  // localhost. Then the “Connecting” status would just flash by, and clicking
+  // “Connect now” would feel like nothing happened. This also makes sure that
+  // reconnecting right away after losing the connection can’t loop too fast,
+  // if something accepts the connection and then closes it immediately.
+  // Connections that have been open for a while are reported closed right
+  // away. Set to 0 in tests, to not slow them down.
+  MIN_CLOSE_MS: 500,
 
   ON_RENDER: () => {
     // Do nothing.
@@ -1160,7 +1163,6 @@ function initWebSocket(
 ): WebSocket {
   const webSocket = new WebSocket(getWebSocketUrl(elmCompiledTimestamp));
   const createdTime = getNow().getTime();
-  let opened = false;
   // Compiled code is sent as binary messages. Get them synchronously as
   // `ArrayBuffer` instead of the default `Blob`.
   webSocket.binaryType = "arraybuffer";
@@ -1174,11 +1176,10 @@ function initWebSocket(
     }
   };
 
-  // See `MIN_FAILED_CONNECT_MS`.
+  // See `MIN_CLOSE_MS`.
   const dispatchClosed = (): void => {
-    const remaining = opened
-      ? 0
-      : __ELM_WATCH.MIN_FAILED_CONNECT_MS - (getNow().getTime() - createdTime);
+    const remaining =
+      __ELM_WATCH.MIN_CLOSE_MS - (getNow().getTime() - createdTime);
     if (remaining > 0) {
       setTimeout(dispatchClosed, remaining);
     } else {
@@ -1190,7 +1191,6 @@ function initWebSocket(
   };
 
   webSocket.addEventListener("open", () => {
-    opened = true;
     dispatchIfCurrent({ tag: "WebSocketConnected", date: getNow() });
   });
 
@@ -1905,7 +1905,7 @@ function renderMockStatuses(ui: Ui | undefined): void {
     Connecting: {
       tag: "Connecting",
       date,
-      attemptNumber: 0,
+      attemptNumber: 1,
     },
     Connecting2: {
       tag: "Connecting",
@@ -1920,7 +1920,7 @@ function renderMockStatuses(ui: Ui | undefined): void {
     ConnectingWss: {
       tag: "Connecting",
       date,
-      attemptNumber: 0,
+      attemptNumber: 1,
       info: {
         ...info,
         webSocketUrl: new URL("wss://localhost:53167"),

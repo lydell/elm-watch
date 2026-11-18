@@ -373,7 +373,7 @@ export async function run({
     window.__ELM_WATCH.RETRY_WAIT_MS = (attemptNumber) =>
       retryWaitMs(attemptNumber) / 100;
 
-    window.__ELM_WATCH.MIN_FAILED_CONNECT_MS = 0;
+    window.__ELM_WATCH.MIN_CLOSE_MS = 0;
 
     window.__ELM_WATCH.RELOAD_PAGE = (message) => {
       if (message !== undefined) {

@@ -107,6 +107,9 @@ describe("hot", () => {
       [Hide until reload or error]
       [Close elm-watch]
       🔌 Worker Connecting · 13:10:05
+      Attempt 1.
+      Connecting now…
+      [Connect now] (disabled)
       Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳
@@ -143,6 +146,9 @@ describe("hot", () => {
       [Hide until reload or error]
       [Close elm-watch]
       🔌 Worker Connecting · 13:10:05
+      Attempt 1.
+      Connecting now…
+      [Connect now] (disabled)
       Drag emoji or press shift+arrows to move
       ================================================================================
       ▲ ⏳

@@ -156,21 +156,10 @@ describe("hot", () => {
         elm-watch %VERSION%
         [Hide until reload or error]
         [Close elm-watch]
-        🔌 ParamsDecodeError Sleeping · 13:10:05
-        Attempt 1 failed.
-        Trying again in 1.01 seconds.
-        [Reconnect now]
-        Drag emoji or press shift+arrows to move
-        ================================================================================
-        ▲ 🔌
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide until reload or error]
-        [Close elm-watch]
         🔌 ParamsDecodeError Connecting · 13:10:05
-        Attempt 1 failed.
-        Trying again now…
-        [Reconnect now] (disabled)
+        Attempt 1.
+        Connecting now…
+        [Connect now] (disabled)
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳
@@ -875,17 +864,9 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
-        Drag emoji or press shift+arrows to move
-        ================================================================================
-        ▲ 🔌
-        --------------------------------------------------------------------------------
-        elm-watch %VERSION%
-        [Hide until reload or error]
-        [Close elm-watch]
-        🔌 Reconnect Sleeping · 13:10:05
-        Attempt 1 failed.
-        Trying again in 1.01 seconds.
-        [Reconnect now]
+        Attempt 1.
+        Connecting now…
+        [Connect now] (disabled)
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
@@ -895,8 +876,8 @@ describe("hot", () => {
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Attempt 1 failed.
-        Trying again now…
-        [Reconnect now] (disabled)
+        Trying again after 1.01 seconds.
+        [Connect now]
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
@@ -904,10 +885,10 @@ describe("hot", () => {
         elm-watch %VERSION%
         [Hide until reload or error]
         [Close elm-watch]
-        🔌 Reconnect Sleeping · 13:10:05
-        Attempt 2 failed.
-        Trying again in 1.04 seconds.
-        [Reconnect now]
+        🔌 Reconnect Connecting · 13:10:05
+        Attempt 2.
+        Trying again now…
+        [Connect now] (disabled)
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ 🔌
@@ -917,8 +898,19 @@ describe("hot", () => {
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
         Attempt 2 failed.
+        Trying again after 1.04 seconds.
+        [Connect now]
+        Drag emoji or press shift+arrows to move
+        ================================================================================
+        ▲ 🔌
+        --------------------------------------------------------------------------------
+        elm-watch %VERSION%
+        [Hide until reload or error]
+        [Close elm-watch]
+        🔌 Reconnect Connecting · 13:10:05
+        Attempt 3.
         Trying again now…
-        [Reconnect now] (disabled)
+        [Connect now] (disabled)
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳
@@ -955,6 +947,9 @@ describe("hot", () => {
         [Hide until reload or error]
         [Close elm-watch]
         🔌 Reconnect Connecting · 13:10:05
+        Attempt 1.
+        Connecting now…
+        [Connect now] (disabled)
         Drag emoji or press shift+arrows to move
         ================================================================================
         ▲ ⏳
@@ -1125,10 +1120,10 @@ describe("hot", () => {
       expect(consoleErrors).toStrictEqual([]);
     });
 
-    test("failed connection attempts take a minimum amount of time", async () => {
+    test("web sockets are never reported closed too soon after being created", async () => {
       setupTestWebSocket();
-      const minFailedConnectMs = 200;
-      let closedTime = 0;
+      const minCloseMs = 200;
+      let closeStartTime = 0;
       let numWebSocketsBefore = 0;
 
       await run({
@@ -1141,12 +1136,14 @@ describe("hot", () => {
         onIdle: async ({ idle }) => {
           switch (idle) {
             case 1:
-              window.__ELM_WATCH.MIN_FAILED_CONNECT_MS = minFailedConnectMs;
+              window.__ELM_WATCH.MIN_CLOSE_MS = minCloseMs;
               numWebSocketsBefore = webSockets.length;
               // The first reconnect fails, the second succeeds.
               failConnectionIndex = numWebSocketsBefore;
+              // Make sure the current web socket is old enough.
+              await wait(minCloseMs);
+              closeStartTime = Date.now();
               await closeAndWait(getLastWebSocket());
-              closedTime = Date.now();
               return "KeepGoing";
             default:
               return "Stop";
@@ -1157,13 +1154,12 @@ describe("hot", () => {
       expect(webSockets).toHaveLength(numWebSocketsBefore + 2);
       const [failedTime = 0, succeededTime = 0] =
         webSocketCreatedTimes.slice(numWebSocketsBefore);
-      // A connection that was open reports being closed right away.
-      expect(failedTime - closedTime).toBeLessThan(minFailedConnectMs);
+      // A connection that has been open for a while is reported closed right
+      // away, and then we reconnect right away.
+      expect(failedTime - closeStartTime).toBeLessThan(minCloseMs);
       // A connection attempt that fails is reported after the minimum time.
       // (Allow timers to fire a millisecond “early” according to `Date`.)
-      expect(succeededTime - failedTime).toBeGreaterThanOrEqual(
-        minFailedConnectMs - 1,
-      );
+      expect(succeededTime - failedTime).toBeGreaterThanOrEqual(minCloseMs - 1);
     });
 
     test("events from previous web sockets are ignored", async () => {

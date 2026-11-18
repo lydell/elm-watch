@@ -177,7 +177,7 @@ const msg = {
   reconnectNow: (date: Date): Msg => ({
     tag: "UiMsg",
     date,
-    msg: { tag: "PressedReconnectNow" },
+    msg: { tag: "PressedConnectNow" },
   }),
   changeCompilationMode: (date: Date): Msg => ({
     tag: "UiMsg",
@@ -228,7 +228,7 @@ describe("client update", () => {
     expect(new Simulation().send(msg.connected).receive(upToDate).toString())
       .toMatchInlineSnapshot(`
         > init
-          status: Connecting, attempt 0, mode: standard, timestamp: 1
+          status: Connecting, attempt 1, mode: standard, timestamp: 1
 
         > WebSocketConnected
           status: Busy, mode: standard, timestamp: 1
@@ -257,7 +257,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketClosed
         status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 1
@@ -269,7 +269,7 @@ describe("client update", () => {
       (1039 ms later)
 
       > SleepBeforeReconnectDone (attempt 1, sleep started at 0 ms)
-        status: Connecting, attempt 1, mode: standard, timestamp: 1
+        status: Connecting, attempt 2, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 
       > WebSocketClosed
@@ -279,7 +279,7 @@ describe("client update", () => {
       (1090 ms later)
 
       > SleepBeforeReconnectDone (attempt 2, sleep started at 1039 ms)
-        status: Connecting, attempt 2, mode: standard, timestamp: 1
+        status: Connecting, attempt 3, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 
       > WebSocketConnected
@@ -317,7 +317,7 @@ describe("client update", () => {
         .send(msg.closed)
         .send(msg.reconnectNow)
         .send(msg.closed)
-        // The timer from the sleep before “Reconnect now”: Ignored.
+        // The timer from the sleep before “Connect now”: Ignored.
         .wait(retryWaitMs(2))
         .timerFired(0)
         .send(msg.visible)
@@ -326,14 +326,14 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketClosed
         status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 1
         cmd: SleepBeforeReconnect (attempt 1, 1010 ms)
 
-      > UiMsg PressedReconnectNow
-        status: Connecting, attempt 1, mode: standard, timestamp: 1
+      > UiMsg PressedConnectNow
+        status: Connecting, attempt 2, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 
       > WebSocketClosed
@@ -346,11 +346,11 @@ describe("client update", () => {
         status: SleepingBeforeReconnect, attempt 2, mode: standard, timestamp: 1
 
       > PageVisibilityChangedToVisible
-        status: Connecting, attempt 2, mode: standard, timestamp: 1
+        status: Connecting, attempt 3, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 
       > PageVisibilityChangedToVisible
-        status: Connecting, attempt 2, mode: standard, timestamp: 1
+        status: Connecting, attempt 3, mode: standard, timestamp: 1
     `);
   });
 
@@ -370,10 +370,10 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > FocusedTab
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketClosed
         status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 1
@@ -385,7 +385,7 @@ describe("client update", () => {
       (1040 ms later)
 
       > SleepBeforeReconnectDone (attempt 1, sleep started at 0 ms)
-        status: Connecting, attempt 1, mode: standard, timestamp: 1
+        status: Connecting, attempt 2, mode: standard, timestamp: 1
         cmd: Reconnect (timestamp 1)
 
       > WebSocketConnected
@@ -419,7 +419,7 @@ describe("client update", () => {
       > PageVisibilityChangedToVisible
         status: FileProtocol, mode: standard, timestamp: 1
 
-      > UiMsg PressedReconnectNow
+      > UiMsg PressedConnectNow
         status: FileProtocol, mode: standard, timestamp: 1
     `);
   });
@@ -438,7 +438,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -468,7 +468,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -499,7 +499,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: proxy, timestamp: 1
+        status: Connecting, attempt 1, mode: proxy, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: proxy, timestamp: 1
@@ -526,7 +526,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -557,7 +557,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -575,22 +575,23 @@ describe("client update", () => {
 
   test("connection lost while evaluating", () => {
     // Evaluating is async. If the WebSocket closes meanwhile, the result must
-    // not overwrite the reconnect status, or the timer would never reconnect.
+    // not overwrite the reconnect status.
     expect(
       new Simulation()
         .send(msg.connected)
         .receive(successfullyCompiled)
         .send(msg.closed)
         .send(msg.evalSucceeded)
+        .send(msg.closed)
+        .send(msg.evalErrored)
         .wait(retryWaitMs(1))
         .timerFired()
-        .send(msg.evalErrored)
         .send(msg.connected)
         .receive(upToDate)
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -600,20 +601,24 @@ describe("client update", () => {
         cmd: Eval /* new code */
 
       > WebSocketClosed
+        status: Connecting, attempt 1, mode: standard, timestamp: 2
+        cmd: Reconnect (timestamp 2)
+
+      > EvalSucceeded
+        status: Connecting, attempt 1, mode: standard, timestamp: 2
+
+      > WebSocketClosed
         status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 2
         cmd: SleepBeforeReconnect (attempt 1, 1010 ms)
 
-      > EvalSucceeded
+      > EvalErrored
         status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 2
 
       (1010 ms later)
 
       > SleepBeforeReconnectDone (attempt 1, sleep started at 0 ms)
-        status: Connecting, attempt 1, mode: standard, timestamp: 2
+        status: Connecting, attempt 2, mode: standard, timestamp: 2
         cmd: Reconnect (timestamp 2)
-
-      > EvalErrored
-        status: Connecting, attempt 1, mode: standard, timestamp: 2
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 2
@@ -639,7 +644,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -649,8 +654,8 @@ describe("client update", () => {
         cmd: Eval /* new code */
 
       > WebSocketClosed
-        status: SleepingBeforeReconnect, attempt 1, mode: standard, timestamp: 2
-        cmd: SleepBeforeReconnect (attempt 1, 1010 ms)
+        status: Connecting, attempt 1, mode: standard, timestamp: 2
+        cmd: Reconnect (timestamp 2)
 
       > EvalNeedsReload
         status: WaitingForReload, reason: a new port 'toJs' was added. The idea is to give JavaScript code a chance to set it up!, mode: standard, timestamp: 2
@@ -674,7 +679,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -703,7 +708,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -745,7 +750,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
@@ -772,7 +777,7 @@ describe("client update", () => {
         .toString(),
     ).toMatchInlineSnapshot(`
       > init
-        status: Connecting, attempt 0, mode: standard, timestamp: 1
+        status: Connecting, attempt 1, mode: standard, timestamp: 1
 
       > WebSocketConnected
         status: Busy, mode: standard, timestamp: 1
