@@ -60,7 +60,7 @@ Next to the title of the error, you can see which file it is in (relative to the
 
 Sometimes Elm shows a lot of code in an error. For example, if you forget a branch in a `case` expression with 50 branches, Elm shows the whole `case` expression. To make it easier to see what the error is about at a glance, elm-watch collapses long code: It keeps the start of the code and the lines Elm points at (with some context), and replaces the rest with a line like `¦ (16 lines)`. Press Space, or click “(16 lines)”, to see all of the code. It stays expanded for all errors until you press Space again. When showing all errors at once, nothing is collapsed.
 
-The terminal works the same way – it also shows one error at a time, with the same keys (except Escape). The terminal also has Tab to switch between targets, since it shows the errors of one target at a time. (When the output isn’t an interactive terminal, such as when piping to a file, all errors are printed as usual.)
+The terminal works the same way – it also shows one error at a time, with the same keys (Escape only closes the editor chooser, since there’s no overlay to close). The terminal also has Tab and Shift+Tab to switch between targets, since it shows the errors of one target at a time. (When the output isn’t an interactive terminal, such as when piping to a file, all errors are printed as usual.)
 
 When the status changes to 🚨, there’s a similar animation as for ✅ – a growing and fading _red_ circle.
 
@@ -79,13 +79,13 @@ The choice is stored in `elm-stuff/elm-watch/stuff.json`, so it is remembered fo
 
 You can choose your editor in the terminal too: Press Enter on an error (or e to change editor), and then the number of your editor. Pressing Enter on an error in the terminal opens the URL (via `open` on macOS, `xdg-open` on Linux and `rundll32` on Windows).
 
-Using another editor? Choose “Other” (or press 7) to see how to [set it up with `ELM_WATCH_OPEN_EDITOR`](#elm_watch_open_editor).
+Using another editor? Choose “Other” (or press 6) to see how to [set it up with `ELM_WATCH_OPEN_EDITOR`](#elm_watch_open_editor).
 
 Note that the browser opens the editor on the device you click on. If you test on your phone, clicking error locations there does nothing. Use [a command](#a-command) if you want that to work.
 
 ### ELM_WATCH_OPEN_EDITOR
 
-Set the `ELM_WATCH_OPEN_EDITOR` environment variable to either [a URL](#a-url) or [a command](#a-command). If it starts like a URL (`something://`), it’s a URL. Otherwise it’s a command. It is used by default in all your projects, but you can still [choose one of the editors](#choose-your-editor) in a specific project (press e in the error overlay or the terminal). To go back to `ELM_WATCH_OPEN_EDITOR` in that project, press e and then 7 (which says “ELM_WATCH_OPEN_EDITOR” instead of “Other” when the environment variable is set).
+Set the `ELM_WATCH_OPEN_EDITOR` environment variable to either [a URL](#a-url) or [a command](#a-command). If it starts like a URL (`something://`), it’s a URL. Otherwise it’s a command. It is used by default in all your projects, but you can still [choose one of the editors](#choose-your-editor) in a specific project (press e in the error overlay or the terminal). To go back to `ELM_WATCH_OPEN_EDITOR` in that project, press e and then 6 (which says “ELM_WATCH_OPEN_EDITOR” instead of “Other” when the environment variable is set).
 
 The easiest way to get started is to run `elm-watch editor`. It explains how to try out values and how to set the environment variable permanently in your shell. If opening an error location fails, the error overlay (or the terminal, if you opened it from there) shows why.
 
@@ -178,7 +178,7 @@ Don’t forget quotes around the `file` variable, in case it contains spaces! (`
 - ✅ `"$file"`, `"%file%"`
 - ❌ `$file`, `%file%`
 
-elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child_process.exec], with the following:
+elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable in a shell (using [child_process.spawn] with `shell: true`), with the following:
 
 - Shell:
   - On Windows: `cmd.exe`
@@ -194,7 +194,7 @@ elm-watch executes the `ELM_WATCH_OPEN_EDITOR` environment variable using [child
 
 Clickable error locations work just the same with the [JavaScript API](../javascript-api/), including `ELM_WATCH_OPEN_EDITOR`.
 
-[child_process.exec]: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+[child_process.spawn]: https://nodejs.org/api/child_process.html#child_processspawncommand-args-options
 [direnv]: https://direnv.net/
 [emacs]: https://www.gnu.org/software/emacs/
 [intellij idea]: https://www.jetbrains.com/idea/

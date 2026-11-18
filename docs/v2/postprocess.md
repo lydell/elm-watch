@@ -58,7 +58,7 @@ type Postprocess = (
 ) => string | Promise<string>;
 ```
 
-- `code` is Elm’s JS output.
+- `code` is Elm’s JS output. In `"hot"` mode, elm-watch has already added its hot reloading code to it.
 - `info.compilationMode` lets you for example only minify in optimize mode.
 - `info.runMode` is either `"make"` or `"hot"`. I recommend doing the same work for both modes, but in case that’s not feasible you have the possibility.
 - Return the new JS, or a promise of it.
@@ -193,6 +193,7 @@ If you used `elm-watch-node`, you can keep your postprocess file and adapt it to
 
 ```js
 // elm-watch.mjs
+import * as path from "node:path";
 import { elmWatch } from "elm-watch";
 import oldPostprocess from "./postprocess.js";
 
@@ -203,7 +204,12 @@ function postprocessFor(targetName) {
       targetName,
       compilationMode,
       runMode,
-      argv: [],
+      // Like elm-watch 1 did: "elm-watch-node", the absolute path to your
+      // script, and any extra arguments from your old "postprocess" setting.
+      argv: [
+        "elm-watch-node",
+        path.resolve(import.meta.dirname, "postprocess.js"),
+      ],
     });
 }
 

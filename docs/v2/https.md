@@ -61,13 +61,14 @@ const CERTIFICATE = {
 process.exitCode = await elmWatch({
   root: import.meta.dirname,
   runMode: "hot",
+  serve: "public",
   targets: [
     {
       type: "application",
       name: "Main",
       elmJson: "elm.json",
       inputs: ["src/Main.elm"],
-      output: "build/main.js",
+      output: "public/build/main.js",
     },
   ],
   createServer: ({ onRequest, onUpgrade }) =>

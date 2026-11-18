@@ -12,6 +12,7 @@ And do you remember trying out Elm with `elm reactor`? Did it feel easy to get s
 - **Maximum speed.** elm-watch tries to do as little as possible besides running `elm make` for you. Doing less work is always faster!
 - [**Hot reloading.**](../hot-reloading/) elm-watch tries to reimagine the level of quality of hot reloading. The goal is to never leave you wondering if it worked at all.
 - **Beautiful colors.** Elm’s error messages are lovely and colorful. elm-watch takes care to preserve them.
+- [**One error at a time.**](../browser-ui/#one-error-at-a-time) Step through errors one by one – in the terminal and in the browser – with long code snippets collapsed, and click the error location to open it in your editor.
 - [**Browser UI.**](../browser-ui/) elm-watch always shows you the latest status in the browser. Switching to `--debug` mode – or even `--optimize` mode – is only a click away.
 - **Cache free.** Elm already has a cache – the `elm-stuff/` folder – which is really stable and all you need. Famously one of the hardest things in programming, elm-watch has no extra caching to worry about.
 - **Elm centric.** elm-watch puts Elm at the heart. Let’s take advantage of Elm’s unique capabilities, like `elm make --output /dev/null` for super fast type checking of apps you’re not currently focusing on!
@@ -24,5 +25,4 @@ And do you remember trying out Elm with `elm reactor`? Did it feel easy to get s
 
 ## Dreams for the future
 
-- **Interactive errors.** Filter by target or Elm file. Collapse long code snippets (`case` expressions).
 - **Elm reactor.** . Imagine a modified Elm binary where `elm reactor` gave you an elm-watch like experience.

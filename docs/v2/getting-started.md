@@ -126,7 +126,7 @@ Here’s some HTML to get you started.
   👉 [Examples with esbuild and Vite](https://github.com/lydell/elm-watch/tree/main/examples#readme)
 
 {: .info }  
-ℹ️ elm-watch **requires** [window.Elm](../window.Elm/) to exist!
+ℹ️ Keep it simple: Load the built Elm JS in its own `<script>` tag, and let it create [window.Elm](../window.Elm/).
 
 [elm-guide-install]: https://guide.elm-lang.org/install/elm.html
 [elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm

@@ -6,7 +6,6 @@ nav_order: 4
 # What elm-watch is _not_
 
 - A compiler for other things than Elm.
-- A watcher for Elm _packages._
 - A code generator.
 - A test runner.
 

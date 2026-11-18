@@ -127,7 +127,7 @@ But it also has the side effect of _never getting 404s anymore._ In the two URLs
 
 If you inspect the request for `/mani.js` (typo), you can see that elm-watch added some extra response headers to it:
 
-- `elm-watch-404: /Users/you/project/public/mani.js`. This header hints that the URL was actually a 404, and shows the absolute file path that couldn’t be found.
+- `elm-watch-404: /Users/you/project/public/mani.js`. This header hints that the URL was actually a 404, and shows the absolute file path that couldn’t be found. (It is also sent when the URL points to a directory – such as `/` – since elm-watch only serves files, and always serves the closest `index.html` for directories.)
 - `elm-watch-index-html: /Users/you/project/public/index.html`. Shows the `index.html` file that was served instead.
 - `elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html`. A handy link to this page if you need to read up on the details.
 
@@ -217,14 +217,14 @@ If you want to test on your phone on the same Wi-Fi, for example, you can expose
 elm-watch’s HTTP server only accepts requests for certain hosts. This protects against two kinds of attacks from web sites you visit:
 
 - [DNS rebinding]: A malicious web site can make its own domain point to `127.0.0.1`, and then read files from elm-watch’s server as if they were its own. elm-watch rejects such requests by checking the `Host` header.
-- Connecting to elm-watch’s WebSocket: Another web site can load your compiled Elm JavaScript via a `<script>` tag (which isn’t prevented by CORS), and use it to connect to elm-watch’s WebSocket. elm-watch rejects such WebSocket connections by checking the `Origin` header. The port is ignored, so if your page is served by another server on `localhost`, it can still connect to elm-watch.
+- Connecting to elm-watch’s WebSocket: Another web site can load your compiled Elm JavaScript via a `<script>` tag (which isn’t prevented by CORS), and use it to connect to elm-watch’s WebSocket. elm-watch rejects such WebSocket connections by checking the `Origin` header (in addition to the `Host` header). Connections without an `Origin` header are allowed, since they don’t come from a browser. The port is ignored, so if your page is served by another server on `localhost`, it can still connect to elm-watch.
 
 These hosts are always allowed:
 
 - `localhost` and `*.localhost`
 - `*.local` (for example `my-macbook.local`, for testing on your phone)
 - IP addresses (for example `127.0.0.1` or `192.168.1.10`)
-- The host of the [webSocketUrl](../elm-watch.json/) setting, if you use it.
+- The host of the [webSocketUrl](../elm-watch.json/) setting, if you use it. (If the `ELM_WATCH_WEBSOCKET_URL` environment variable is set, it takes precedence, and its host is allowed instead.)
 
 To allow more hosts, add them to `"allowedHosts"` in [elm-watch.json](../elm-watch.json/):
 
@@ -239,12 +239,6 @@ ELM_WATCH_ALLOWED_HOSTS=my-name.ngrok.dev elm-watch hot
 ```
 
 Pages opened via `file://` can’t connect to elm-watch’s WebSocket. Browsers send `Origin: null` for them, but also for sandboxed iframes, which any web site can create. elm-watch can’t tell them apart, so it rejects them all. Open your page via `http://` instead, for example using elm-watch’s [simple static file server](#server).
-
-With the [JavaScript API](../javascript-api/), environment variables like `ELM_WATCH_ALLOWED_HOSTS` are ignored. Read them yourself instead:
-
-```js
-allowedHosts: ["dev.example.com", ...(process.env.MY_HOSTS?.split(",") ?? [])],
-```
 
 Only exact host names are supported – no wildcards like `.example.com` or `*.example.com`. That is on purpose: A wildcard on a shared domain (like ngrok’s or other tunnel services’) would let anyone with a subdomain there connect to your elm-watch WebSocket. List each host exactly instead.
 
@@ -357,11 +351,17 @@ import * as http from "node:http";
 import { elmWatch } from "elm-watch";
 import httpProxy from "http-proxy";
 
-const proxy = new httpProxy.createProxyServer({
+const proxy = httpProxy.createProxyServer({
   target: {
     host: "127.0.0.1",
     port: 9000,
   },
+});
+
+// Without this, requests hang if the server on port 9000 isn’t running.
+proxy.on("error", (_error, _request, response) => {
+  response.writeHead(502);
+  response.end("Proxy error");
 });
 
 process.exitCode = await elmWatch({

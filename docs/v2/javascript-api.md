@@ -100,6 +100,12 @@ const { positionals, values } = parseArgs({
 // For example: `node elm-watch.mjs make --optimize Admin`
 const [runMode = "hot", ...targetNames] = positionals;
 
+if (runMode !== "hot" && runMode !== "make") {
+  console.error(`Expected "hot" or "make", but got: ${runMode}`);
+  process.exit(1);
+}
+
+/** @type {Array<import("elm-watch").Target>} */
 const targets = [
   {
     type: "application",
@@ -125,10 +131,12 @@ process.exitCode = await elmWatch({
     : values.debug
       ? "debug"
       : "standard",
-  targets:
-    targetNames.length === 0
-      ? targets
-      : targets.filter((target) => targetNames.includes(target.name)),
+  // Like the `elm-watch` command: Enable targets containing any of the given names.
+  targets: targets.filter(
+    (target) =>
+      targetNames.length === 0 ||
+      targetNames.some((targetName) => target.name.includes(targetName)),
+  ),
 });
 ```
 
