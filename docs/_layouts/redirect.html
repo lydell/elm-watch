@@ -1,0 +1,28 @@
+{%- comment -%}
+  Used by v1-redirects/, which redirect the URLs of the elm-watch 1.x docs
+  (linked from elm-watch 1.x itself and the early v2 betas) to the old docs on
+  GitHub, pinned at the v1-docs tag. That commit is not on any branch, and has
+  the docs adjusted to render nicely on GitHub. `/` redirects to /v2/.
+{%- endcomment -%}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    {%- if page.redirect_to contains "://" %}
+    {%- assign url = page.redirect_to %}
+    {%- else %}
+    {%- assign url = page.redirect_to | relative_url %}
+    {%- endif %}
+    <link rel="canonical" href="{{ url }}" />
+    <meta name="robots" content="noindex" />
+    <script>
+      // Unlike meta refresh, this preserves the #hash.
+      location.replace({{ url | jsonify }} + location.hash);
+    </script>
+    <meta http-equiv="refresh" content="0; url={{ url }}" />
+  </head>
+  <body>
+    <p>Redirecting to <a href="{{ url }}">{{ url }}</a>…</p>
+  </body>
+</html>
