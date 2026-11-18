@@ -1,0 +1,46 @@
+{%- comment -%}
+  elm-watch links to /v2/link#some-key instead of directly to the docs, so the
+  docs can be restructured without breaking links in released versions. The
+  keys are mapped to URLs in _data/v2_links.json. Never remove keys from there!
+  The URLs are relative to the directory of the page using this layout.
+{%- endcomment -%}
+{%- assign links = site.data[page.links] -%}
+{%- assign base = page.dir | relative_url -%}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>elm-watch docs link</title>
+    <meta name="robots" content="noindex" />
+    <script>
+      (function () {
+        var links = {{ links | jsonify }};
+        var key = decodeURIComponent(location.hash.slice(1));
+        var path =
+          key === ""
+            ? ""
+            : Object.prototype.hasOwnProperty.call(links, key)
+              ? links[key]
+              : undefined;
+        if (path === undefined) {
+          document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("key").textContent = key;
+            document.getElementById("unknown").hidden = false;
+          });
+        } else {
+          location.replace({{ base | jsonify }} + path);
+        }
+      })();
+    </script>
+    <noscript>
+      <meta http-equiv="refresh" content="0; url={{ base }}" />
+    </noscript>
+  </head>
+  <body>
+    <p id="unknown" hidden>
+      Unknown docs link: <code id="key"></code>
+    </p>
+    <p><a href="{{ base }}">Go to the elm-watch docs</a></p>
+  </body>
+</html>

@@ -1,6 +1,7 @@
 import { isIP } from "net";
 import * as Codec from "tiny-decoders";
 
+import { docsLink } from "./DocsLinks.ts";
 import { ELM_WATCH_ALLOWED_HOSTS, type Env, getEnvValue } from "./Env.ts";
 import type { Brand } from "./Types.ts";
 
@@ -22,8 +23,7 @@ import type { Brand } from "./Types.ts";
 // like ngrok’s. List each host exactly instead (the environment variable is
 // useful for hosts that change).
 
-export const ALLOWED_HOSTS_DOCS_LINK =
-  "https://lydell.github.io/elm-watch/v2/server/#allowed-hosts";
+export const ALLOWED_HOSTS_DOCS_LINK = docsLink("allowed-hosts");
 
 // A normalized hostname: Lowercase, punycode and no trailing dot.
 export type AllowedHost = Brand<string, "AllowedHost">;

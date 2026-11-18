@@ -214,7 +214,7 @@ describe("SimpleStaticFileServer", () => {
       .toMatchInlineSnapshot(`
         200
         content-type: text/html; charset=utf-8
-        content-length: 3101
+        content-length: 3090
         <!DOCTYPE html>
             <html lang="en">
               <head>…</head>
@@ -237,15 +237,14 @@ describe("SimpleStaticFileServer", () => {
                 server, including source code and files like <code>.env</code>. By
                 default, the server is only available on your computer, so that only
                 matters if you
-                <a href="https://lydell.github.io/elm-watch/v2/server/#network-exposure"
-                  >expose it on the network</a
-                >. A folder with only the files your page needs, like
-                <code>public/</code>, is safer.
+                <a href="https://lydell.github.io/elm-watch/v2/link#network-exposure">expose it on the network</a>.
+                A folder with only the files your page needs, like <code>public/</code>,
+                is safer.
               </p>
             </main>
                 <p style="margin-top: 2em">
                   <small
-                    >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/v2/server/">elm-watch server</a>.</small
+                    >ℹ️ This is the <a href="https://lydell.github.io/elm-watch/v2/link#server">elm-watch server</a>.</small
                   >
                 </p>
               </body>
@@ -320,7 +319,7 @@ describe("SimpleStaticFileServer", () => {
                       
                               <p>
                                 👉
-                                <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml"
+                                <a href="https://lydell.github.io/elm-watch/v2/link#index-html"
                                   >How index.html files work</a
                                 >
                                 (for <code>Browser.application</code> programs)
@@ -338,7 +337,7 @@ describe("SimpleStaticFileServer", () => {
                       
                               <p>
                                 👉
-                                <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml"
+                                <a href="https://lydell.github.io/elm-watch/v2/link#index-html"
                                   >File not found troubleshooting</a
                                 >
                               </p>
@@ -358,7 +357,7 @@ describe("SimpleStaticFileServer", () => {
                       <p>Suggestion: Create an <code>index.html</code> file.</p>
                       <p>
                         👉
-                        <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml">How index.html files work</a>
+                        <a href="https://lydell.github.io/elm-watch/v2/link#index-html">How index.html files work</a>
                       </p>
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public</pre>
@@ -375,7 +374,7 @@ describe("SimpleStaticFileServer", () => {
                       <p>Suggestion: Create an <code>index.html</code> file.</p>
                       <p>
                         👉
-                        <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml">How index.html files work</a>
+                        <a href="https://lydell.github.io/elm-watch/v2/link#index-html">How index.html files work</a>
                       </p>
                       <p>This is the absolute file path the URL resolves to:</p>
                       <pre>/tmp/public/sub</pre>
@@ -404,7 +403,7 @@ describe("SimpleStaticFileServer", () => {
                       
                               <p>
                                 👉
-                                <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml"
+                                <a href="https://lydell.github.io/elm-watch/v2/link#index-html"
                                   >How index.html files work</a
                                 >
                                 (for <code>Browser.application</code> programs)
@@ -423,7 +422,7 @@ describe("SimpleStaticFileServer", () => {
                       
                               <p>
                                 👉
-                                <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml"
+                                <a href="https://lydell.github.io/elm-watch/v2/link#index-html"
                                   >How index.html files work</a
                                 >
                                 (for <code>Browser.application</code> programs)
@@ -442,7 +441,7 @@ describe("SimpleStaticFileServer", () => {
                       
                               <p>
                                 👉
-                                <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml"
+                                <a href="https://lydell.github.io/elm-watch/v2/link#index-html"
                                   >How index.html files work</a
                                 >
                                 (for <code>Browser.application</code> programs)
@@ -461,7 +460,7 @@ describe("SimpleStaticFileServer", () => {
                       
                               <p>
                                 👉
-                                <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml"
+                                <a href="https://lydell.github.io/elm-watch/v2/link#index-html"
                                   >How index.html files work</a
                                 >
                                 (for <code>Browser.application</code> programs)
@@ -486,7 +485,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public
             elm-watch-index-html: /tmp/public/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -501,7 +500,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
             <p>root</p>
@@ -516,7 +515,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/a/b/c/d
             elm-watch-index-html: /tmp/public/a/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -534,7 +533,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public/a/index.html
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
             <p>a</p>
@@ -543,7 +542,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/a/b
             elm-watch-index-html: /tmp/public/a/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -558,7 +557,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public/a/b
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
             <p>a</p>
@@ -568,7 +567,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/??
             elm-watch-index-html: /tmp/public/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -586,7 +585,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public/index.html
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
             <p>root</p>
@@ -596,7 +595,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/a/missing
             elm-watch-index-html: /tmp/public/a/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
           `);
         },
@@ -618,7 +617,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/a/favicon.ico
             elm-watch-index-html: /tmp/public/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -636,7 +635,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public/index.html
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
             <p>root</p>
@@ -645,7 +644,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/favicon.ico
             elm-watch-index-html: /tmp/public/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -663,7 +662,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public/index.html
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
             <p>root</p>
@@ -715,7 +714,7 @@ describe("SimpleStaticFileServer", () => {
                       
                               <p>
                                 👉
-                                <a href="https://lydell.github.io/elm-watch/v2/server/#indexhtml"
+                                <a href="https://lydell.github.io/elm-watch/v2/link#index-html"
                                   >How index.html files work</a
                                 >
                                 (for <code>Browser.application</code> programs)
@@ -753,7 +752,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/sub/fifo
             elm-watch-index-html: /tmp/public/sub/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -769,7 +768,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public/sub/index.html
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
             <p>sub</p>
@@ -984,7 +983,7 @@ describe("SimpleStaticFileServer", () => {
                               
                         <p>
                           👉
-                          <a href="https://lydell.github.io/elm-watch/v2/server/#allowed-hosts"
+                          <a href="https://lydell.github.io/elm-watch/v2/link#allowed-hosts"
                             >Learn more about allowed hosts</a
                           >
                         </p>
@@ -1031,7 +1030,7 @@ describe("SimpleStaticFileServer", () => {
                         
                         <p>
                           👉
-                          <a href="https://lydell.github.io/elm-watch/v2/server/#allowed-hosts"
+                          <a href="https://lydell.github.io/elm-watch/v2/link#allowed-hosts"
                             >Learn more about allowed hosts</a
                           >
                         </p>
@@ -1077,10 +1076,9 @@ describe("SimpleStaticFileServer", () => {
                     server, including source code and files like <code>.env</code>. By
                     default, the server is only available on your computer, so that only
                     matters if you
-                    <a href="https://lydell.github.io/elm-watch/v2/server/#network-exposure"
-                      >expose it on the network</a
-                    >. A folder with only the files your page needs, like
-                    <code>public/</code>, is safer.
+                    <a href="https://lydell.github.io/elm-watch/v2/link#network-exposure">expose it on the network</a>.
+                    A folder with only the files your page needs, like <code>public/</code>,
+                    is safer.
                   </p>
           `);
         },
@@ -1197,7 +1195,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/not-found
             elm-watch-index-html: /tmp/public/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -1215,7 +1213,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public/index.html
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
             <p>index</p>
@@ -1295,7 +1293,7 @@ describe("SimpleStaticFileServer", () => {
             200
             elm-watch-404: /tmp/public/app/not-found
             elm-watch-index-html: /tmp/public/app/index.html
-            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html
             content-type: text/html; charset=utf-8
             <!-- elm-watch debug information:
 
@@ -1313,7 +1311,7 @@ describe("SimpleStaticFileServer", () => {
             /tmp/public/app/index.html
 
             Learn more:
-            https://lydell.github.io/elm-watch/v2/server/#indexhtml
+            https://lydell.github.io/elm-watch/v2/link#index-html
 
             -->
           `);

@@ -68,7 +68,7 @@ describe("errors", () => {
         with your targets, and give each target a \`postprocess\` function.
         Run \`elm-watch init --javascript\` to create such a file from your
         elm-watch.json.
-        Learn more: https://lydell.github.io/elm-watch/v2/postprocess/
+        Learn more: https://lydell.github.io/elm-watch/v2/link#postprocess
         Got: [
           "elm-watch-node",
           "postprocess.js"

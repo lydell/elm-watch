@@ -1,4 +1,5 @@
 import { EMOJI, emojiWidthFix } from "./Compile.ts";
+import { docsLink } from "./DocsLinks.ts";
 import {
   ELM_WATCH_ALLOWED_HOSTS,
   ELM_WATCH_HOST,
@@ -38,7 +39,7 @@ ${bold("elm-watch init [--javascript|--typescript]")}
     With ${bold("--javascript")} or ${bold("--typescript")}: Create elm-watch.mjs
     or elm-watch.mts instead, for using the JavaScript API. If you
     already have an ${elmWatchJson}, it is migrated to the new file.
-    https://lydell.github.io/elm-watch/v2/javascript-api/
+    ${docsLink("javascript-api")}
 
 ${bold("elm-watch make [--debug|--optimize] [target names...]")}
     Compile Elm code into JS. Similar to ${bold("elm make")}.
@@ -77,7 +78,7 @@ ${bold("Environment variables:")}
     ${bold(ELM_WATCH_OPEN_EDITOR)}
         A URL or a command for opening your editor
         when clicking error locations in the browser
-        https://lydell.github.io/elm-watch/v2/browser-ui/#clickable-error-locations
+        ${docsLink("clickable-error-locations")}
 
     ${bold(ELM_WATCH_HOST)}
         Override "host" in ${elmWatchJson}
@@ -91,7 +92,7 @@ ${bold("Environment variables:")}
         Comma-separated hosts to allow in addition to "allowedHosts"
 
 ${bold("Documentation:")}
-    https://lydell.github.io/elm-watch/v2/
+    ${docsLink("home")}
 
 ${bold("Version:")}
     %VERSION%

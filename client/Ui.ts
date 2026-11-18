@@ -1,5 +1,6 @@
 import * as Codec from "tiny-decoders";
 
+import { docsLink } from "../src/DocsLinks.ts";
 import {
   EDITOR_PRESETS,
   type EditorPreset,
@@ -3256,7 +3257,7 @@ function viewHttpsInfo(webSocketUrl: URL): Array<HTMLElement> {
           h(
             HTMLAnchorElement,
             {
-              href: "https://lydell.github.io/elm-watch/v2/https/",
+              href: docsLink("https"),
               target: "_blank",
               rel: "noreferrer",
             },

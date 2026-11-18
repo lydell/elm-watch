@@ -4,6 +4,7 @@ import * as path from "path";
 
 import { ALLOWED_HOSTS_DOCS_LINK, type RejectedHost } from "./AllowedHosts.ts";
 import type { ConfigSource } from "./Config.ts";
+import { docsLink } from "./DocsLinks.ts";
 import { ELM_WATCH_ALLOWED_HOSTS } from "./Env.ts";
 import { escapeHtml, toError } from "./Helpers.ts";
 import {
@@ -69,8 +70,8 @@ const MIME_TYPES: Record<string, string> = {
 // https://github.com/nodejs/node/blob/f801b58e7753dd5abd492ad2076686f5ec63d897/lib/_http_common.js#L216C1-L216C51
 const HEADER_CHAR_REGEX = /[^\t\x20-\x7e\x80-\xff]/g;
 
-const DOCS_LINK = "https://lydell.github.io/elm-watch/v2/server/";
-const DOCS_LINK_INDEX_HTML = `${DOCS_LINK}#indexhtml`;
+const DOCS_LINK = docsLink("server");
+const DOCS_LINK_INDEX_HTML = docsLink("index-html");
 
 class Html {
   private escapedHtml: string;
@@ -504,10 +505,9 @@ export function staticFileNotEnabledHtml(configSource: ConfigSource): Html {
         server, including source code and files like <code>.env</code>. By
         default, the server is only available on your computer, so that only
         matters if you
-        <a href="https://lydell.github.io/elm-watch/v2/server/#network-exposure"
-          >expose it on the network</a
-        >. A folder with only the files your page needs, like
-        <code>public/</code>, is safer.
+        <a href="${docsLink("network-exposure")}">expose it on the network</a>.
+        A folder with only the files your page needs, like <code>public/</code>,
+        is safer.
       </p>
     `,
   );

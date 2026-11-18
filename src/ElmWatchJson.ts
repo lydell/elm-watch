@@ -4,6 +4,7 @@ import * as Codec from "tiny-decoders";
 
 import { AllowedHost } from "./AllowedHosts.ts";
 import type { Config, Target as ConfigTarget } from "./Config.ts";
+import { docsLink } from "./DocsLinks.ts";
 import { readElmJsonType, readSourceDirectories } from "./ElmJson.ts";
 import { Host } from "./Host.ts";
 import { IS_WINDOWS } from "./IsWindows.ts";
@@ -210,7 +211,7 @@ Instead, create a JavaScript file that imports elm-watch and calls \`elmWatch()\
 with your targets, and give each target a \`postprocess\` function.
 Run \`elm-watch init --javascript\` to create such a file from your
 elm-watch.json.
-Learn more: https://lydell.github.io/elm-watch/v2/postprocess/`,
+Learn more: ${docsLink("postprocess")}`,
       got: value,
       path: [],
     },

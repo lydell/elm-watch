@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as Codec from "tiny-decoders";
 
+import { docsLink } from "./DocsLinks.ts";
 import * as ElmWatchJson from "./ElmWatchJson.ts";
 import * as Errors from "./Errors.ts";
 import {
@@ -27,8 +28,7 @@ import {
 
 const elmWatchJson = bold("elm-watch.json");
 
-const JAVASCRIPT_API_DOCS_LINK =
-  "https://lydell.github.io/elm-watch/v2/javascript-api/";
+const JAVASCRIPT_API_DOCS_LINK = docsLink("javascript-api");
 
 type Language = EntrypointLanguage | "json";
 
@@ -116,7 +116,7 @@ function initElmWatchJson(cwd: Cwd, terminal: Terminal): number {
     `
 ${createdMessage(elmWatchJson, discoveredInputs)}
 
-Documentation: https://lydell.github.io/elm-watch/v2/elm-watch.json/
+Documentation: ${docsLink("elm-watch-json")}
   `.trim(),
   );
   return 0;
@@ -200,7 +200,7 @@ ${elmWatchJsonPath}
 
 ${upgradedTargetsReport(upgradedTargets)}
 
-Documentation: https://lydell.github.io/elm-watch/v2/elm-watch.json/
+Documentation: ${docsLink("elm-watch-json")}
   `.trim(),
   );
   return 0;
@@ -223,7 +223,7 @@ function upgradedTargetsReport(
 and output need an elm.json with "type": "application" now. To typecheck the
 package, change the target to "type": "package" (and remove "inputs" and
 "output"). To compile an example using the package, give the example its own
-elm.json: https://lydell.github.io/elm-watch/v2/elm-watch.json/#package-targets`
+elm.json: ${docsLink("package-targets")}`
     : "";
 
   return `

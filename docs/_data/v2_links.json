@@ -1,0 +1,13 @@
+{
+  "home": "",
+  "javascript-api": "javascript-api/",
+  "elm-watch-json": "elm-watch.json/",
+  "package-targets": "elm-watch.json/#package-targets",
+  "clickable-error-locations": "browser-ui/#clickable-error-locations",
+  "postprocess": "postprocess/",
+  "server": "server/",
+  "index-html": "server/#indexhtml",
+  "allowed-hosts": "server/#allowed-hosts",
+  "network-exposure": "server/#network-exposure",
+  "https": "https/"
+}

@@ -132,7 +132,7 @@ If you inspect the request for `/mani.js` (typo), you can see that elm-watch add
 
 - `elm-watch-404: /Users/you/project/public/mani.js`. This header hints that the URL was actually a 404, and shows the absolute file path that couldn’t be found.
 - `elm-watch-index-html: /Users/you/project/public/index.html`. Shows the `index.html` file that was served instead.
-- `elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/server/#indexhtml`. A handy link to this page if you need to read up on the details.
+- `elm-watch-learn-more: https://lydell.github.io/elm-watch/v2/link#index-html`. A handy link to this page if you need to read up on the details.
 
 elm-watch also adds an HTML comment starting with `<!-- elm-watch debug information: -->` at the top of the served HTML, which contains the same information as the headers but with more words. The idea is that the headers and the HTML comment should help you when a file path didn’t work.
 

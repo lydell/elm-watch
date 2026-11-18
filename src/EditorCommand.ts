@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
+import { docsLink } from "./DocsLinks.ts";
 import { EDITOR_PLACEHOLDERS } from "./Editor.ts";
 import { ELM_WATCH_OPEN_EDITOR, type Env, getEnvValue } from "./Env.ts";
 import { bold, dim, toError } from "./Helpers.ts";
@@ -91,8 +92,7 @@ export async function editorCommand(
 
 const URL_EXAMPLE = "pycharm://open?file={file}&line={line}&column={column0}";
 
-const DOCS_URL =
-  "https://lydell.github.io/elm-watch/v2/browser-ui/#clickable-error-locations";
+const DOCS_URL = docsLink("clickable-error-locations");
 
 function gettingStarted(env: Env): string {
   const variables = EDITOR_PLACEHOLDERS.map((placeholder) =>

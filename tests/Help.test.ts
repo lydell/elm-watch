@@ -60,7 +60,7 @@ describe("help", () => {
           With ⧙--javascript⧘ or ⧙--typescript⧘: Create elm-watch.mjs
           or elm-watch.mts instead, for using the JavaScript API. If you
           already have an ⧙elm-watch.json⧘, it is migrated to the new file.
-          https://lydell.github.io/elm-watch/v2/javascript-api/
+          https://lydell.github.io/elm-watch/v2/link#javascript-api
 
       ⧙elm-watch make [--debug|--optimize] [target names...]⧘
           Compile Elm code into JS. Similar to ⧙elm make⧘.
@@ -110,7 +110,7 @@ describe("help", () => {
           ⧙ELM_WATCH_OPEN_EDITOR⧘
               A URL or a command for opening your editor
               when clicking error locations in the browser
-              https://lydell.github.io/elm-watch/v2/browser-ui/#clickable-error-locations
+              https://lydell.github.io/elm-watch/v2/link#clickable-error-locations
 
           ⧙ELM_WATCH_HOST⧘
               Override "host" in ⧙elm-watch.json⧘
@@ -124,7 +124,7 @@ describe("help", () => {
               Comma-separated hosts to allow in addition to "allowedHosts"
 
       ⧙Documentation:⧘
-          https://lydell.github.io/elm-watch/v2/
+          https://lydell.github.io/elm-watch/v2/link#home
 
       ⧙Version:⧘
           %VERSION%
@@ -152,7 +152,7 @@ describe("help", () => {
             With --javascript or --typescript: Create elm-watch.mjs
             or elm-watch.mts instead, for using the JavaScript API. If you
             already have an elm-watch.json, it is migrated to the new file.
-            https://lydell.github.io/elm-watch/v2/javascript-api/
+            https://lydell.github.io/elm-watch/v2/link#javascript-api
 
         elm-watch make [--debug|--optimize] [target names...]
             Compile Elm code into JS. Similar to elm make.
@@ -191,7 +191,7 @@ describe("help", () => {
             ELM_WATCH_OPEN_EDITOR
                 A URL or a command for opening your editor
                 when clicking error locations in the browser
-                https://lydell.github.io/elm-watch/v2/browser-ui/#clickable-error-locations
+                https://lydell.github.io/elm-watch/v2/link#clickable-error-locations
 
             ELM_WATCH_HOST
                 Override "host" in elm-watch.json
@@ -205,7 +205,7 @@ describe("help", () => {
                 Comma-separated hosts to allow in addition to "allowedHosts"
 
         Documentation:
-            https://lydell.github.io/elm-watch/v2/
+            https://lydell.github.io/elm-watch/v2/link#home
 
         Version:
             %VERSION%
