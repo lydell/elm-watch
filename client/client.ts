@@ -50,6 +50,7 @@ type __ELM_WATCH = {
   WEBSOCKET_TIMEOUT: number;
   RETRY_WAIT_MS: (attemptNumber: number) => number;
   MIN_CLOSE_MS: number;
+  GOING_AWAY_DELAY_MS: number;
   CHANGED_CSS: Date;
   CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
@@ -239,6 +240,15 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
   // Connections that have been open for a while are reported closed right
   // away. Set to 0 in tests, to not slow them down.
   MIN_CLOSE_MS: 500,
+
+  // Firefox closes web sockets with code 1001 (“going away”) as soon as the
+  // page starts navigating away (like when reloading the page), while the page
+  // is still running. Reconnecting right away would show “Connecting” and make
+  // a new connection just before the page goes away. Instead, wait a bit
+  // without changing status. elm-watch never sends 1001 itself, so if we’re
+  // still around after the wait, something else (like a proxy) closed the
+  // connection, and we reconnect as usual.
+  GOING_AWAY_DELAY_MS: 1000,
 
   ON_RENDER: () => {
     // Do nothing.
@@ -1155,6 +1165,8 @@ function getWebSocketUrl(elmCompiledTimestamp: number): URL {
   return url;
 }
 
+const GOING_AWAY_CLOSE_CODE = 1001;
+
 function initWebSocket(
   getNow: GetNow,
   elmCompiledTimestamp: number,
@@ -1194,7 +1206,14 @@ function initWebSocket(
     dispatchIfCurrent({ tag: "WebSocketConnected", date: getNow() });
   });
 
-  webSocket.addEventListener("close", dispatchClosed);
+  webSocket.addEventListener("close", (event) => {
+    // See `GOING_AWAY_DELAY_MS`.
+    if (event.code === GOING_AWAY_CLOSE_CODE) {
+      setTimeout(dispatchClosed, __ELM_WATCH.GOING_AWAY_DELAY_MS);
+    } else {
+      dispatchClosed();
+    }
+  });
 
   // In Node.js, if you start the Node.js program (with the elm-watch client) before you start `elm-watch` hot,
   // the "error" event is emitted. Treating it like "closed" allows us to try reconnecting.

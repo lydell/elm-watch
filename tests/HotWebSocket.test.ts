@@ -1162,6 +1162,46 @@ describe("hot", () => {
       expect(succeededTime - failedTime).toBeGreaterThanOrEqual(minCloseMs - 1);
     });
 
+    test("going away closes wait before reconnecting", async () => {
+      setupTestWebSocket();
+      const goingAwayDelayMs = 200;
+      let closeTime = 0;
+      let numWebSocketsBefore = 0;
+
+      await run({
+        fixture: "basic",
+        args: ["Reconnect"],
+        scripts: ["Reconnect.js"],
+        init: (node) => {
+          window.Elm?.["HtmlMain"]?.init({ node });
+        },
+        onIdle: ({ idle }) => {
+          switch (idle) {
+            case 1:
+              window.__ELM_WATCH.GOING_AWAY_DELAY_MS = goingAwayDelayMs;
+              numWebSocketsBefore = webSockets.length;
+              closeTime = Date.now();
+              // Like Firefox when navigating away from the page. (Pages can’t
+              // close web sockets with code 1001 themselves.)
+              getLastWebSocket().dispatchEvent(
+                new CloseEvent("close", { code: 1001 }),
+              );
+              return "KeepGoing";
+            default:
+              return "Stop";
+          }
+        },
+      });
+
+      expect(webSockets).toHaveLength(numWebSocketsBefore + 1);
+      const [reconnectTime = 0] =
+        webSocketCreatedTimes.slice(numWebSocketsBefore);
+      // (Allow timers to fire a millisecond “early” according to `Date`.)
+      expect(reconnectTime - closeTime).toBeGreaterThanOrEqual(
+        goingAwayDelayMs - 1,
+      );
+    });
+
     test("events from previous web sockets are ignored", async () => {
       setupTestWebSocket();
       let oldWebSocket: WebSocket | undefined = undefined;
