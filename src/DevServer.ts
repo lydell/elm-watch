@@ -2,6 +2,7 @@ import * as crypto from "crypto";
 import * as https from "https";
 import type { AddressInfo } from "net";
 import * as net from "net";
+import * as os from "os";
 import type { Duplex } from "stream";
 import * as util from "util";
 import type WebSocket from "ws";
@@ -11,6 +12,7 @@ import {
   type AllowedHost,
   checkHostHeader,
   checkOriginHeader,
+  getServerLinkHosts,
   type RejectedHost,
   type RejectedOrigin,
 } from "./AllowedHosts.ts";
@@ -174,11 +176,22 @@ export class DevServer {
     allowedHosts,
     configSource,
   }: DevServerOptions) {
+    // The network IP addresses can change while running (like when switching
+    // Wi-Fi), so they are checked on every request.
+    const getAllowedHosts = (): ReadonlyArray<AllowedHost> => [
+      ...allowedHosts,
+      ...getServerLinkHosts(host, os.networkInterfaces()),
+    ];
+
     this.polyHttpServer = createServer({
       isAllowedHost: (request) =>
-        checkHostHeader(allowedHosts, request.headers.host).tag === "Allowed",
+        checkHostHeader(getAllowedHosts(), request.headers.host).tag ===
+        "Allowed",
       onRequest: (request, response) => {
-        const hostCheck = checkHostHeader(allowedHosts, request.headers.host);
+        const hostCheck = checkHostHeader(
+          getAllowedHosts(),
+          request.headers.host,
+        );
         if (hostCheck.tag !== "Allowed") {
           SimpleStaticFileServer.respondHtml(
             response,
@@ -253,7 +266,10 @@ export class DevServer {
 
         const { origin } = request.headers;
 
-        const hostCheck = checkHostHeader(allowedHosts, request.headers.host);
+        const hostCheck = checkHostHeader(
+          getAllowedHosts(),
+          request.headers.host,
+        );
         if (hostCheck.tag !== "Allowed") {
           rejectUpgrade(socket, "403 Forbidden", "Host not allowed");
           this.dispatch({
@@ -278,7 +294,7 @@ export class DevServer {
           return;
         }
 
-        const originCheck = checkOriginHeader(allowedHosts, origin);
+        const originCheck = checkOriginHeader(getAllowedHosts(), origin);
         if (originCheck.tag !== "Allowed") {
           rejectUpgrade(socket, "403 Forbidden", "Origin not allowed");
           this.dispatch({

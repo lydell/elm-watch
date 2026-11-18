@@ -1,3 +1,4 @@
+import type * as os from "os";
 import * as Codec from "tiny-decoders";
 import { describe, expect, test } from "vitest";
 
@@ -7,7 +8,9 @@ import {
   checkHostHeader,
   checkOriginHeader,
   getAllowedHostsFromEnv,
+  getServerLinkHosts,
 } from "../src/AllowedHosts.ts";
+import { markAsHost } from "../src/Host.ts";
 import { stringSnapshotSerializer } from "./Helpers.ts";
 
 expect.addSnapshotSerializer(stringSnapshotSerializer);
@@ -157,11 +160,8 @@ describe("AllowedHosts", () => {
         "172.16.0.1",
         "172.31.255.255",
         "169.254.1.2",
-        "100.101.102.103",
-        "0.0.0.0:8000",
         "[::1]",
         "[::1]:8000",
-        "[::]:8000",
         "[::ffff:127.0.0.1]:8000",
         "[fe80::1]:8000",
         "[fd12:3456::1]:8000",
@@ -205,7 +205,9 @@ describe("AllowedHosts", () => {
         ["203.0.113.5", "203.0.113.5"],
         ["203.0.113.5:8000", "203.0.113.5"],
         ["172.32.0.1", "172.32.0.1"],
-        ["100.128.0.1", "100.128.0.1"],
+        ["100.101.102.103", "100.101.102.103"],
+        ["0.0.0.0:8000", "0.0.0.0"],
+        ["[::]:8000", "[::]"],
         ["[2001:db8::1]:8000", "[2001:db8::1]"],
         ["[::ffff:203.0.113.5]", "[::ffff:cb00:7105]"],
       ] as const) {
@@ -286,6 +288,74 @@ describe("AllowedHosts", () => {
           tag: "Invalid",
           value: origin,
         });
+      }
+    });
+  });
+
+  describe("getServerLinkHosts", () => {
+    const interfaces: NodeJS.Dict<Array<os.NetworkInterfaceInfo>> = {
+      lo0: [
+        {
+          address: "127.0.0.1",
+          netmask: "255.0.0.0",
+          family: "IPv4",
+          mac: "00:00:00:00:00:00",
+          internal: true,
+          cidr: "127.0.0.1/8",
+        },
+      ],
+      en0: [
+        {
+          address: "203.0.113.5",
+          netmask: "255.255.255.0",
+          family: "IPv4",
+          mac: "00:00:00:00:00:01",
+          internal: false,
+          cidr: "203.0.113.5/24",
+        },
+        {
+          address: "2001:db8::5",
+          netmask: "ffff:ffff:ffff:ffff::",
+          family: "IPv6",
+          mac: "00:00:00:00:00:01",
+          internal: false,
+          cidr: "2001:db8::5/64",
+          scopeid: 0,
+        },
+      ],
+    };
+
+    test("0.0.0.0: the network IP addresses", () => {
+      expect(
+        getServerLinkHosts(markAsHost("0.0.0.0"), interfaces),
+      ).toStrictEqual(["203.0.113.5"]);
+    });
+
+    test("other hosts: the host itself", () => {
+      for (const [host, expected] of [
+        ["127.0.0.1", "127.0.0.1"],
+        ["100.101.102.103", "100.101.102.103"],
+        ["2001:DB8::1", "[2001:db8::1]"],
+        ["My-Machine", "my-machine"],
+      ] as const) {
+        expect(getServerLinkHosts(markAsHost(host), interfaces)).toStrictEqual([
+          expected,
+        ]);
+      }
+    });
+
+    test("printed links are allowed", () => {
+      for (const [host, origin] of [
+        ["0.0.0.0", "http://203.0.113.5:9000"],
+        ["100.101.102.103", "http://100.101.102.103:9000"],
+      ] as const) {
+        const allowedHosts = getServerLinkHosts(markAsHost(host), interfaces);
+        expect(checkOriginHeader(allowedHosts, origin)).toStrictEqual({
+          tag: "Allowed",
+        });
+        expect(
+          checkHostHeader(allowedHosts, new URL(origin).host),
+        ).toStrictEqual({ tag: "Allowed" });
       }
     });
   });

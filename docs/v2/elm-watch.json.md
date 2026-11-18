@@ -76,7 +76,7 @@ Example:
 | host | `string` | `"127.0.0.1"` | The host for elm-watch’s HTTP and WebSocket server to listen on. Use `"0.0.0.0"` to expose the server on the local network. See [Network exposure](../server/#network-exposure). The `ELM_WATCH_HOST` environment variable takes precedence. |
 | webSocketUrl | `string` | `` `ws://${currentHostname}:${port}/elm-watch` `` (sort of) | This lets you customize how the elm-watch client connects its WebSocket for advanced use cases. You can also use the `ELM_WATCH_WEBSOCKET_URL` environment variable for dynamically setting it (the environment variable takes precedence). The value must be a valid URL starting with `ws:` or `wss:`. |
 | serve | `string` | unset | A directory of static files to [serve](../server/). |
-| allowedHosts | `Array<string>` | `[]` | Extra host names that elm-watch’s server accepts requests for, in addition to localhost, `*.localhost`, `*.local`, non-public IP addresses and the host of `webSocketUrl`. Exact host names (or IP addresses) only, like `"dev.example.com"`. You can also use the `ELM_WATCH_ALLOWED_HOSTS` environment variable (comma separated), which is combined with this setting. See [Allowed hosts](../server/#allowed-hosts). |
+| allowedHosts | `Array<string>` | `[]` | Extra host names that elm-watch’s server accepts requests for, in addition to localhost, `*.localhost`, `*.local`, non-public IP addresses, the hosts of the server links elm-watch prints and the host of `webSocketUrl`. Exact host names (or IP addresses) only, like `"dev.example.com"`. You can also use the `ELM_WATCH_ALLOWED_HOSTS` environment variable (comma separated), which is combined with this setting. See [Allowed hosts](../server/#allowed-hosts). |
 
 ## Environment variables
 

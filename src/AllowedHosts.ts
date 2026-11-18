@@ -1,8 +1,10 @@
 import { BlockList, isIP } from "net";
+import type * as os from "os";
 import * as Codec from "tiny-decoders";
 
 import { docsLink } from "./DocsLinks.ts";
 import { ELM_WATCH_ALLOWED_HOSTS, type Env, getEnvValue } from "./Env.ts";
+import { getNetworkIps, type Host } from "./Host.ts";
 import type { Brand } from "./Types.ts";
 
 // elm-watch’s server only accepts requests where the `Host` header (and for
@@ -17,10 +19,11 @@ import type { Brand } from "./Types.ts";
 //
 // Some hosts are always allowed, since they can’t be registered in public DNS:
 // localhost, *.localhost, *.local (mDNS) and IP addresses that can’t be on the
-// public internet (loopback, private networks and so on). Public IP addresses
-// are not allowed: A web site served on a public IP address could otherwise
-// connect to the WebSocket. More hosts (including IP addresses) can be
-// allowed via "allowedHosts" in elm-watch.json, the `ELM_WATCH_ALLOWED_HOSTS`
+// public internet (loopback, private networks and link-local). Public IP
+// addresses are not allowed: A web site served on a public IP address could
+// otherwise connect to the WebSocket. The hosts of the links elm-watch prints
+// for its server are also allowed (see `getServerLinkHosts`). More hosts
+// (including IP addresses) can be allowed via "allowedHosts" in elm-watch.json, the `ELM_WATCH_ALLOWED_HOSTS`
 // environment variable, and "webSocketUrl" (its hostname is allowed).
 // Wildcards are not supported on purpose: They are unsafe for shared domains
 // like ngrok’s. List each host exactly instead (the environment variable is
@@ -188,6 +191,27 @@ function isAlwaysAllowed(hostname: string): boolean {
   );
 }
 
+// The hosts of the links elm-watch prints for its server (see
+// `printServerLinks`): The `host` it listens on, or all network IP addresses
+// for `0.0.0.0`. They are always allowed, so that the printed links work. Even
+// public IP addresses: A page served on your own computer’s IP address is
+// served by your computer, not by some web site.
+export function getServerLinkHosts(
+  host: Host,
+  interfaces: NodeJS.Dict<Array<os.NetworkInterfaceInfo>>,
+): Array<AllowedHost> {
+  const hosts = host === "0.0.0.0" ? getNetworkIps(interfaces) : [host];
+  return hosts.flatMap((string) => {
+    const result = parseAllowedHost(string);
+    switch (result.tag) {
+      case "Valid":
+        return [result.value];
+      case "Invalid":
+        return [];
+    }
+  });
+}
+
 // IPv6 addresses are wrapped in brackets in URLs.
 function unbracketIpv6(hostname: string): string {
   return hostname.startsWith("[") && hostname.endsWith("]")
@@ -195,13 +219,13 @@ function unbracketIpv6(hostname: string): string {
     : hostname;
 }
 
-// IP addresses that can’t be used by public web sites. (`BlockList` also
-// matches IPv4-mapped IPv6 addresses, like `::ffff:127.0.0.1`.)
+// IP addresses that can’t be used by public web sites. The same as
+// `BlockList.PRIVATE_RANGES`, which requires Node.js 24.21.0 or later.
+// (`BlockList` also matches IPv4-mapped IPv6 addresses, like
+// `::ffff:127.0.0.1`.)
 const NON_PUBLIC_IPS = new BlockList();
 for (const [network, prefix] of [
-  ["0.0.0.0", 8], // “This host”
   ["10.0.0.0", 8], // Private network
-  ["100.64.0.0", 10], // Carrier-grade NAT (used by Tailscale, for example)
   ["127.0.0.0", 8], // Loopback
   ["169.254.0.0", 16], // Link-local
   ["172.16.0.0", 12], // Private network
@@ -210,7 +234,6 @@ for (const [network, prefix] of [
   NON_PUBLIC_IPS.addSubnet(network, prefix, "ipv4");
 }
 for (const [network, prefix] of [
-  ["::", 128], // Unspecified
   ["::1", 128], // Loopback
   ["fc00::", 7], // Unique local addresses (private network)
   ["fe80::", 10], // Link-local
