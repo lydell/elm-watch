@@ -35,6 +35,10 @@ import type {
 // site and elm-watch, and direct traffic by path matching.
 const WEBSOCKET_URL_EXPECTED_START = "/elm-watch?";
 
+// The client adds a random path segment, to avoid Firefox’s delays after
+// failed connections (see `getWebSocketUrl` in client.ts).
+const WEBSOCKET_URL_REGEX = /^\/elm-watch(?:\/\d+)?\?/;
+
 // The server keeps track of the open web sockets, since it outlives each run of
 // Hot (it is kept when restarting).
 export type WebSocketConnection = {
@@ -280,7 +284,8 @@ export class DevServer {
           return;
         }
 
-        if (!urlString.startsWith(WEBSOCKET_URL_EXPECTED_START)) {
+        const urlMatch = WEBSOCKET_URL_REGEX.exec(urlString);
+        if (urlMatch === null) {
           rejectUpgrade(socket, "404 Not Found", "Invalid URL");
           this.dispatch({
             tag: "WebSocketConnectionRejected",
@@ -307,7 +312,7 @@ export class DevServer {
 
         // This never throws as far as I can tell.
         const urlParams = new URLSearchParams(
-          urlString.slice(WEBSOCKET_URL_EXPECTED_START.length),
+          urlString.slice(urlMatch[0].length),
         );
 
         const urlToken = urlParams.get("webSocketToken") ?? "";

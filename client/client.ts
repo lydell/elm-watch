@@ -1124,9 +1124,17 @@ function getWebSocketUrl(elmCompiledTimestamp: number): URL {
             : window.location.hostname,
           window.location.protocol === "https:" ? "wss" : "ws",
         ];
+  // Firefox delays new web sockets after failed connections, by up to a minute
+  // (growing with each failure). This makes reconnecting after restarting
+  // elm-watch slow. The delays are per path (not including the query string),
+  // so use a random path segment each time. That’s only possible when we know
+  // the server: A proxy in front of elm-watch might only allow a specific path.
+  // Random rather than a counter: The delays are global to the browser, so a
+  // counter starting over (on page reload, in another tab, or for another
+  // target on the same page) would reuse recently failed paths.
   const url = new URL(
     typeof WEBSOCKET_CONNECTION === "number"
-      ? `${protocol}://${hostname}:${WEBSOCKET_CONNECTION}/elm-watch`
+      ? `${protocol}://${hostname}:${WEBSOCKET_CONNECTION}/elm-watch/${Math.floor(Math.random() * 2 ** 32)}`
       : WEBSOCKET_CONNECTION,
   );
   url.searchParams.set("elmWatchVersion", VERSION);

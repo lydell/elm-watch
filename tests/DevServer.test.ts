@@ -44,7 +44,10 @@ async function withServer(
   allowedHosts: Array<string>,
   f: (helpers: {
     get: (headers: http.OutgoingHttpHeaders) => Promise<string>;
-    connect: (headers: http.OutgoingHttpHeaders) => Promise<string>;
+    connect: (
+      headers: http.OutgoingHttpHeaders,
+      urlPath?: string,
+    ) => Promise<string>;
     rejections: Array<unknown>;
   }) => Promise<void>,
 ): Promise<void> {
@@ -90,10 +93,13 @@ async function withServer(
         .on("error", reject);
     });
 
-  const connect = (headers: http.OutgoingHttpHeaders): Promise<string> =>
+  const connect = (
+    headers: http.OutgoingHttpHeaders,
+    urlPath = "/elm-watch",
+  ): Promise<string> =>
     new Promise((resolve, reject) => {
       const webSocket = new WebSocket(
-        `ws://127.0.0.1:${port}/elm-watch?webSocketToken=${TOKEN}`,
+        `ws://127.0.0.1:${port}${urlPath}?webSocketToken=${TOKEN}`,
         { headers },
       );
       webSocket.on("open", () => {
@@ -252,6 +258,35 @@ describe("DevServer", () => {
           },
         ]
       `);
+    });
+  });
+
+  test("WebSocket: URL path", async () => {
+    await withServer([], async ({ connect, rejections }) => {
+      expect(await connect({}, "/elm-watch")).toMatchInlineSnapshot(`open`);
+      // The client adds a random path segment, to avoid Firefox’s delays after
+      // failed connections.
+      expect(await connect({}, "/elm-watch/123456")).toMatchInlineSnapshot(
+        `open`,
+      );
+      expect(rejections).toStrictEqual([]);
+
+      expect(await connect({}, "/elm-watch/")).toMatchInlineSnapshot(
+        `404 Invalid URL`,
+      );
+      expect(await connect({}, "/elm-watch/abc")).toMatchInlineSnapshot(
+        `404 Invalid URL`,
+      );
+      expect(await connect({}, "/elm-watch/1/2")).toMatchInlineSnapshot(
+        `404 Invalid URL`,
+      );
+      expect(await connect({}, "/elm-watchx")).toMatchInlineSnapshot(
+        `404 Invalid URL`,
+      );
+      expect(await connect({}, "/nope")).toMatchInlineSnapshot(
+        `404 Invalid URL`,
+      );
+      expect(rejections).toHaveLength(5);
     });
   });
 
