@@ -57,7 +57,7 @@ If you use a bundler, `import`ing the built Elm JS can have additional downsides
 - The bundler might rewrite that global `this` mentioned above to `exports` (a local object) in an attempt to support `import`ing old-school packages. However, then `window.Elm` won’t be created.
 - The bundler might waste time parsing the whole built Elm JS file for nothing.
 
-elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](../postprocess/) function, though, if you really feel like it.
+elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which is the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](../postprocess/) function, though, if you really feel like it.
 
 Having `window.Elm.Main.init()` in your code might feel ugly and old-school compared to using `import`, but I think it’s fine:
 
@@ -76,7 +76,7 @@ function postprocess(code) {
 ```
 
 {: .warning }  
-⚠️ Beware that if you put a script tag on your page that loads a JS file, which in turns `import`s the compiled Elm code, it might cause your page to load more slowly, since the compiled Elm code needs to wait for the first JS file to download and execute first.
+⚠️ Beware that if you put a script tag on your page that loads a JS file, which in turn `import`s the compiled Elm code, it might cause your page to load more slowly, since the compiled Elm code needs to wait for the first JS file to download and execute first.
 
 {: .warning }  
 ⚠️ Hot reloading is slower and uses more memory with modules. When hot reloading, elm-watch evaluates the new code as a script if possible, and as a module only when it has to (because of `import` or `export`). Browsers never forget a module once it has been loaded, so each hot reload keeps a copy of your compiled Elm code in memory until you reload the page. For example, in Chromium a small app (145 KB) used about 0.5 MB more memory per hot reload. If you only need a module for your production build, consider postprocessing into a module only in `make` mode (`runMode === "make"`), and keep using a plain script tag during development.

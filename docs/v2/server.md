@@ -63,7 +63,7 @@ This only applies to outputs inside the directory to serve, requested via elm-wa
 
 ## What you can do yourself
 
-Here are some more advanced dev server needs, that elm-watch simple HTTP server doesn’t do out of the box, but that you can set up yourself:
+Here are some more advanced dev server needs, that elm-watch’s simple HTTP server doesn’t do out of the box, but that you can set up yourself:
 
 - Routing.
 - Proxying API requests. See the [application-proxy example](https://github.com/lydell/elm-watch/tree/main/examples/application-proxy#readme).
@@ -77,7 +77,7 @@ But there is also another way: [Running elm-watch in an alternative way with a c
 
 The configuration is `"serve": "./directory/"` rather than `"serve": { "directory": "./directory/" }` on purpose to not allow for more options.
 
-Just like mentioned in [What elm-watch is _not_](../what-elm-watch-is-not), I don’t want to drown in feature requests for the HTTP server. I want to focus on the Elm aspects. On top of that, I personally think it’s easier and more flexible to write a little bit of code when you need more advanced things. Easier in the form of that you can write plain code instead of reading documentation, and that you can debug why things are not working easily. More flexible since with custom code you can do anything, not just what is supported through configuration.
+Just like mentioned in [What elm-watch is _not_](../what-elm-watch-is-not/), I don’t want to drown in feature requests for the HTTP server. I want to focus on the Elm aspects. On top of that, I personally think it’s easier and more flexible to write a little bit of code when you need more advanced things. Easier in the form of that you can write plain code instead of reading documentation, and that you can debug why things are not working easily. More flexible since with custom code you can do anything, not just what is supported through configuration.
 
 So elm-watch’s simple static server focuses on the needs of [Browser.application](#browserapplication). Anything more is outside the scope of Elm and requires [custom code](#custom-server).
 
@@ -144,7 +144,7 @@ Here’s a tip for fixing a broken URL to a file:
 
 1. Copy the absolute file path that actually was tried to be read from the `elm-watch-404` header or the HTML comment (or an actual 404 page if there was no closest `index.html`). Paste it in a temporary place.
 
-2. Open the file you intended to link to, using your editor or a file explorer and copy the absolute path of the file. Paste it next to file path in step 1.
+2. Open the file you intended to link to, using your editor or a file explorer and copy the absolute path of the file. Paste it next to the file path in step 1.
 
 3. Compare the two file paths to spot differences:
 
@@ -162,7 +162,7 @@ Here’s a tip for fixing a broken URL to a file:
 
 Note that `index.html` files must be called exactly `index.html`. Not `index.htm` or `INDEX.HTML`.
 
-What would happen if you named `public/admin/index.html` just `public/admin.html` instead? There’s nothing stopping you from doing it. You would need to go to `/admin.html` to access it. Which would probably render a 404-style page in your `Browser.application` program, since you most likely have no route matching `/admin.html`. And if the `Browser.application` program ever changes the URL, refreshing the page won’t work. So stick to `index.html` files for `Browser.application` programs. Then you get the right page when you Elm app starts, and refreshing the page works.
+What would happen if you named `public/admin/index.html` just `public/admin.html` instead? There’s nothing stopping you from doing it. You would need to go to `/admin.html` to access it. Which would probably render a 404-style page in your `Browser.application` program, since you most likely have no route matching `/admin.html`. And if the `Browser.application` program ever changes the URL, refreshing the page won’t work. So stick to `index.html` files for `Browser.application` programs. Then you get the right page when your Elm app starts, and refreshing the page works.
 
 I recommend always creating an `index.html` directly in your static files directory. elm-watch prints a link to the static file server on start up, and if you have a root `index.html` file, that link will take you somewhere useful from the get go.
 

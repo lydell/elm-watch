@@ -25,4 +25,4 @@ And do you remember trying out Elm with `elm reactor`? Did it feel easy to get s
 
 ## Dreams for the future
 
-- **Elm reactor.** . Imagine a modified Elm binary where `elm reactor` gave you an elm-watch like experience.
+- **Elm reactor.** Imagine a modified Elm binary where `elm reactor` gave you an elm-watch like experience.

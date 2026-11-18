@@ -8,7 +8,7 @@ nav_order: 12
 {: .info }  
 **TL;DR:** I recommend using `http://` for local development. If you really want `https://`, there are ways to set that up yourself.
 
-I’d say it’s the most common to use plain old `http://` when working on `localhost`. One could argue that `https://` would be better even for local development since it’s closer to your production environment (which most likely uses `https://`). To be honest, I’ve tried using `https://` for local development and can’t remember a single time it saved me from a bug. Instead it just complicates things with certificates. But there are some niche web features that are only available HTTPS, even on `localhost`.
+I’d say it’s the most common to use plain old `http://` when working on `localhost`. One could argue that `https://` would be better even for local development since it’s closer to your production environment (which most likely uses `https://`). To be honest, I’ve tried using `https://` for local development and can’t remember a single time it saved me from a bug. Instead it just complicates things with certificates. But there are some niche web features that are only available over HTTPS, even on `localhost`.
 
 With elm-watch HTTPS causes a new complexity: elm-watch uses WebSockets for hot reloading, which results in the question of `ws://` vs `wss://`.
 
@@ -20,7 +20,7 @@ elm-watch uses:
 elm-watch runs an HTTP server, because WebSockets connect over HTTP before switching to the WebSocket protocol. Now, things differ a little bit depending on the elm-watch version:
 
 - elm-watch 1.0.2 and older only runs an HTTP server.
-- elm-watch 1.1.0 added some support for HTTPS: It runs both and HTTP server and an HTTPS server.
+- elm-watch 1.1.0 added some support for HTTPS: It runs both an HTTP server and an HTTPS server.
 - elm-watch 2 removes the HTTPS server, but lets you set that up yourself.
 
 ## elm-watch 1.1
