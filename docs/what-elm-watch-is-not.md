@@ -1,9 +1,7 @@
----
-title: What elm-watch is not
-nav_order: 4
----
-
 # What elm-watch is _not_
+
+> [!IMPORTANT]
+> These are the old docs for elm-watch 1.x (and early `elm-watch@beta` versions). See the [current docs](https://lydell.github.io/elm-watch/).
 
 - A compiler for other things than Elm.
 - A watcher for Elm _packages._
@@ -14,7 +12,7 @@ nav_order: 4
 
 The core of elm-watch is more of a “professional” tool. Let elm-watch excel at compiling Elm quickly and reliably, and own the rest of the stack yourself. Have your own TypeScript compiler and your own CSS setup or whatever you need.
 
-However, there are some things that elm-watch needs anyway – such as an [HTTP server](../server/) – and by exposing just the right amount of it, you get a nice [elm-live]-like experience, both for beginners, and for experienced people with projects that haven’t gotten the most complicated requirements.
+However, there are some things that elm-watch needs anyway – such as an [HTTP server](server.md) – and by exposing just the right amount of it, you get a nice [elm-live]-like experience, both for beginners, and for experienced people with projects that haven’t gotten the most complicated requirements.
 
 That being said, it’s not super difficult to set elm-watch up together with other tools. See the [example/] folder for a lean and sweet setup with [esbuild], and [run-pty] for easily starting `elm-watch`, `esbuild` and a custom dev server in one go.
 
@@ -31,7 +29,7 @@ For a package, it doesn’t take many tests to reach the point where if the test
 
 [elm-live]: https://github.com/wking-io/elm-live
 [esbuild]: https://esbuild.github.io/
-[example/]: https://github.com/lydell/elm-watch/tree/main/example#readme
+[example/]: https://github.com/lydell/elm-watch/tree/3bb2599600df0a4e268f57298174e24d37f173ae/example#readme
 [issue #23]: https://github.com/lydell/elm-watch/issues/23
 [parcel]: https://parceljs.org/
 [run-pty]: https://github.com/lydell/run-pty/

@@ -1,9 +1,7 @@
----
-title: Browser UI
-nav_order: 7
----
-
 # Browser UI
+
+> [!IMPORTANT]
+> These are the old docs for elm-watch 1.x (and early `elm-watch@beta` versions). See the [current docs](https://lydell.github.io/elm-watch/).
 
 When using `elm-watch hot`, you’ll see a little box in the bottom-left corner of the browser window, looking something like this:
 

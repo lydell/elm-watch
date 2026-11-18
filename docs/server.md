@@ -1,12 +1,10 @@
----
-title: Server
-nav_order: 10
----
-
 # Server
 
-{: .warning }  
-⚠️ This is a beta feature! You need to install `elm-watch@beta` to be able to use it.
+> [!IMPORTANT]
+> These are the old docs for elm-watch 1.x (and early `elm-watch@beta` versions). See the [current docs](https://lydell.github.io/elm-watch/).
+
+> [!WARNING]
+> This is a beta feature! You need to install `elm-watch@beta` to be able to use it.
 
 If you want, you can enable a simple static file server for your project, by adding the following to your `elm-watch.json` file:
 
@@ -24,8 +22,8 @@ The simple static file server tries to be useful by default through strong conve
 
 The file server is completely optional. It only serves files. So if you serve your files some other way, that’s totally fine. As long as the generated Elm JS can connect via WebSocket to elm-watch, then Elm hot reloading will work fine.
 
-{: .info }  
-ℹ️ By default, the HTTP server is exposed on the local network (so you can test on your phone on the same Wi-Fi for example). If you are on a public Wi-Fi, you can restrict the server to just your computer by setting an environment variable: `ELM_WATCH_HOST=127.0.0.1`. Otherwise, you could expose the source code of your project if you use `"serve": "."`.
+> [!NOTE]
+> By default, the HTTP server is exposed on the local network (so you can test on your phone on the same Wi-Fi for example). If you are on a public Wi-Fi, you can restrict the server to just your computer by setting an environment variable: `ELM_WATCH_HOST=127.0.0.1`. Otherwise, you could expose the source code of your project if you use `"serve": "."`.
 
 ## What does the simple static file server do?
 
@@ -59,7 +57,7 @@ But there is also another way: [Running elm-watch in an alternative way with a c
 
 The configuration is `"serve": "./directory/"` rather than `"serve": { "directory": "./directory/" }` on purpose to not allow for more options.
 
-Just like mentioned in [What elm-watch is _not_](../what-elm-watch-is-not), I don’t want to drown in feature requests for the HTTP server. I want to focus on the Elm aspects. On top of that, I personally think it’s easier and more flexible to write a little bit of code when you need more advanced things. Easier in the form of that you can write plain code instead of reading documentation, and that you can debug why things are not working easily. More flexible since with custom code you can do anything, not just what is supported through configuration.
+Just like mentioned in [What elm-watch is _not_](what-elm-watch-is-not.md), I don’t want to drown in feature requests for the HTTP server. I want to focus on the Elm aspects. On top of that, I personally think it’s easier and more flexible to write a little bit of code when you need more advanced things. Easier in the form of that you can write plain code instead of reading documentation, and that you can debug why things are not working easily. More flexible since with custom code you can do anything, not just what is supported through configuration.
 
 So elm-watch’s simple static server focuses on the needs of [Browser.application](#browserapplication). Anything more is outside the scope of Elm and requires [custom code](#custom-server).
 
@@ -187,7 +185,7 @@ If you have multiple applications you might want to inspect `event.detail` (whic
 
 Why doesn’t elm-watch do that by default? elm-watch only reloads when it can be near perfect, so that you can rely on it always working.
 
-- Elm files can be reloaded near perfectly, as described in [Hot reloading](../hot-reloading/).
+- Elm files can be reloaded near perfectly, as described in [Hot reloading](hot-reloading.md).
 - CSS is stateless and somewhat easy to reload.
 - Images _sound_ like they can be hot reloaded if they change, but it’s very difficult to reload images set by CSS `background-image`, so elm-watch does not reload any images. In practice images don’t change that much during development anyway.
 - JS is full of state and can’t be hot reloaded in general. It’s possible to instead reload the page. However, due to `import` and other JS loading techniques it’s difficult to know which JS files should reload which pages. Therefore elm-watch does not reload the page by default, but you can do it yourself as mentioned above, given the constraints of your given project.
@@ -243,7 +241,7 @@ elmWatch(process.argv.slice(2), {
   });
 ```
 
-- `onRequest` is not strictly needed for the core of elm-watch to work, but is very interesting because it lets you do a lot of stuff. By default, all `onRequest` is doing is responding to regular HTTP requests (WebSocket connection HTTP requests are handled by `onUpgrade`) with a simple HTML page that tells you how to enable elm-watch’s [static file server](../server/). If you enable the static file server, the `onRequest` instead looks for files in the static file directory and serves them. You can wrap `onRequest` to do whatever you want before letting elm-watch server static files.
+- `onRequest` is not strictly needed for the core of elm-watch to work, but is very interesting because it lets you do a lot of stuff. By default, all `onRequest` is doing is responding to regular HTTP requests (WebSocket connection HTTP requests are handled by `onUpgrade`) with a simple HTML page that tells you how to enable elm-watch’s [static file server](server.md). If you enable the static file server, the `onRequest` instead looks for files in the static file directory and serves them. You can wrap `onRequest` to do whatever you want before letting elm-watch server static files.
 - `onUpgrade` is important, but only interesting if your project uses WebSockets too. If you also have your own WebSocket in your project, you can wrap `onUpgrade` to also handle your WebSocket. If you forget `.on("upgrade", onUpgrade)`, then elm-watch’s WebSockets will never connect.
 - If you were wondering, you don’t need to add `.on("error", (error) => {...})`. elm-watch does that for you.
 
@@ -366,8 +364,8 @@ elmWatch(process.argv.slice(2), {
   });
 ```
 
-{: .warning }  
-You can’t really log anything in your custom server code – you’ll compete with the output of elm-watch, which clears the screen and moves the cursor to update parts of the output. If your custom server is complicated enough to need logging, make a separate proxy server. Extending elm-watch’s server is better for smaller, “silent” customizations, such as doing a little bit of proxying or setting up HTTPS.
+> [!WARNING]
+> You can’t really log anything in your custom server code – you’ll compete with the output of elm-watch, which clears the screen and moves the cursor to update parts of the output. If your custom server is complicated enough to need logging, make a separate proxy server. Extending elm-watch’s server is better for smaller, “silent” customizations, such as doing a little bit of proxying or setting up HTTPS.
 
 It is _not_ recommended to run other compilers as part of the elm-watch server, such as esbuild or Sass, since they also need to print error messages. Run them as separate watchers. [run-pty] is one way of easily starting multiple watchers with one command.
 

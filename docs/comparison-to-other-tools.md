@@ -1,17 +1,7 @@
----
-title: Comparison to other tools
-nav_order: 5
----
-
-<!-- prettier-ignore-start -->
-
 # Comparison to other tools
-{: .no_toc }
 
-1. TOC
-{:toc}
-
-<!-- prettier-ignore-end -->
+> [!IMPORTANT]
+> These are the old docs for elm-watch 1.x (and early `elm-watch@beta` versions). See the [current docs](https://lydell.github.io/elm-watch/).
 
 ## elm-watch vs generic watcher tools
 
@@ -25,7 +15,7 @@ There are many CLI programs that let you watch for file changes and then run a g
   - **Unfortunate ordering.** When you change `src/Shared.elm` (which is used by both targets), you have to wait for `src/Main.elm` to finish compiling before seeing changes to `src/Admin.elm`. The Elm compiler is fast, but the more targets you have the more it adds up. elm-watch compiles the app you interacted with most recently first.
   - **Error overload.** Running many `elm make` commands in sequence means you might see the same error over and over for shared code. An alternative is to stop on the first failing `elm make`, but then you don’t get to see errors at all for later targets until earlier are solved. elm-watch deduplicates compilation errors, so you don’t see the exact same one twice.
 
-- **Build duplication.** You need to maintain your watcher command, and a separate build command for every target. With elm-watch, your targets are defined in [elm-watch.json](../elm-watch.json/) so you can both watch and build for production easily.
+- **Build duplication.** You need to maintain your watcher command, and a separate build command for every target. With elm-watch, your targets are defined in [elm-watch.json](elm-watch.json.md) so you can both watch and build for production easily.
 
 - **Hot reloading.** That’s just not doable with an ad-hoc command. Sure, you might find some smooth WebSocket CLI, but you still need to do the code injection in Elm’s compiled JS.
 
@@ -47,11 +37,11 @@ You can pair elm-watch with either of webpack, Parcel, Vite, esbuild or any othe
 
 1. Set the `"output"`s in elm-watch.json to a place that is served by the dev server of your tool.
 
-2. Link to the built Elm JS in your HTML (as mentioned in [Getting Started](../getting-started/)). Ideally, you want your tool to “ignore” that script tag – we don’t want it to spend time analyzing it, just serve that file. This might be a bit tricky depending on how customizable the build tool is. Try it out and see how it goes!
+2. Link to the built Elm JS in your HTML (as mentioned in [Getting Started](getting-started.md)). Ideally, you want your tool to “ignore” that script tag – we don’t want it to spend time analyzing it, just serve that file. This might be a bit tricky depending on how customizable the build tool is. Try it out and see how it goes!
 
 3. When building for production:
 
-   - You might be able to re-use your build tool for minifying the built Elm JS, or you can install a minifier separately and use it in elm-watch [postprocess](../postprocess/).
+   - You might be able to re-use your build tool for minifying the built Elm JS, or you can install a minifier separately and use it in elm-watch [postprocess](postprocess.md).
    - You might want to hash the built Elm JS file, and update its link in the HTML to include the hash. If nothing else, you could make a small script that does that and run it after elm-watch and your build tool.
 
 It’s up to you to decide if you think the extra work of pairing a build tool with elm-watch is worth it.

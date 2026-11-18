@@ -1,14 +1,12 @@
----
-title: window.Elm
-nav_order: 12
----
-
 # window.Elm
+
+> [!IMPORTANT]
+> These are the old docs for elm-watch 1.x (and early `elm-watch@beta` versions). See the [current docs](https://lydell.github.io/elm-watch/).
 
 elm-watch is basically just `elm make` in watch mode, so the output format is using the good old `window.Elm` global.
 
-{: .info }  
-ℹ️ elm-watch 1.1.3 even _required `window.Elm` to exist,_ to make [hot reloading](../hot-reloading/) work. Newer versions of elm-watch don’t mind if you change that, though.
+> [!NOTE]
+> elm-watch 1.1.3 even _required `window.Elm` to exist,_ to make [hot reloading](hot-reloading.md) work. Newer versions of elm-watch don’t mind if you change that, though.
 
 **In short:** Keep it simple and load the built Elm JS in its own `<script>` tag and you’ll be fine.
 
@@ -57,7 +55,7 @@ If you use a bundler, `import`ing the built Elm JS can have additional downsides
 - The bundler might rewrite that global `this` mentioned above to `exports` (a local object) in an attempt to support `import`ing old-school packages. However, then `window.Elm` won’t be created.
 - The bundler might waste time parsing the whole built Elm JS file for nothing.
 
-elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](../postprocess/) script, though, if you really feel like it.
+elm-watch _could_ replace the `this` in the built Elm JS with [globalThis] which the modern way of getting the global object no matter what environment. But elm-watch takes a very conservative approach: For `elm-watch make`, the built Elm JS is just the output of `elm make` with no modifications at all. Patching that output is not the job of elm-watch, and would lead to the question of where to stop. _You_ can choose to make that modification in a [postprocess](postprocess.md) script, though, if you really feel like it.
 
 Having `window.Elm.Main.init()` in your code might feel ugly and old-school compared to using `import`, but I think it’s fine:
 
@@ -75,8 +73,8 @@ function postprocess({ code }) {
 }
 ```
 
-{: .warning }  
-⚠️ Beware that if you put a script tag on your page that loads a JS file, which in turns `import`s the compiled Elm code, it might cause your page to load more slowly, since the compiled Elm code needs to wait for the first JS file to download and execute first.
+> [!WARNING]
+> Beware that if you put a script tag on your page that loads a JS file, which in turns `import`s the compiled Elm code, it might cause your page to load more slowly, since the compiled Elm code needs to wait for the first JS file to download and execute first.
 
 Note that [elm-esm] does not work with elm-watch: It replaces a bit too much of the code.
 

@@ -1,9 +1,7 @@
----
-title: elm-watch.json
-nav_order: 8
----
-
 # elm-watch.json
+
+> [!IMPORTANT]
+> These are the old docs for elm-watch 1.x (and early `elm-watch@beta` versions). See the [current docs](https://lydell.github.io/elm-watch/).
 
 An `elm-watch.json` file is required to be able to use `elm-watch`. There’s not that much to know about it.
 
@@ -56,16 +54,16 @@ Example:
 | Property | Type | Default | Description |
 | --- | --- | --- | --- |
 | [targets](#targets) | `Record<string, object>` | _Required_ | The input Elm files to compile and the output JavaScript files to write to. At least one target is required. |
-| [postprocess](../postprocess/) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
+| [postprocess](postprocess.md) | `NonEmptyArray<string>` | No postprocessing. | A command to run after each `elm make` to transform Elm’s JavaScript output. |
 | port | `number` | An arbitrary available port. Tries to re-use the same port as last time you ran elm-watch. | The port for elm-watch’s HTTP and WebSocket server, used for hot reloading and as a simple file server. In case you _have_ to have the exact same port every time. Note that [some ports cannot be used][port-blocking]. |
 | ⚠️ webSocketUrl | `string` | `` `ws://${currentHostname}:${port}/elm-watch` `` (sort of) | **Only available in `elm-watch@beta`.** This lets you customize how the elm-watch client connects its WebSocket for advanced use cases. You can also use the `ELM_WATCH_WEBSOCKET_URL` environment variable for dynamically setting it (the environment variable takes precedence). The value must be a valid URL starting with `ws:` or `wss:`. |
-| ⚠️ serve | `string` | unset | **Only available in `elm-watch@beta`.** A directory of static files to [serve](../server/). |
+| ⚠️ serve | `string` | unset | **Only available in `elm-watch@beta`.** A directory of static files to [serve](server.md). |
 
 ## targets
 
 There isn’t much to say about `"targets"` really. You define what elm-watch should compile.
 
-It’s an object. The keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess](../postprocess/) script. You can also filter by target substring: `elm-watch make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
+It’s an object. The keys can be whatever you want, basically. They’re displayed in the terminal UI. They’re passed to your [postprocess](postprocess.md) script. You can also filter by target substring: `elm-watch make app 🇸🇪` would build only targets containing “app” or “🇸🇪”.
 
 For each target, provide the following:
 

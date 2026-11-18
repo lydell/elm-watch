@@ -1,17 +1,7 @@
----
-title: Getting started
-nav_order: 2
----
-
-<!-- prettier-ignore-start -->
-
 # Getting started
-{: .no_toc }
 
-1. TOC
-{:toc}
-
-<!-- prettier-ignore-end -->
+> [!IMPORTANT]
+> These are the old docs for elm-watch 1.x (and early `elm-watch@beta` versions). See the [current docs](https://lydell.github.io/elm-watch/).
 
 ## Installation
 
@@ -19,11 +9,11 @@ nav_order: 2
 npm install --save-dev elm-watch
 ```
 
-{: .info }  
-ℹ️ You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [unofficial npm][unofficial-npm], [elm-tooling]).
+> [!NOTE]
+> You need to install Elm itself separately, in whatever way you prefer ([installer][elm-guide-install], [npm][elm-npm-package], [unofficial npm][unofficial-npm], [elm-tooling]).
 
-{: .info }  
-ℹ️ Node.js 16 or newer is required.
+> [!NOTE]
+> Node.js 16 or newer is required.
 
 ```
 npx elm-watch --help
@@ -33,13 +23,13 @@ npx elm-watch --help
 
 > 📽 [Video showing how to get started][getting-started-with-elm-watch]
 
-{: .info }  
-ℹ️ If you don’t already have an Elm project, create one by running `elm init`.
+> [!NOTE]
+> If you don’t already have an Elm project, create one by running `elm init`.
 
-{: .info }  
-ℹ️ Also make sure you have an HTML file. If it works with plain `elm make`, it works with elm-watch. See the next section for inspiration.
+> [!NOTE]
+> Also make sure you have an HTML file. If it works with plain `elm make`, it works with elm-watch. See the next section for inspiration.
 
-Create a file called [elm-watch.json](../elm-watch.json/):
+Create a file called [elm-watch.json](elm-watch.json.md):
 
 ```
 npx elm-watch init
@@ -65,7 +55,7 @@ Start watching with hot reloading:
 npx elm-watch hot
 ```
 
-The command prints the link to a [local development HTTP server](../server) (which is completely optional to use, but easy to get started with).
+The command prints the link to a [local development HTTP server](server.md) (which is completely optional to use, but easy to get started with).
 
 To build for production:
 
@@ -92,7 +82,7 @@ Here’s some HTML to get you started.
   </script>
   ```
 
-  👉 [Minimal example](https://github.com/lydell/elm-watch/tree/main/example-minimal#readme)
+  👉 [Minimal example](https://github.com/lydell/elm-watch/tree/3bb2599600df0a4e268f57298174e24d37f173ae/example-minimal#readme)
 
 - For `Browser.document` and `Browser.application`:
 
@@ -113,10 +103,10 @@ Here’s some HTML to get you started.
   <script src="/build/bundle.js"></script>
   ```
 
-  👉 [Example with esbuild](https://github.com/lydell/elm-watch/tree/main/example#readme)
+  👉 [Example with esbuild](https://github.com/lydell/elm-watch/tree/3bb2599600df0a4e268f57298174e24d37f173ae/example#readme)
 
-{: .info }  
-ℹ️ elm-watch **requires** [window.Elm](../window.Elm/) to exist!
+> [!NOTE]
+> elm-watch **requires** [window.Elm](window.Elm.md) to exist!
 
 [elm-guide-install]: https://guide.elm-lang.org/install/elm.html
 [elm-npm-package]: https://github.com/elm/compiler/tree/master/installers/npm

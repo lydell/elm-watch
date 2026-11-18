@@ -1,9 +1,7 @@
----
-title: Hot reloading
-nav_order: 6
----
-
 # Hot reloading
+
+> [!IMPORTANT]
+> These are the old docs for elm-watch 1.x (and early `elm-watch@beta` versions). See the [current docs](https://lydell.github.io/elm-watch/).
 
 > **Note:** The goal is to have 100 % reliable hot reloading. However, it’s not possible without changes to the compiler. elm-watch gets maybe 90 % of the way there.
 >
