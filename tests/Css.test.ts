@@ -511,6 +511,210 @@ describe("updateStyleSheetIfNeeded", () => {
     `);
   });
 
+  test("added rule in the middle", () => {
+    expect(
+      updateOnce(
+        sheet(
+          styleRule("a", "color: red;"),
+          styleRule("b", "color: blue;"),
+          styleRule("c", "color: green;"),
+        ),
+        sheet(
+          styleRule("a", "color: red;"),
+          styleRule("new1", "color: pink;"),
+          styleRule("new2", "color: pink;"),
+          styleRule("b", "color: blue;"),
+          styleRule("c", "color: green;"),
+        ),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      b: set selectorText to new1
+      sheet: delete 1
+      sheet: insert 1: new1 { color: pink; }
+      c: set selectorText to new2
+      sheet: delete 2
+      sheet: insert 2: new2 { color: pink; }
+      sheet: insert 3: b { color: blue; }
+      sheet: insert 4: c { color: green; }
+      --- result:
+      a { color: red; }
+      new1 { color: pink; }
+      new2 { color: pink; }
+      b { color: blue; }
+      c { color: green; }
+    `);
+  });
+
+  test("removed rule in the middle", () => {
+    expect(
+      updateOnce(
+        sheet(
+          styleRule("a", "color: red;"),
+          styleRule("b", "color: blue;"),
+          styleRule("c", "color: green;"),
+        ),
+        sheet(styleRule("a", "color: red;"), styleRule("c", "color: green;")),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      b: set selectorText to c
+      sheet: delete 1
+      sheet: insert 1: c { color: green; }
+      sheet: delete 2
+      --- result:
+      a { color: red; }
+      c { color: green; }
+    `);
+  });
+
+  test("added rule and changed rules around it", () => {
+    expect(
+      updateOnce(
+        sheet(
+          styleRule("a", "color: red;"),
+          styleRule("b", "color: blue;"),
+          styleRule("c", "color: green;"),
+        ),
+        sheet(
+          styleRule("a", "color: orange;"),
+          styleRule("new", "color: pink;"),
+          styleRule("b", "color: navy;"),
+          styleRule("c", "color: green;"),
+        ),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      sheet: delete 0
+      sheet: insert 0: a { color: orange; }
+      b: set selectorText to new
+      sheet: delete 1
+      sheet: insert 1: new { color: pink; }
+      c: set selectorText to b
+      sheet: delete 2
+      sheet: insert 2: b { color: navy; }
+      sheet: insert 3: c { color: green; }
+      --- result:
+      a { color: orange; }
+      new { color: pink; }
+      b { color: navy; }
+      c { color: green; }
+    `);
+  });
+
+  test("changes in several places", () => {
+    expect(
+      updateOnce(
+        sheet(
+          styleRule("a", "color: red;"),
+          styleRule("b", "color: blue;"),
+          styleRule("c", "color: green;"),
+        ),
+        sheet(
+          styleRule("new1", "color: pink;"),
+          styleRule("a", "color: red;"),
+          styleRule("b", "color: blue;"),
+          styleRule("new2", "color: pink;"),
+          styleRule("c", "color: green;"),
+        ),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      a: set selectorText to new1
+      sheet: delete 0
+      sheet: insert 0: new1 { color: pink; }
+      b: set selectorText to a
+      sheet: delete 1
+      sheet: insert 1: a { color: red; }
+      c: set selectorText to b
+      sheet: delete 2
+      sheet: insert 2: b { color: blue; }
+      sheet: insert 3: new2 { color: pink; }
+      sheet: insert 4: c { color: green; }
+      --- result:
+      new1 { color: pink; }
+      a { color: red; }
+      b { color: blue; }
+      new2 { color: pink; }
+      c { color: green; }
+    `);
+  });
+
+  test("repeated selectors", () => {
+    expect(
+      updateOnce(
+        sheet(styleRule("a", "color: red;"), styleRule("a", "margin: 0;")),
+        sheet(
+          styleRule("a", "color: red;"),
+          styleRule("a", "padding: 0;"),
+          styleRule("a", "margin: 0;"),
+        ),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      sheet: delete 1
+      sheet: insert 1: a { padding: 0; }
+      sheet: insert 2: a { margin: 0; }
+      --- result:
+      a { color: red; }
+      a { padding: 0; }
+      a { margin: 0; }
+    `);
+  });
+
+  test("swapped rules", () => {
+    expect(
+      updateOnce(
+        sheet(styleRule("a", "color: red;"), styleRule("b", "color: blue;")),
+        sheet(styleRule("b", "color: blue;"), styleRule("a", "color: red;")),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      a: set selectorText to b
+      sheet: delete 0
+      sheet: insert 0: b { color: blue; }
+      b: set selectorText to a
+      sheet: delete 1
+      sheet: insert 1: a { color: red; }
+      --- result:
+      b { color: blue; }
+      a { color: red; }
+    `);
+  });
+
+  test("added rule inside @media", () => {
+    expect(
+      updateOnce(
+        sheet(
+          mediaRule(
+            "print",
+            styleRule("a", "color: red;"),
+            styleRule("b", "color: blue;"),
+          ),
+        ),
+        sheet(
+          mediaRule(
+            "print",
+            styleRule("new", "color: pink;"),
+            styleRule("a", "color: red;"),
+            styleRule("b", "color: blue;"),
+          ),
+        ),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      a: set selectorText to new
+      @media print: delete 0
+      @media print: insert 0: new { color: pink; }
+      b: set selectorText to a
+      @media print: delete 1
+      @media print: insert 1: a { color: red; }
+      @media print: insert 2: b { color: blue; }
+      --- result:
+      @media print { new { color: pink; } a { color: red; } b { color: blue; } }
+    `);
+  });
+
   test("everything to empty", () => {
     expect(
       updateOnce(
@@ -580,6 +784,45 @@ describe("updateStyleSheetIfNeeded", () => {
       --- result:
       a { color: hotpink; }
       b { color: blue; }
+    `);
+  });
+
+  test("edits made in the devtools, and an added rule (diffing is by index)", () => {
+    const originalStyles: FakeOriginalStyles = new WeakMap();
+    const oldStyleSheet = sheet(
+      styleRule("a", "color: red;"),
+      styleRule("b", "color: red;"),
+    );
+
+    // The first update remembers the original styles.
+    update(originalStyles, oldStyleSheet, oldStyleSheet);
+
+    // Simulate editing in the devtools.
+    for (const rule of oldStyleSheet.cssRules as Array<FakeStyleRule>) {
+      rule.style.cssText = "color: hotpink;";
+    }
+
+    expect(
+      update(
+        originalStyles,
+        oldStyleSheet,
+        sheet(
+          styleRule("new", "color: green;"),
+          styleRule("a", "color: red;"),
+          styleRule("b", "color: red;"),
+        ),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      a: set selectorText to new
+      sheet: delete 0
+      sheet: insert 0: new { color: green; }
+      b: set selectorText to a
+      sheet: insert 2: b { color: red; }
+      --- result:
+      new { color: green; }
+      a { color: hotpink; }
+      b { color: red; }
     `);
   });
 

@@ -203,89 +203,9 @@ export function updateStyleSheetIfNeeded(
   /* oxlint-disable typescript/no-non-null-assertion */
   let index = 0;
   for (; index < length; index++) {
-    const oldRule = oldStyleSheet.cssRules[index]!;
-    const newRule = newStyleSheet.cssRules[index]!;
-    if (oldRule instanceof CSSStyleRule && newRule instanceof CSSStyleRule) {
-      if (oldRule.selectorText !== newRule.selectorText) {
-        oldRule.selectorText = newRule.selectorText;
-        changed = true;
-      }
-      let originals = originalStyles.get(oldRule);
-      if (originals === undefined) {
-        originals = oldRule.style.cssText;
-        originalStyles.set(oldRule, originals);
-      }
-      // We compare the original CSS, not the current CSS, because the current
-      // CSS might have been changed by the user in the devtools.
-      if (originals !== newRule.style.cssText) {
-        oldStyleSheet.deleteRule(index);
-        oldStyleSheet.insertRule(newRule.cssText, index);
-        originalStyles.set(
-          oldStyleSheet.cssRules[index] as CSSStyleRule,
-          newRule.style.cssText,
-        );
-        changed = true;
-      } else {
-        const nestedChanged = updateStyleSheetIfNeeded(
-          originalStyles,
-          oldRule,
-          newRule,
-        );
-        if (nestedChanged) {
-          changed = true;
-          // Workaround for Chrome: Nested rules are not updated otherwise.
-          oldRule.selectorText = oldRule.selectorText;
-        }
-      }
-    } else if (
-      oldRule instanceof CSSImportRule &&
-      newRule instanceof CSSImportRule &&
-      oldRule.cssText === newRule.cssText &&
-      // Exclude Firefox since imported style sheets often returned old, cached versions.
-      !isFirefox()
+    if (
+      updateRuleIfNeeded(originalStyles, oldStyleSheet, newStyleSheet, index)
     ) {
-      const nestedChanged =
-        oldRule.styleSheet !== null && newRule.styleSheet !== null
-          ? updateStyleSheetIfNeeded(
-              originalStyles,
-              oldRule.styleSheet,
-              newRule.styleSheet,
-            )
-          : !(oldRule.styleSheet === null && newRule.styleSheet === null);
-      if (nestedChanged) {
-        changed = true;
-        // Workaround for Chrome: Only the first update to the imported style
-        // sheet is reflected otherwise.
-        // @ts-expect-error TypeScript says `.media` is readonly, but it’s fine
-        // to set it.
-        oldRule.media = oldRule.media;
-      }
-    } else if (
-      // @media, @supports and @container:
-      (oldRule instanceof CSSConditionRule &&
-        newRule instanceof CSSConditionRule &&
-        oldRule.conditionText === newRule.conditionText) ||
-      // @layer:
-      (oldRule instanceof CSSLayerBlockRule &&
-        newRule instanceof CSSLayerBlockRule &&
-        oldRule.name === newRule.name) ||
-      // @page:
-      (oldRule instanceof CSSPageRule &&
-        newRule instanceof CSSPageRule &&
-        oldRule.selectorText === newRule.selectorText)
-    ) {
-      const nestedChanged = updateStyleSheetIfNeeded(
-        originalStyles,
-        oldRule,
-        newRule,
-      );
-      if (nestedChanged) {
-        changed = true;
-      }
-      // The fallback below works for any rule, but is more destructive.
-    } else if (oldRule.cssText !== newRule.cssText) {
-      oldStyleSheet.deleteRule(index);
-      oldStyleSheet.insertRule(newRule.cssText, index);
       changed = true;
     }
   }
@@ -299,6 +219,103 @@ export function updateStyleSheetIfNeeded(
     changed = true;
   }
   /* oxlint-enable typescript/no-non-null-assertion */
+  return changed;
+}
+
+function updateRuleIfNeeded(
+  originalStyles: WeakMap<CSSStyleRule, string>,
+  oldStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">,
+  newStyleSheet: Pick<CSSStyleSheet, "cssRules" | "deleteRule" | "insertRule">,
+  index: number,
+): boolean {
+  /* oxlint-disable typescript/no-non-null-assertion */
+  const oldRule = oldStyleSheet.cssRules[index]!;
+  const newRule = newStyleSheet.cssRules[index]!;
+  /* oxlint-enable typescript/no-non-null-assertion */
+  let changed = false;
+  if (oldRule instanceof CSSStyleRule && newRule instanceof CSSStyleRule) {
+    if (oldRule.selectorText !== newRule.selectorText) {
+      oldRule.selectorText = newRule.selectorText;
+      changed = true;
+    }
+    let originals = originalStyles.get(oldRule);
+    if (originals === undefined) {
+      originals = oldRule.style.cssText;
+      originalStyles.set(oldRule, originals);
+    }
+    // We compare the original CSS, not the current CSS, because the current
+    // CSS might have been changed by the user in the devtools.
+    if (originals !== newRule.style.cssText) {
+      oldStyleSheet.deleteRule(index);
+      oldStyleSheet.insertRule(newRule.cssText, index);
+      originalStyles.set(
+        oldStyleSheet.cssRules[index] as CSSStyleRule,
+        newRule.style.cssText,
+      );
+      changed = true;
+    } else {
+      const nestedChanged = updateStyleSheetIfNeeded(
+        originalStyles,
+        oldRule,
+        newRule,
+      );
+      if (nestedChanged) {
+        changed = true;
+        // Workaround for Chrome: Nested rules are not updated otherwise.
+        oldRule.selectorText = oldRule.selectorText;
+      }
+    }
+  } else if (
+    oldRule instanceof CSSImportRule &&
+    newRule instanceof CSSImportRule &&
+    oldRule.cssText === newRule.cssText &&
+    // Exclude Firefox since imported style sheets often returned old, cached versions.
+    !isFirefox()
+  ) {
+    const nestedChanged =
+      oldRule.styleSheet !== null && newRule.styleSheet !== null
+        ? updateStyleSheetIfNeeded(
+            originalStyles,
+            oldRule.styleSheet,
+            newRule.styleSheet,
+          )
+        : !(oldRule.styleSheet === null && newRule.styleSheet === null);
+    if (nestedChanged) {
+      changed = true;
+      // Workaround for Chrome: Only the first update to the imported style
+      // sheet is reflected otherwise.
+      // @ts-expect-error TypeScript says `.media` is readonly, but it’s fine
+      // to set it.
+      oldRule.media = oldRule.media;
+    }
+  } else if (
+    // @media, @supports and @container:
+    (oldRule instanceof CSSConditionRule &&
+      newRule instanceof CSSConditionRule &&
+      oldRule.conditionText === newRule.conditionText) ||
+    // @layer:
+    (oldRule instanceof CSSLayerBlockRule &&
+      newRule instanceof CSSLayerBlockRule &&
+      oldRule.name === newRule.name) ||
+    // @page:
+    (oldRule instanceof CSSPageRule &&
+      newRule instanceof CSSPageRule &&
+      oldRule.selectorText === newRule.selectorText)
+  ) {
+    const nestedChanged = updateStyleSheetIfNeeded(
+      originalStyles,
+      oldRule,
+      newRule,
+    );
+    if (nestedChanged) {
+      changed = true;
+    }
+    // The fallback below works for any rule, but is more destructive.
+  } else if (oldRule.cssText !== newRule.cssText) {
+    oldStyleSheet.deleteRule(index);
+    oldStyleSheet.insertRule(newRule.cssText, index);
+    changed = true;
+  }
   return changed;
 }
 
