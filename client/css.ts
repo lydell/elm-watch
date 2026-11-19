@@ -269,8 +269,9 @@ function getAllCssImports(
  * This function does nothing if the CSS is unchanged. That’s important because
  * reloading the whole `<link>` tag can cause a flash of unstyled content, and
  * reset any temporary changes you have done in the inspector. This is run when
- * _any_ CSS file changes – which might not even be related to this page – or
- * on `visibilitychange` which includes switching between tabs.
+ * _any_ CSS file changes – which might not even be related to this page – and
+ * every time elm-watch connects, since files might have changed while
+ * disconnected (`StaticFilesMayHaveChangedWhileDisconnected`).
  * The “diffing” algorithm is very simple: For identical CSS it does nothing.
  * For a single changed rule (very common), only that rule is updated. In
  * other cases it might replace more rules than strictly needed but it doesn't
