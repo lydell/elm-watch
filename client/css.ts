@@ -367,7 +367,10 @@ function updateRuleIfNeeded(
   ) {
     const nestedChanged =
       oldRule.styleSheet !== null && newRule.styleSheet !== null
-        ? updateStyleSheetIfNeeded(
+        ? // Cross-origin style sheets (like Google Fonts) are never reloaded.
+          canReadCssRules(oldRule.styleSheet) &&
+          canReadCssRules(newRule.styleSheet) &&
+          updateStyleSheetIfNeeded(
             originalStyles,
             oldRule.styleSheet,
             newRule.styleSheet,
@@ -410,6 +413,15 @@ function updateRuleIfNeeded(
     changed = true;
   }
   return changed;
+}
+
+// Reading `cssRules` of a cross-origin style sheet throws.
+function canReadCssRules(styleSheet: Pick<CSSStyleSheet, "cssRules">): boolean {
+  try {
+    return styleSheet.cssRules.length >= 0;
+  } catch {
+    return false;
+  }
 }
 
 // Note: We can't use the user agent to detect Firefox, because this needs to work

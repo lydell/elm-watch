@@ -1050,6 +1050,35 @@ describe("updateStyleSheetIfNeeded", () => {
     `);
   });
 
+  test("@import: cross-origin imported style sheets are not looked inside", () => {
+    // Reading `cssRules` of a cross-origin style sheet throws.
+    const crossOrigin = (): FakeImportRule => {
+      const importRule = cssImport("https://fonts.example.com/font.css");
+      Object.defineProperty(importRule.styleSheet, "cssRules", {
+        get: () => {
+          throw new Error("SecurityError: Cannot access rules");
+        },
+      });
+      Object.defineProperty(importRule.styleSheet, "toString", {
+        value: () => "cross-origin",
+      });
+      return importRule;
+    };
+    expect(
+      updateOnce(
+        sheet(crossOrigin(), styleRule("a", "color: red;")),
+        sheet(crossOrigin(), styleRule("a", "color: blue;")),
+      ),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      sheet: delete 1
+      sheet: insert 1: a { color: blue; }
+      --- result:
+      @import url("https://fonts.example.com/font.css"); /* cross-origin */
+      a { color: blue; }
+    `);
+  });
+
   test("@import: Firefox does not look inside imported style sheets", () => {
     vi.stubGlobal("window", { scrollMaxX: 0 });
     expect(
@@ -1146,9 +1175,8 @@ describe("rememberOriginalStyles", () => {
     const oldStyleSheet = linkedSheet("http://localhost/a.css", ...makeRules());
     load(oldStyleSheet);
     editAllInDevtools(oldStyleSheet.cssRules);
-    expect(
-      update(originalStyles, oldStyleSheet, sheet(...makeRules())),
-    ).toMatchInlineSnapshot(`
+    expect(update(originalStyles, oldStyleSheet, sheet(...makeRules())))
+      .toMatchInlineSnapshot(`
       changed: false
       --- result:
       a { color: hotpink; &:hover { color: hotpink; } }
