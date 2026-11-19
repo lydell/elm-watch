@@ -16,6 +16,11 @@ import {
 // Copied from: https://github.com/evanw/esbuild/blob/52110fd09322af7c8ac22e011f64093e53765004/internal/helpers/mime.go#L5-L39
 // Added .ico, .vtt, audio and video. Removed markdown – otherwise that causes
 // downloads in Firefox instead of opening in the browser as plain text.
+// Other file types are served as `text/plain` (see `serveFile`). We don’t set
+// `X-Content-Type-Options: nosniff`, so the browser can sniff the content of
+// such files instead, letting things like a `.cjs` file in a `<script>` tag,
+// or binary files, work anyway. `nosniff` wouldn’t add much security either:
+// Other web sites can’t read the content of a file they load as a script.
 const MIME_TYPES: Record<string, string> = {
   // Text
   ".css": "text/css; charset=utf-8",
