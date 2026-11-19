@@ -8,7 +8,12 @@ import {
   type GetNow,
   markAsAbsolutePath,
 } from "../src/Types.ts";
-import { reloadAllCssIfNeeded, runSerially, type SerialState } from "./css.ts";
+import {
+  reloadAllCssIfNeeded,
+  rememberOriginalStylesOnLoad,
+  runSerially,
+  type SerialState,
+} from "./css.ts";
 import {
   createUi,
   type Info,
@@ -57,6 +62,7 @@ type __ELM_WATCH = {
   CHANGED_CSS: Date;
   CHANGED_FILE_URL_PATHS: { timestamp: Date; changed: Set<string> };
   ORIGINAL_STYLES: WeakMap<CSSStyleRule, string>;
+  REMEMBERING_ORIGINAL_STYLES_ON_LOAD: boolean;
   CSS_RELOAD: SerialState<boolean>;
   RELOAD_STATUSES: Map</* targetName */ string, ReloadStatus>;
   RELOAD_PAGE: (message: string | undefined) => void;
@@ -264,6 +270,8 @@ const DEFAULT_ELM_WATCH: __ELM_WATCH = {
 
   ORIGINAL_STYLES: new WeakMap(),
 
+  REMEMBERING_ORIGINAL_STYLES_ON_LOAD: false,
+
   CSS_RELOAD: { running: undefined, queued: undefined },
 
   RELOAD_STATUSES: new Map(),
@@ -442,6 +450,11 @@ function run(): void {
 
   if (HAS_WINDOW) {
     removeElmWatchIndexHtmlComment();
+    // Once per page, even if there are several targets.
+    if (!__ELM_WATCH.REMEMBERING_ORIGINAL_STYLES_ON_LOAD) {
+      __ELM_WATCH.REMEMBERING_ORIGINAL_STYLES_ON_LOAD = true;
+      rememberOriginalStylesOnLoad(__ELM_WATCH.ORIGINAL_STYLES);
+    }
   }
 
   runTeaProgram<Mutable, Msg, Model, Cmd, undefined>({

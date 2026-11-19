@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
+  rememberOriginalStyles,
+  rememberOriginalStylesOnLoad,
   runSerially,
   type SerialState,
   updateStyleSheetIfNeeded,
@@ -64,6 +66,8 @@ class FakeStyleSheet {
   label: string;
 
   cssRules: Array<FakeRule>;
+
+  href: string | null = null;
 
   constructor(cssRules: Array<FakeRule>, label = "sheet") {
     this.cssRules = cssRules;
@@ -1057,6 +1061,153 @@ describe("updateStyleSheetIfNeeded", () => {
       changed: false
       --- result:
       @import url("other.css"); /* a { color: red; } */
+    `);
+  });
+});
+
+describe("rememberOriginalStyles", () => {
+  // Never instantiated, but needed for `instanceof`.
+  class FakeLinkElement {
+    sheet: FakeStyleSheet | null = null;
+  }
+
+  function linkedSheet(
+    href: string,
+    ...cssRules: Array<FakeRule>
+  ): FakeStyleSheet {
+    const styleSheet = sheet(...cssRules);
+    styleSheet.href = href;
+    return styleSheet;
+  }
+
+  function editAllInDevtools(rules: Array<FakeRule>): void {
+    for (const rule of rules) {
+      if (rule instanceof FakeStyleRule) {
+        rule.style.cssText = "color: hotpink;";
+      }
+      if (rule instanceof FakeImportRule) {
+        editAllInDevtools(rule.styleSheet?.cssRules ?? []);
+      } else if ("cssRules" in rule) {
+        editAllInDevtools(rule.cssRules as Array<FakeRule>);
+      }
+    }
+  }
+
+  let loadListener: ((event: { target: unknown }) => void) | undefined;
+
+  beforeEach(() => {
+    log = [];
+    allRules = [];
+    loadListener = undefined;
+    vi.stubGlobal("CSSStyleRule", FakeStyleRule);
+    vi.stubGlobal("CSSConditionRule", FakeConditionRule);
+    vi.stubGlobal("CSSLayerBlockRule", FakeLayerBlockRule);
+    vi.stubGlobal("CSSImportRule", FakeImportRule);
+    vi.stubGlobal("CSSPageRule", FakePageRule);
+    vi.stubGlobal("HTMLLinkElement", FakeLinkElement);
+    vi.stubGlobal("window", { location: { host: "localhost" } });
+    return () => {
+      vi.unstubAllGlobals();
+    };
+  });
+
+  function stubDocument(): void {
+    vi.stubGlobal("document", {
+      addEventListener: (
+        eventName: string,
+        listener: (event: { target: unknown }) => void,
+      ) => {
+        if (eventName === "load") {
+          loadListener = listener;
+        }
+      },
+    });
+  }
+
+  function load(styleSheet: FakeStyleSheet): void {
+    const link = new FakeLinkElement();
+    link.sheet = styleSheet;
+    loadListener?.({ target: link });
+  }
+
+  const makeRules = (): Array<FakeRule> => [
+    styleRule("a", "color: red;", styleRule("&:hover", "color: blue;")),
+    mediaRule("print", styleRule("b", "color: red;")),
+    layer("x", styleRule("c", "color: red;")),
+    cssImport("other.css", styleRule("d", "color: red;")),
+  ];
+
+  test("style sheets loaded later are remembered when loaded", () => {
+    const originalStyles: FakeOriginalStyles = new WeakMap();
+    stubDocument();
+    rememberOriginalStylesOnLoad(
+      originalStyles as unknown as WeakMap<CSSStyleRule, string>,
+    );
+    const oldStyleSheet = linkedSheet("http://localhost/a.css", ...makeRules());
+    load(oldStyleSheet);
+    editAllInDevtools(oldStyleSheet.cssRules);
+    expect(
+      update(originalStyles, oldStyleSheet, sheet(...makeRules())),
+    ).toMatchInlineSnapshot(`
+      changed: false
+      --- result:
+      a { color: hotpink; &:hover { color: hotpink; } }
+      @media print { b { color: hotpink; } }
+      @layer x { c { color: hotpink; } }
+      @import url("other.css"); /* d { color: hotpink; } */
+    `);
+  });
+
+  test("style sheets that are not reloaded are not remembered", () => {
+    const originalStyles: FakeOriginalStyles = new WeakMap();
+    stubDocument();
+    rememberOriginalStylesOnLoad(
+      originalStyles as unknown as WeakMap<CSSStyleRule, string>,
+    );
+    const inline = sheet(styleRule("a", "color: red;"));
+    const crossOrigin = linkedSheet(
+      "http://example.com/a.css",
+      styleRule("a", "color: red;"),
+    );
+    load(inline);
+    load(crossOrigin);
+    expect(
+      [...inline.cssRules, ...crossOrigin.cssRules].map((rule) =>
+        originalStyles.has(rule as FakeStyleRule),
+      ),
+    ).toEqual([false, false]);
+  });
+
+  test("rules inserted by an update", () => {
+    const originalStyles: FakeOriginalStyles = new WeakMap();
+    const oldStyleSheet = linkedSheet(
+      "http://localhost/a.css",
+      styleRule("a", "color: red;"),
+    );
+    const makeNewStyleSheet = (a: string): FakeStyleSheet =>
+      sheet(
+        styleRule("a", a),
+        styleRule("new", "color: red;"),
+        mediaRule("print", styleRule("b", "color: red;")),
+      );
+    update(originalStyles, oldStyleSheet, makeNewStyleSheet("color: red;"));
+    // Done after every CSS reload.
+    rememberOriginalStyles(
+      originalStyles as unknown as WeakMap<CSSStyleRule, string>,
+      oldStyleSheet as unknown as CSSStyleSheet,
+    );
+    editAllInDevtools(oldStyleSheet.cssRules);
+    // Only `a` changed: The edits of the new rules are preserved.
+    expect(
+      update(originalStyles, oldStyleSheet, makeNewStyleSheet("color: blue;")),
+    ).toMatchInlineSnapshot(`
+      changed: true
+      sheet: delete 0
+      sheet: insert 0: a { color: blue; }
+      --- result:
+      a { color: blue; }
+      new { color: hotpink; }
+      @media print { b { color: hotpink; } }
     `);
   });
 });

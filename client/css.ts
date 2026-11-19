@@ -50,12 +50,78 @@ export async function reloadAllCssIfNeeded(
   );
 }
 
-async function reloadCssIfNeeded(
+/**
+ * When reloading CSS, we compare against the original styles of each rule, not
+ * the current ones, to keep edits made in the devtools (see
+ * `updateStyleSheetIfNeeded`). That only works if the original styles are
+ * remembered before you get a chance to make any edits. The style sheets on
+ * the page when elm-watch connects are remembered by the CSS reload done on
+ * connect. This remembers style sheets loaded after that (such as a `<link>`
+ * added by JavaScript) as soon as they have loaded. (Rules inserted by CSS
+ * reloads are remembered in `reloadCssIfNeeded`.)
+ */
+export function rememberOriginalStylesOnLoad(
+  originalStyles: WeakMap<CSSStyleRule, string>,
+): void {
+  // The "load" event does not bubble, but can be captured.
+  document.addEventListener(
+    "load",
+    (event) => {
+      if (
+        event.target instanceof HTMLLinkElement &&
+        event.target.sheet !== null
+      ) {
+        rememberOriginalStyles(originalStyles, event.target.sheet);
+      }
+    },
+    true,
+  );
+}
+
+export function rememberOriginalStyles(
   originalStyles: WeakMap<CSSStyleRule, string>,
   styleSheet: CSSStyleSheet,
-): Promise<boolean> {
+): void {
+  if (getReloadableUrl(styleSheet) !== undefined) {
+    rememberOriginalStylesInRules(originalStyles, styleSheet.cssRules);
+  }
+}
+
+function rememberOriginalStylesInRules(
+  originalStyles: WeakMap<CSSStyleRule, string>,
+  cssRules: CSSRuleList,
+): void {
+  for (const rule of Array.from(cssRules)) {
+    if (rule instanceof CSSStyleRule && !originalStyles.has(rule)) {
+      originalStyles.set(rule, rule.style.cssText);
+    }
+    if (rule instanceof CSSImportRule) {
+      if (rule.styleSheet !== null) {
+        try {
+          rememberOriginalStylesInRules(
+            originalStyles,
+            rule.styleSheet.cssRules,
+          );
+        } catch {
+          // Reading `cssRules` of a cross-origin style sheet throws.
+        }
+      }
+    } else if (hasCssRules(rule)) {
+      // Nested style rules, @media, @supports, @container, @layer, etc.
+      rememberOriginalStylesInRules(originalStyles, rule.cssRules);
+    }
+  }
+}
+
+function hasCssRules(
+  rule: CSSRule,
+): rule is CSSRule & { cssRules: CSSRuleList } {
+  return "cssRules" in rule;
+}
+
+function getReloadableUrl(styleSheet: CSSStyleSheet): URL | undefined {
   if (styleSheet.href === null) {
-    return false;
+    return undefined;
   }
 
   const url = makeUrl(styleSheet.href);
@@ -65,6 +131,18 @@ async function reloadCssIfNeeded(
     // Don’t try to reload our own temporary style sheets (see `parseCssWithImports`).
     url.searchParams.has(RELOAD_PARAM)
   ) {
+    return undefined;
+  }
+
+  return url;
+}
+
+async function reloadCssIfNeeded(
+  originalStyles: WeakMap<CSSStyleRule, string>,
+  styleSheet: CSSStyleSheet,
+): Promise<boolean> {
+  const url = getReloadableUrl(styleSheet);
+  if (url === undefined) {
     return false;
   }
 
@@ -100,10 +178,18 @@ async function reloadCssIfNeeded(
     ),
   );
   const newStyleSheet = await parseCssWithImports(url);
+  if (newStyleSheet === undefined) {
+    return false;
+  }
 
-  return newStyleSheet === undefined
-    ? false
-    : updateStyleSheetIfNeeded(originalStyles, styleSheet, newStyleSheet);
+  const changed = updateStyleSheetIfNeeded(
+    originalStyles,
+    styleSheet,
+    newStyleSheet,
+  );
+  // Remember the original styles of rules inserted by the update.
+  rememberOriginalStyles(originalStyles, styleSheet);
+  return changed;
 }
 
 const RELOAD_PARAM = "elm-watch-css-reload";
