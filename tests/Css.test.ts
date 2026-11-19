@@ -787,7 +787,7 @@ describe("updateStyleSheetIfNeeded", () => {
     `);
   });
 
-  test("edits made in the devtools, and an added rule (diffing is by index)", () => {
+  test("edits made in the devtools are not moved to another rule", () => {
     const originalStyles: FakeOriginalStyles = new WeakMap();
     const oldStyleSheet = sheet(
       styleRule("a", "color: red;"),
@@ -797,17 +797,19 @@ describe("updateStyleSheetIfNeeded", () => {
     // The first update remembers the original styles.
     update(originalStyles, oldStyleSheet, oldStyleSheet);
 
-    // Simulate editing in the devtools.
-    for (const rule of oldStyleSheet.cssRules as Array<FakeStyleRule>) {
-      rule.style.cssText = "color: hotpink;";
-    }
+    // Simulate editing `a` in the devtools.
+    (oldStyleSheet.cssRules[0] as FakeStyleRule).style.cssText =
+      "color: hotpink;";
 
+    // A rule with the same styles was added above `a`. Since diffing is by
+    // index, the old `a` rule is paired with `new`. It must not be renamed to
+    // `new` (which would make `new` hotpink), but replaced.
     expect(
       update(
         originalStyles,
         oldStyleSheet,
         sheet(
-          styleRule("new", "color: green;"),
+          styleRule("new", "color: red;"),
           styleRule("a", "color: red;"),
           styleRule("b", "color: red;"),
         ),
@@ -816,12 +818,12 @@ describe("updateStyleSheetIfNeeded", () => {
       changed: true
       a: set selectorText to new
       sheet: delete 0
-      sheet: insert 0: new { color: green; }
+      sheet: insert 0: new { color: red; }
       b: set selectorText to a
       sheet: insert 2: b { color: red; }
       --- result:
-      new { color: green; }
-      a { color: hotpink; }
+      new { color: red; }
+      a { color: red; }
       b { color: red; }
     `);
   });

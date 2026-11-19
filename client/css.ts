@@ -234,7 +234,8 @@ function updateRuleIfNeeded(
   /* oxlint-enable typescript/no-non-null-assertion */
   let changed = false;
   if (oldRule instanceof CSSStyleRule && newRule instanceof CSSStyleRule) {
-    if (oldRule.selectorText !== newRule.selectorText) {
+    const renamed = oldRule.selectorText !== newRule.selectorText;
+    if (renamed) {
       oldRule.selectorText = newRule.selectorText;
       changed = true;
     }
@@ -244,8 +245,14 @@ function updateRuleIfNeeded(
       originalStyles.set(oldRule, originals);
     }
     // We compare the original CSS, not the current CSS, because the current
-    // CSS might have been changed by the user in the devtools.
-    if (originals !== newRule.style.cssText) {
+    // CSS might have been changed by the user in the devtools. But if a rule
+    // edited in the devtools gets a new selector, it’s most likely a different
+    // rule now (for example because a rule was added above it), so replace it
+    // to avoid moving the devtools edits to another rule.
+    if (
+      originals !== newRule.style.cssText ||
+      (renamed && oldRule.style.cssText !== originals)
+    ) {
       oldStyleSheet.deleteRule(index);
       oldStyleSheet.insertRule(newRule.cssText, index);
       originalStyles.set(
