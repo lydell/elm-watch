@@ -291,7 +291,13 @@ export function createUi(): Ui {
   // just the overlay: A modal dialog makes everything outside it inert, and the
   // emoji and the panel (which can hide the errors, for example) need to keep
   // working while the overlay is shown.
-  const dialog = h(HTMLDialogElement, { className: CLASS.dialog });
+  // While not modal, the dialog is just a wrapper, and is not exposed as a
+  // dialog to screen readers (see `updateErrorOverlayVisibility`). (Chrome
+  // ignores `role="none"` on `<dialog>`, but respects `role="generic"`.)
+  const dialog = h(HTMLDialogElement, {
+    className: CLASS.dialog,
+    attrs: { role: "generic" },
+  });
 
   // This element covers the whole window, but lets clicks through to the page
   // (except on our own elements). It is put in the top layer as a popover (see
@@ -303,6 +309,9 @@ export function createUi(): Ui {
   const topLayer = h(HTMLDivElement, { className: CLASS.topLayer });
   // This enables popover mode, allowing `.showPopover()` to be called later:
   topLayer.popover = "manual";
+  // Chrome exposes popovers as unnamed groups to screen readers. This is just
+  // a wrapper.
+  topLayer.setAttribute("role", "none");
 
   const closeErrorOverlay = (): void => {
     setErrorOverlayOpen(false);
@@ -984,7 +993,11 @@ export function createUi(): Ui {
       // `display: inline` by default, via `all: initial`.)
       if (hidden || window.getComputedStyle(container).display === "none") {
         dialog.close();
+        dialog.setAttribute("role", "generic");
+        dialog.removeAttribute("aria-label");
       } else if (!dialog.open) {
+        dialog.removeAttribute("role");
+        dialog.setAttribute("aria-label", "elm-watch errors");
         dialog.showModal();
         overlay.focus({ preventScroll: true });
       }
