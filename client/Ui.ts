@@ -3881,22 +3881,26 @@ function viewErrorLocationButton(
   children: Array<Node | string>,
   onOpenEditor: (location: LocationToOpen) => void,
 ): HTMLElement {
-  return clickable
-    ? h(
-        HTMLButtonElement,
-        {
-          className: CLASS.errorLocationButton,
-          onclick: () => {
-            onOpenEditor({
-              file: location.file,
-              line: location.line,
-              column: location.column,
-            });
-          },
-        },
-        ...children,
-      )
-    : h(HTMLSpanElement, {}, ...children);
+  if (!clickable) {
+    return h(HTMLSpanElement, {}, ...children);
+  }
+  const button = h(
+    HTMLButtonElement,
+    {
+      className: CLASS.errorLocationButton,
+      onclick: () => {
+        onOpenEditor({
+          file: location.file,
+          line: location.line,
+          column: location.column,
+        });
+      },
+    },
+    ...children,
+  );
+  // Just the location would not say what the button does.
+  button.setAttribute("aria-label", `Open ${button.textContent} in editor`);
+  return button;
 }
 
 // The overlay and the panel use the terminal colors (or the default theme’s,

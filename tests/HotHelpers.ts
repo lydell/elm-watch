@@ -852,6 +852,10 @@ export function getOverlay(): string {
             element.removeAttribute("tabindex");
             element.removeAttribute("data-focus-key");
           }
+          // The location buttons: “Open src/Main.elm:19:5 in editor”.
+          for (const element of clone.querySelectorAll("button")) {
+            element.removeAttribute("aria-label");
+          }
           return clone.outerHTML.replace("<pre>", "\n<pre>");
         })
         .join(`\n${"-".repeat(80)}\n`);

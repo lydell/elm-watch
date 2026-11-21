@@ -801,6 +801,11 @@ describe("hot error view", () => {
 
         // The browser has its own state, and is collapsed by default too.
         overlays.push(getOverlay());
+        expect(
+          getOverlayElement("h2 + span + span button").getAttribute(
+            "aria-label",
+          ),
+        ).toBe("Open src/Main.elm:19:5 in editor");
         pressOverlayKey(" ");
         overlays.push(getOverlay());
         // Clicking “(N lines)” expands too.
