@@ -132,7 +132,7 @@ export class TargetState<Status extends OutputStatus = OutputStatus> {
   }
 
   flushDurations(): Array<Duration> {
-    // Clear the durations when getting them. This means that once we have have
+    // Clear the durations when getting them. This means that once we have
     // printed them, we won’t print them again. This way we only show durations
     // for the targets that were affected by the latest compilation cycle.
     const durations = this._durations.slice();
