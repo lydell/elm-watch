@@ -119,7 +119,12 @@ type TargetData =
 // The `Elm` object, when compiled with packages that have built-in hot reloading.
 type ElmHotExports = ElmExports & {
   // Only exists when not in optimize mode.
-  hot?: { reload: (newScope: { Elm: ElmHotExports }) => void };
+  hot?: {
+    // Older versions (such as Lamdera 1.5.1) return nothing.
+    reload: (newScope: {
+      Elm: ElmHotExports;
+    }) => { incompatible?: Array<{ moduleName: string }> } | undefined;
+  };
 };
 
 // `init.elmWatch` and `init.hotReloadData` for each module. See `injectElmHot` in `Inject.ts`.
@@ -671,8 +676,9 @@ function elmHotReload(
     return reloadReasons;
   }
 
+  let incompatible: Array<{ moduleName: string }> = [];
   try {
-    hot.reload({ Elm: newElm });
+    incompatible = hot.reload({ Elm: newElm })?.incompatible ?? [];
   } catch (error) {
     return [
       {
@@ -681,6 +687,18 @@ function elmHotReload(
         moduleName: Object.keys(newInitData).join(", "),
       },
     ];
+  }
+
+  // `Elm.hot.reload` can compare fingerprints of the type of `main` (if the
+  // compiler provides them), which catches more than the checks above, such as
+  // `Msg` changes outside debug mode. It leaves incompatible apps running the
+  // old code (while the compatible ones got the new code), so reload the page.
+  // Its module names lack the `Elm.` prefix that ours have.
+  if (incompatible.length > 0) {
+    return incompatible.map(({ moduleName }) => ({
+      tag: "MainTypeChanged",
+      moduleName: `Elm.${moduleName}`,
+    }));
   }
 
   targetData.initData = { ...targetData.initData, ...newInitData };

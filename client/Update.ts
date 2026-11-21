@@ -54,6 +54,9 @@ export type ReloadReason =
       tag: "InitReturnValueChanged";
     }
   | {
+      tag: "MainTypeChanged";
+    }
+  | {
       tag: "MessageTypeChangedInDebugMode";
     }
   | {
@@ -897,6 +900,8 @@ function reloadReasonToString(reason: ReloadReasonWithModuleName): string {
       return `hot reload for \`${reason.moduleName}\` failed, probably because of incompatible model changes.\nThis is the error:\n${unknownErrorToString(reason.caughtError)}`;
     case "InitReturnValueChanged":
       return `\`${reason.moduleName}.init\` returned something different than last time. Let's start fresh!`;
+    case "MainTypeChanged":
+      return `the type of \`${reason.moduleName}.main\` changed, so the running app can't take the new code.`;
     case "MessageTypeChangedInDebugMode":
       return `the message type in \`${reason.moduleName}\` changed in debug mode ("debug metadata" changed).`;
     case "NewPortAdded":

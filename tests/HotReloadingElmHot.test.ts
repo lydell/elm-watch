@@ -205,6 +205,56 @@ describe("hot reloading with Elm.hot", () => {
     },
   );
 
+  // Lamdera’s `Elm.hot.reload` returns nothing. Newer versions of the
+  // `hot-reload-stop` branches return the apps whose type of `main` changed
+  // (per fingerprints from the compiler), and leave them running the old code.
+  // Simulate that.
+  test("Elm.hot.reload returns incompatible apps", async () => {
+    let initCount = 0;
+
+    const { replace, go } = runHotReload({
+      name: "AddMsg",
+      programType: "Element",
+      compilationMode: "standard",
+      compiler: "lamdera",
+      init: (node) => {
+        initCount++;
+        const app = window.Elm?.["AddMsg"]?.init({ node });
+        if (initCount === 1) {
+          const { hot } = window.Elm as {
+            hot: { reload: (newScope: unknown) => unknown };
+          };
+          const { reload } = hot;
+          hot.reload = (newScope) => {
+            expect(reload(newScope)).toBeUndefined();
+            return { incompatible: [{ app, moduleName: "AddMsg" }] };
+          };
+        }
+        return app;
+      },
+    });
+
+    const { browserConsole } = await go(async ({ idle, main }) => {
+      switch (idle) {
+        case 1:
+          main.click();
+          await waitOneFrame();
+          expect(main.outerHTML).toStrictEqual(`<main>Msg1</main>`);
+          replace((content) => content.replace(/-- /g, ""));
+          return "KeepGoing";
+        default:
+          // The page was reloaded, so we start over from `init`.
+          expect(main.outerHTML).toStrictEqual(`<main>init</main>`);
+          return "Stop";
+      }
+    });
+
+    expect(browserConsole).toMatchInlineSnapshot(`
+      elm-watch: I did a full page reload because the type of \`Elm.AddMsg.main\` changed, so the running app can't take the new code.
+      (target: AddMsg)
+    `);
+  });
+
   test("Init tweak value", async () => {
     const { replace, go } = runHotReload({
       name: "InitTweakValue",
