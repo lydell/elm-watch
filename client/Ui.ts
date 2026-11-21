@@ -3464,7 +3464,16 @@ function viewOverlay({
     [[["esc", "CancelEditorChooser", true, "Cancel"]], "cancel"],
   ];
   const closeHint: OverlayHint = [
-    [["esc", "CloseOverlay", true, "Close error overlay"]],
+    // Different from the label of the close button at the top, so that the
+    // two can be told apart.
+    [
+      [
+        "esc",
+        "CloseOverlay",
+        true,
+        "Close error overlay (press Escape again to reopen)",
+      ],
+    ],
     "close",
     "(again to reopen)",
   ];
