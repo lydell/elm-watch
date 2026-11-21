@@ -291,12 +291,14 @@ export function createUi(): Ui {
   // just the overlay: A modal dialog makes everything outside it inert, and the
   // emoji and the panel (which can hide the errors, for example) need to keep
   // working while the overlay is shown.
-  // While not modal, the dialog is just a wrapper, and is not exposed as a
-  // dialog to screen readers (see `updateErrorOverlayVisibility`). (Chrome
-  // ignores `role="none"` on `<dialog>`, but respects `role="generic"`.)
+  // While not modal, the dialog is just a wrapper, but screen readers still
+  // see a dialog. Chrome ignores `role="none"` on `<dialog>`, and the roles
+  // that do work are reported by accessibility checkers (such as axe) – on the
+  // user’s page, since elm-watch’s UI is injected there. So the dialog is at
+  // least named (see `updateErrorOverlayVisibility`).
   const dialog = h(HTMLDialogElement, {
     className: CLASS.dialog,
-    attrs: { role: "generic" },
+    attrs: { "aria-label": "elm-watch" },
   });
 
   // This element covers the whole window, but lets clicks through to the page
@@ -1015,10 +1017,8 @@ export function createUi(): Ui {
       // `display: inline` by default, via `all: initial`.)
       if (hidden || window.getComputedStyle(container).display === "none") {
         dialog.close();
-        dialog.setAttribute("role", "generic");
-        dialog.removeAttribute("aria-label");
+        dialog.setAttribute("aria-label", "elm-watch");
       } else if (!dialog.open) {
-        dialog.removeAttribute("role");
         dialog.setAttribute("aria-label", "elm-watch errors");
         dialog.showModal();
         overlay.focus({ preventScroll: true });
