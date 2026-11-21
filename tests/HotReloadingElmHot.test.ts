@@ -453,12 +453,6 @@ main =
     expect(browserConsole).toStrictEqual("");
   });
 
-  // Lamdera’s elm/browser stores the `key` function of `Browser.application` in
-  // a global variable (`_Browser_key`), set when the code is evaluated. After a
-  // hot reload, `Browser.Navigation.pushUrl` uses the key from the new code,
-  // whose `setup` never ran, and crashes with:
-  // TypeError: Cannot read properties of undefined (reading 'onUrlChange')
-  // That happens with `Elm.hot.reload` without elm-watch too.
   test("Application URL messages change", async () => {
     const { replace, go } = runHotReload({
       name: "Application",
