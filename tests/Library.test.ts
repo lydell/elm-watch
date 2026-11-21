@@ -638,7 +638,11 @@ describe("library", () => {
             "\nExpected \x1B[1m;\x1B[0m but found \x1B[31mfoo\x1B[0m\x1B[2J\n\n",
           location: { file: "ts/main.ts", line: 12, column: 9 },
         },
-        { message: "Only a file", location: { file: "/absolute/file.ts" } },
+        // Outside the cwd (printed relative to it), but the same everywhere.
+        {
+          message: "Only a file",
+          location: { file: path.resolve("..", "outside", "file.ts") },
+        },
       ]);
       errors.set("translations", [{ message: "Missing key: goodbye" }]);
       errors.set("cleared", [{ message: "Not shown" }]);
@@ -667,7 +671,7 @@ describe("library", () => {
 
         Expected ⧙;⧘ but found ⧙foo⧘⧘
 
-        ⧙── ESBUILD ──────────────────────────────────────── ⧘../../../../absolute/file.ts
+        ⧙── ESBUILD ────────────────────────────────────────────────── ⧘../outside/file.ts
 
         Only a file
 

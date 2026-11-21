@@ -572,6 +572,9 @@ export function clean(string: string): string {
           .toString()
           .replace(/[A-Z]:\//g, ""),
       )
+      // Editor URLs on Windows: `/C:/Users/...` (see `fileToUrlPath`).
+      .split(`/${path.dirname(import.meta.dirname).replace(/\\/g, "/")}`)
+      .join("/Users/you/project")
       .replace(
         /fixtures-copies[\\/]+[^\\/\s]+[\\/]+[^\\/\s]+(?=[\\/])/g,
         "fixtures",
@@ -595,7 +598,7 @@ export function clean(string: string): string {
         (_match, rest: string) =>
           `/${rest.replace(/\\\\/g, "/").replace(/\\/g, "/")}`,
       )
-      .replace(/\S+\.(?:elm|js)/g, (match) => match.replace(/\\/g, "/"))
+      .replace(/\S+\.(?:elm|js|ts)/g, (match) => match.replace(/\\/g, "/"))
       // Watcher events, like `changed src\Dir` (relative paths).
       .replace(
         /(⧙(?:changed|removed) )([^⧘]+)/g,

@@ -333,7 +333,8 @@ describe("editor", () => {
       [ELM_WATCH_OPEN_EDITOR]: "myeditor://{file}",
     });
     expect(result.exitCode).toBe(1);
-    expect(result.stderr).toMatchInlineSnapshot(`
+    // On Windows, the root is something like `C:\`.
+    expect(result.stderr.replace(/^[A-Z]:\\$/m, "/")).toMatchInlineSnapshot(`
       ⧙elm-watch editor⧘ opens the closest package.json, but I couldn’t find one in this directory or any of its parents:
 
       /
