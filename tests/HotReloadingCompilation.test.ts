@@ -18,6 +18,7 @@ import {
   fixtureDir,
   getOverlay,
   getOverlayAnnouncement,
+  getStatusAnnouncement,
   getTerminalColors,
   hideErrors,
   hideUi,
@@ -113,7 +114,9 @@ describe("hot reloading", () => {
       isTTY: false,
     });
 
+    const announcements: Array<string> = [];
     const { terminal, onlyExpandedRenders } = await go(({ idle }) => {
+      announcements.push(getStatusAnnouncement());
       switch (idle) {
         case 1:
           switchCompilationMode("optimize");
@@ -125,6 +128,10 @@ describe("hot reloading", () => {
           return "Stop";
       }
     });
+
+    // Screen readers are told when the errors are gone (but not on the
+    // first successful compilation).
+    expect(announcements).toEqual(["", "", "elm-watch: Successfully compiled"]);
 
     expect(onlyErrorMessages(terminal)).toMatchInlineSnapshot(`
       ⧙── DEBUG REMNANTS ───────────────────────────────────────────── ⧘⧙Target: DebugLog⧘

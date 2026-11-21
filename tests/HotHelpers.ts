@@ -887,6 +887,19 @@ export function pressOverlayKey(key: string): void {
   window.dispatchEvent(new KeyboardEvent("keydown", { key, cancelable: true }));
 }
 
+export function getStatusAnnouncement(): string {
+  let result = "(StatusAnnouncement not found)";
+  withShadowRoot((shadowRoot) => {
+    const element = shadowRoot.querySelector(
+      `[data-test-id="StatusAnnouncement"]`,
+    );
+    if (element !== null) {
+      result = element.textContent;
+    }
+  });
+  return result;
+}
+
 export function getOverlayElement(selector: string): HTMLElement {
   let element: Element | undefined = undefined;
   withShadowRoot((shadowRoot) => {

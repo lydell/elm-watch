@@ -334,6 +334,14 @@ export function createUi(): Ui {
     hidden: true,
   });
 
+  // Errors are announced by the overlay, but the overlay just disappears when
+  // they are fixed. This says so instead. It is always present, since screen
+  // readers usually don’t announce newly inserted live regions.
+  const statusAnnouncement = h(HTMLParagraphElement, {
+    className: CLASS.visuallyHidden,
+    attrs: { "aria-live": "polite", "data-test-id": "StatusAnnouncement" },
+  });
+
   // Re-added to the overlay on every render, as its first child.
   const overlayCloseButton = h(
     HTMLButtonElement,
@@ -389,12 +397,17 @@ export function createUi(): Ui {
     root.append(panel);
   }
 
-  for (const element of [overlay, overlayAnnouncement, root]) {
+  for (const element of [
+    overlay,
+    overlayAnnouncement,
+    statusAnnouncement,
+    root,
+  ]) {
     element.lang = "en";
     element.setAttribute("translate", "no");
   }
 
-  topLayer.append(overlay, overlayAnnouncement, root);
+  topLayer.append(overlay, overlayAnnouncement, statusAnnouncement, root);
   dialog.append(topLayer);
   const shadowRoot = container.attachShadow({ mode: "open" });
   shadowRoot.append(h(HTMLStyleElement, {}, CSS), dialog);
@@ -428,6 +441,8 @@ export function createUi(): Ui {
   // reloading the page. It is also back on errors, so that you don’t miss them.
   let hiddenUntilReloadOrError = false;
   let position = loadUiPosition();
+  // Whether there have been errors since the last success announcement.
+  let hadErrors = false;
 
   // External errors first, like in the terminal, since they are often the
   // cause of Elm errors (code generation, for example).
@@ -829,6 +844,13 @@ export function createUi(): Ui {
     const someError = (worst?.severity ?? 0) >= ERROR_SEVERITY;
     if (someError) {
       hiddenUntilReloadOrError = false;
+      hadErrors = true;
+      // Clear the announcement, so that the next success is announced even if
+      // the text is the same as last time.
+      statusAnnouncement.textContent = "";
+    } else if (hadErrors && worst?.severity === 0) {
+      hadErrors = false;
+      statusAnnouncement.textContent = summaryLabel(snapshots, externalSources);
     }
     const hidden = snapshots.length === 0 || hiddenUntilReloadOrError;
     toggleButton.hidden = hidden;
