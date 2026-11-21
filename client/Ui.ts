@@ -2438,12 +2438,17 @@ focus might be inside the panel and must not be lost.
   color: var(--muted);
 }
 
+/* The empty alternative text keeps the brackets out of the accessible name
+   (like the \`aria-hidden\` brackets of the overlay key hints). The first
+   declaration is a fallback for browsers without alternative text support. */
 .${CLASS.button}::before {
   content: "[";
+  content: "[" / "";
 }
 
 .${CLASS.button}::after {
   content: "]";
+  content: "]" / "";
 }
 
 .${CLASS.button}:enabled:hover {
