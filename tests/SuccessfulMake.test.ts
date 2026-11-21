@@ -129,6 +129,18 @@ describe("successful make", () => {
     `);
   });
 
+  test("success JSON from elm make", async () => {
+    expect(
+      await run("successful-make", ["make"], {
+        bin: "success-json-output-bin",
+      }),
+    ).toMatchInlineSnapshot(`
+      ✅ main⧙                                                                 1.23 s E⧘
+
+      ✅ Compilation finished in ⧙123 ms⧘.
+    `);
+  });
+
   test("CI", async () => {
     expect(
       await run("successful-make", ["make", "--optimize"], { isTTY: false }),

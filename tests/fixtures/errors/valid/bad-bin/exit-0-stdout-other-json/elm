@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+import { fakeElm } from "#fake-elm";
+
+fakeElm({
+  make: () => {
+    process.stdout.write('{"type":"something-else"}');
+    return 0;
+  },
+});

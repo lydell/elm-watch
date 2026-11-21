@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+import { spawn } from "#spawn";
+import path from "path";
+
+// Like the real `elm`, but `elm make --report=json` also prints JSON with
+// `"type": "success"` on stdout on success, like some forks of Elm do.
+const child = spawn("elm", process.argv.slice(2), {
+  env: {
+    ...process.env,
+    PATH: process.env.PATH.split(path.delimiter)
+      .filter((part) => !part.includes("success-json-output-bin"))
+      .join(path.delimiter),
+  },
+  stdio: "inherit",
+});
+
+child.on("exit", (exitCode) => {
+  if (exitCode === 0 && process.argv.includes("--report=json")) {
+    process.stdout.write('{"type":"success","watch":["/some/file.elm"]}');
+  }
+  process.exit(exitCode ?? 1);
+});

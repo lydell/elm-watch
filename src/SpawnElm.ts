@@ -142,7 +142,7 @@ export function make({
 
         return exitReason.tag === "ExitCode" &&
           exitReason.exitCode === 0 &&
-          stdout === "" &&
+          isSuccessStdout(stdout) &&
           stderr === ""
           ? { tag: "Success" }
           : exitReason.tag === "ExitCode" &&
@@ -262,6 +262,18 @@ function outputPathToAbsoluteString(
 
 function maybeToArray<T>(arg: T | undefined): Array<T> {
   return arg === undefined ? [] : [arg];
+}
+
+const SuccessJson = Codec.fields(
+  { type: Codec.primitiveUnion(["success"]) },
+  { allowExtraFields: true },
+);
+
+// `elm make --report=json` prints nothing on success. Some compilers (like
+// forks of Elm) print JSON with `"type": "success"` and more information.
+// elm-watch doesn't use it, but it means success too.
+function isSuccessStdout(stdout: string): boolean {
+  return stdout === "" || Codec.JSON.parse(SuccessJson, stdout).tag === "Valid";
 }
 
 function parsePotentialElmMakeJson(
