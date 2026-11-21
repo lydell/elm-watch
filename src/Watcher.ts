@@ -28,6 +28,9 @@ import { type AbsolutePath, markAsAbsolutePath } from "./Types.ts";
 //   per directory) has the same problem for directories inside the watched
 //   directory: https://github.com/nodejs/node/issues/67329 So on Linux we do
 //   that ourselves instead, see `watchTreeOnLinux`.
+// - On Windows, the watcher follows the watched directory if it is moved away,
+//   and reports nothing about it. So on Windows we also watch the parent
+//   directory, and start over if the watched directory has been replaced.
 // - Watching a path that does not exist throws. Watched directories (such as
 //   source directories in elm.json) might not exist (yet), so we watch the
 //   closest existing ancestor until they do.
@@ -191,7 +194,14 @@ export function watch(
     rootStates.set(root, {
       tag: "Watching",
       fsWatcher,
-      parentWatcher: watchParent(root, onReplaced),
+      parentWatcher: watchParent(root, () => {
+        // On Windows, changes inside the root also result in events about the
+        // root in the parent, so check if the root was actually replaced.
+        // (Windows file IDs are not reused like Linux inode numbers.)
+        if (!IS_WINDOWS || isReplaced()) {
+          onReplaced();
+        }
+      }),
     });
   };
 
@@ -444,19 +454,20 @@ function lstat(absolutePath: string): fs.Stats | undefined {
   }
 }
 
-// On Linux, calls `onEvent` for events about `root` in its parent directory:
-// When `root` is created, removed, moved or gets new attributes (but not when
-// something inside it changes). Returns `undefined` if the parent can’t be
-// watched: The watcher of the root itself still notices most changes to the
-// root. Only needed on Linux (see the top of this file). On macOS, watching a
-// directory also gets (and filters out) events for everything inside it, and on
-// Windows, changes inside `root` result in events about `root` in the parent.
+// On Linux and Windows, calls `onEvent` for events about `root` in its parent
+// directory: On Linux when `root` is created, removed, moved or gets new
+// attributes (but not when something inside it changes). On Windows, changes
+// inside `root` also result in events about `root`. Returns `undefined` if the
+// parent can’t be watched: The watcher of the root itself still notices most
+// changes to the root. Not needed on macOS (see the top of this file), where
+// watching a directory also gets (and filters out) events for everything inside
+// it.
 function watchParent(
   root: AbsolutePath,
   onEvent: () => void,
 ): fs.FSWatcher | undefined {
   const parent = path.dirname(root);
-  if (process.platform !== "linux" || parent === root) {
+  if ((process.platform !== "linux" && !IS_WINDOWS) || parent === root) {
     return undefined;
   }
   const basename = path.basename(root);

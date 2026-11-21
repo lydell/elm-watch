@@ -235,7 +235,8 @@ describe("watch", () => {
   // On Linux, inotify watches the directory itself, not the path. If the
   // directory is replaced before we get to handle the event, the old watcher
   // keeps watching the removed directory. For recursive watchers, moving the
-  // directory away doesn’t even result in an event.
+  // directory away doesn’t even result in an event. On Windows, the watcher
+  // follows a directory that is moved away, and reports nothing.
   describe.each(["SourceDirectory", "Shallow"] as const)(
     "%s that is replaced quickly",
     (tag) => {
