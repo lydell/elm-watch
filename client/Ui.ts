@@ -2562,6 +2562,19 @@ focus might be inside the panel and must not be lost.
   color: var(--bg);
 }
 
+/* Forced colors (such as Windows High Contrast) remove the reverse video
+   background, which would make the selected mode look like the others. */
+@media (forced-colors: active) {
+  .${CLASS.modes} label:has(:checked),
+  .${CLASS.modes} label:has(:checked):hover,
+  .${CLASS.modes} label:has(:checked:disabled):hover {
+    forced-color-adjust: none;
+    background-color: SelectedItem;
+    color: SelectedItemText;
+    outline-color: CanvasText;
+  }
+}
+
 .${CLASS.modes} input {
   position: absolute;
   inset: 0;
