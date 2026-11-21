@@ -1913,7 +1913,9 @@ supported by browsers, for browsers without popover support.
   z-index: 2147483647;
   direction: ltr;
   /* The terminal colors, for both the overlay and the panel. Until we know
-     them (see \`setTerminalColors\`), the system colors. */
+     them (see \`setTerminalColors\`), the system colors: The OS light/dark
+     mode is a better guess at the terminal theme than the server’s default
+     theme (which is dark), and is what we show while failing to connect. */
   --fg: CanvasText;
   --bg: Canvas;
   --color-scheme: light dark;
