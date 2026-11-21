@@ -825,6 +825,22 @@ describe("hot error view", () => {
         });
         window.dispatchEvent(space);
         expect(space.defaultPrevented).toBe(false);
+        // The arrow keys scroll error text that is too wide, if focused,
+        // instead of going to another error.
+        expect(getOverlay()).toContain("error 2/2");
+        const pre = getOverlayElement("pre");
+        Object.defineProperty(pre, "scrollWidth", { value: 1000 });
+        pre.focus();
+        const arrow = new KeyboardEvent("keydown", {
+          key: "ArrowLeft",
+          cancelable: true,
+        });
+        window.dispatchEvent(arrow);
+        expect(arrow.defaultPrevented).toBe(false);
+        expect(getOverlay()).toContain("error 2/2");
+        // h still goes to the previous error.
+        pressOverlayKey("h");
+        expect(getOverlay()).toContain("error 1/2");
         return "Stop" as const;
       },
     });

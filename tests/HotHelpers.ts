@@ -848,6 +848,10 @@ export function getOverlay(): string {
           for (const element of [clone, ...clone.querySelectorAll("[class]")]) {
             element.removeAttribute("class");
           }
+          for (const element of clone.querySelectorAll("pre")) {
+            element.removeAttribute("tabindex");
+            element.removeAttribute("data-focus-key");
+          }
           return clone.outerHTML.replace("<pre>", "\n<pre>");
         })
         .join(`\n${"-".repeat(80)}\n`);

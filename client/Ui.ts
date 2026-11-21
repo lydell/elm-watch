@@ -1325,7 +1325,14 @@ export function createUi(): Ui {
       (key === "ToggleExpanded" && !canToggleExpanded()) ||
       // Let Enter and Space press the focused button.
       ((event.key === "Enter" || event.key === " ") &&
-        shadowRoot.activeElement instanceof HTMLButtonElement)
+        shadowRoot.activeElement instanceof HTMLButtonElement) ||
+      // Let the arrow keys scroll error text that is too wide (such as on
+      // narrow screens or when zoomed in). Use h and l to go to the
+      // previous and next error instead.
+      ((event.key === "ArrowLeft" || event.key === "ArrowRight") &&
+        shadowRoot.activeElement instanceof HTMLPreElement &&
+        shadowRoot.activeElement.scrollWidth >
+          shadowRoot.activeElement.clientWidth)
     ) {
       return;
     }
@@ -3683,6 +3690,10 @@ function viewOverlayError(
           ),
     ),
     h(HTMLPreElement, {
+      // Focusable, so that keyboard users can scroll error text that is too
+      // wide. Chrome and Firefox make scrollable elements focusable
+      // automatically, but Safari does not.
+      attrs: { tabindex: "0", [DATA_FOCUS_KEY]: "ErrorText" },
       innerHTML: expanded
         ? error.htmlContent
         : (error.htmlContentCollapsed ?? error.htmlContent),
