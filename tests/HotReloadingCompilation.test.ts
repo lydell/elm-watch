@@ -549,7 +549,7 @@ describe("hot reloading", () => {
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
         <overlay visible>
-        <div id="0"><div><span>NEEDS DOUBLE QUOTES</span><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
+        <div id="0"><div><h2>NEEDS DOUBLE QUOTES</h2><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -567,7 +567,7 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible>
-        <div id="0"><div><span>NEEDS DOUBLE QUOTES</span><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
+        <div id="0"><div><h2>NEEDS DOUBLE QUOTES</h2><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -585,7 +585,7 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible>
-        <div id="0"><div><span>NEEDS DOUBLE QUOTES</span><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
+        <div id="0"><div><h2>NEEDS DOUBLE QUOTES</h2><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -603,7 +603,7 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible>
-        <div id="0"><div><span>UNKNOWN EXPORT</span><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
+        <div id="0"><div><h2>UNKNOWN EXPORT</h2><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
@@ -613,7 +613,7 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible>
-        <div id="0"><div><span>UNKNOWN EXPORT</span><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
+        <div id="0"><div><h2>UNKNOWN EXPORT</h2><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
@@ -623,7 +623,7 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible>
-        <div id="0"><div><span>NEEDS DOUBLE QUOTES</span><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
+        <div id="0"><div><h2>NEEDS DOUBLE QUOTES</h2><span></span><span><button>src/AppHelpers.elm<span>:3:8</span></button></span></div>
         <pre>The following string uses single quotes:
 
         3| text = 'App'
@@ -637,13 +637,13 @@ describe("hot reloading", () => {
         code like (String.any (\\c -&gt; c == 'X') "90210") where you are inspecting
         individual characters.</pre></div>
         --------------------------------------------------------------------------------
-        <div id="1"><div><span>UNKNOWN EXPORT</span><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
+        <div id="1"><div><h2>UNKNOWN EXPORT</h2><span></span><span><button>src/Shared.elm<span>:1:25</span></button></span></div>
         <pre>You are trying to expose a value named \`textTypo\` but I cannot find its
         definition.
 
         Maybe you want <span style="color: rgb(229, 229, 16)">text</span> instead?</pre></div>
         --------------------------------------------------------------------------------
-        <div id="2"><div><span>PROBLEM IN TYPE ANNOTATION</span><span></span><span><button>src/AppOtherHelpers.elm<span>:3:7</span></button></span></div>
+        <div id="2"><div><h2>PROBLEM IN TYPE ANNOTATION</h2><span></span><span><button>src/AppOtherHelpers.elm<span>:3:7</span></button></span></div>
         <pre>I was partway through parsing the \`text\` type annotation, but I got stuck here:
 
         3| text := "AppOther"
@@ -706,7 +706,7 @@ describe("hot reloading", () => {
 
       expect(joinOverlays(overlays)).toMatchInlineSnapshot(`
         <overlay visible>
-        <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/App.elm<span>:7:19</span></button></span></div>
+        <div id="0"><div><h2>TYPE MISMATCH</h2><span></span><span><button>src/App.elm<span>:7:19</span></button></span></div>
         <pre>I cannot do addition with <span style="color: rgb(229, 229, 16)">String</span> values like this one:
 
         7| main = Html.text (AppHelpers.text + Shared.text)
@@ -723,7 +723,7 @@ describe("hot reloading", () => {
         </overlay>
         ================================================================================
         <overlay visible>
-        <div id="0"><div><span>SYNTAX PROBLEM</span><span></span><span><button>src/App.elm<span>:1:2</span></button></span></div>
+        <div id="0"><div><h2>SYNTAX PROBLEM</h2><span></span><span><button>src/App.elm<span>:1:2</span></button></span></div>
         <pre>I got stuck here:
 
         1|  App exposing (main)
@@ -774,7 +774,7 @@ describe("hot reloading", () => {
 
       expect(overlay).toMatchInlineSnapshot(`
         <overlay visible>
-        <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/App.elm<span>:7:19</span></button></span></div>
+        <div id="0"><div><h2>TYPE MISMATCH</h2><span></span><span><button>src/App.elm<span>:7:19</span></button></span></div>
         <pre>I cannot do addition with <span style="color: #333333">String</span> values like this one:
 
         7| main = Html.text (AppHelpers.text + Shared.text)

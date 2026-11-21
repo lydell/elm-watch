@@ -932,7 +932,7 @@ describe("hot error view", () => {
     `);
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
       <overlay visible>
-      <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/Main.elm<span>:19:5</span></button></span></div>
+      <div id="0"><div><h2>TYPE MISMATCH</h2><span></span><span><button>src/Main.elm<span>:19:5</span></button></span></div>
       <pre>Something is off with the body of the \`f\` definition:
 
       19|<span style="color: rgb(241, 76, 76)">&gt;</span>    String.length &lt;|
@@ -960,7 +960,7 @@ describe("hot error view", () => {
       </overlay>
       ================================================================================
       <overlay visible>
-      <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/Main.elm<span>:19:5</span></button></span></div>
+      <div id="0"><div><h2>TYPE MISMATCH</h2><span></span><span><button>src/Main.elm<span>:19:5</span></button></span></div>
       <pre>Something is off with the body of the \`f\` definition:
 
       19|<span style="color: rgb(241, 76, 76)">&gt;</span>    String.length &lt;|

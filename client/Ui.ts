@@ -1992,6 +1992,11 @@ supported by browsers, for browsers without popover support.
   transform: translate(calc(var(--padding) * -1), calc(-50% - var(--border-thickness) / 2));
 }
 
+.${CLASS.errorTitle} {
+  margin: 0;
+  font-size: inherit;
+}
+
 .${CLASS.errorTitleLocation} {
   font-weight: normal;
   min-width: 0;
@@ -3671,7 +3676,12 @@ function viewOverlayError(
     h(
       HTMLDivElement,
       { className: CLASS.overlayErrorHeader },
-      h(HTMLSpanElement, { className: CLASS.errorTitle }, error.title),
+      // A heading, so that screen reader users can jump between errors.
+      h(
+        HTMLHeadingElement,
+        { localName: "h2", className: CLASS.errorTitle },
+        error.title,
+      ),
       error.location === undefined
         ? undefined
         : h(HTMLSpanElement, { className: CLASS.errorTitleSpacer }),

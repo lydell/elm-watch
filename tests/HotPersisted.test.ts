@@ -87,7 +87,7 @@ describe("hot", () => {
 
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible>
-      <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/Main.elm<span>:10:31</span></button></span></div>
+      <div id="0"><div><h2>TYPE MISMATCH</h2><span></span><span><button>src/Main.elm<span>:10:31</span></button></span></div>
       <pre>I am struggling with this boolean operation:
 
       10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
@@ -141,7 +141,7 @@ describe("hot", () => {
 
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible>
-      <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/Main.elm<span>:10:31</span></button></span></div>
+      <div id="0"><div><h2>TYPE MISMATCH</h2><span></span><span><button>src/Main.elm<span>:10:31</span></button></span></div>
       <pre>I am struggling with this boolean operation:
 
       10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"
@@ -198,7 +198,7 @@ describe("hot", () => {
 
     expect(getOverlay()).toMatchInlineSnapshot(`
       <overlay visible>
-      <div id="0"><div><span>UNEXPECTED ELM OUTPUT</span><span></span><span><span>Target: Main</span></span></div>
+      <div id="0"><div><h2>UNEXPECTED ELM OUTPUT</h2><span></span><span><span>Target: Main</span></span></div>
       <pre>I ran the following commands:
 
       cd /Users/you/project/tests/fixtures/hot/error-overlay-bold-and-dim
@@ -353,7 +353,7 @@ describe("hot", () => {
 
         expect(chooser).toMatchInlineSnapshot(`
           <overlay visible>
-          <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>src/Main.elm<span>:10:31</span></button></span></div>
+          <div id="0"><div><h2>TYPE MISMATCH</h2><span></span><span><button>src/Main.elm<span>:10:31</span></button></span></div>
           <pre>I am struggling with this boolean operation:
 
           10|     , view = \\_ -&gt; if True &amp;&amp; 5 then Html.text "yes" else Html.text "no"

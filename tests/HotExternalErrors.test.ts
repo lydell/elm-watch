@@ -155,12 +155,12 @@ describe("hot external errors", () => {
     `);
     expect(overlays.join(`\n${"=".repeat(80)}\n`)).toMatchInlineSnapshot(`
       <overlay visible>
-      <div id="0"><div><span>ESBUILD</span><span></span><span><button>tests/fixtures/hot/error-view/ts/main.ts<span>:12:9</span></button></span></div>
+      <div id="0"><div><h2>ESBUILD</h2><span></span><span><button>tests/fixtures/hot/error-view/ts/main.ts<span>:12:9</span></button></span></div>
       <pre>Expected <span style="font-weight: bold">;</span> but found <span style="color: rgb(205, 49, 49)">foo</span></pre></div>
 
       ================================================================================
       <overlay visible>
-      <div id="0"><div><span>TYPE MISMATCH</span><span></span><span><button>tests/fixtures/hot/error-view/src/A.elm<span>:6:5</span></button></span></div>
+      <div id="0"><div><h2>TYPE MISMATCH</h2><span></span><span><button>tests/fixtures/hot/error-view/src/A.elm<span>:6:5</span></button></span></div>
       <pre>Something is off with the body of the \`a\` definition:
 
       6|     1
