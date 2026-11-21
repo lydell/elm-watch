@@ -319,12 +319,21 @@ export function createUi(): Ui {
     setErrorOverlayOpen(false);
   };
 
-  // The overlay itself is focused when it opens (rather than the first button),
-  // so that Enter and Space work as key hints, and Page Up/Down scroll.
+  // The overlay has two parts: The errors (the only part that scrolls, with the
+  // close button sticking to the top), and the footer (with the editor chooser
+  // above it, when open).
   const overlay = h(HTMLDivElement, {
     className: CLASS.overlay,
-    attrs: { "data-test-id": "Overlay", tabindex: "-1" },
+    attrs: { "data-test-id": "Overlay" },
     hidden: true,
+  });
+
+  // The scrollable errors are focused when the overlay opens (rather than the
+  // first button), so that Enter and Space work as key hints, and Page Up/Down
+  // scroll.
+  const overlayContent = h(HTMLDivElement, {
+    className: CLASS.overlayContent,
+    attrs: { tabindex: "-1" },
   });
 
   // The overlay content is re-created on every render, and screen readers
@@ -344,7 +353,9 @@ export function createUi(): Ui {
     attrs: { "aria-live": "polite", "data-test-id": "StatusAnnouncement" },
   });
 
-  // Re-added to the overlay on every render, as its first child.
+  const overlayBottom = h(HTMLDivElement, { className: CLASS.overlayBottom });
+
+  // Re-added to the overlay content on every render, as its first child.
   const overlayCloseButton = h(
     HTMLButtonElement,
     {
@@ -409,6 +420,7 @@ export function createUi(): Ui {
     element.setAttribute("translate", "no");
   }
 
+  overlay.append(overlayContent, overlayBottom);
   topLayer.append(overlay, overlayAnnouncement, statusAnnouncement, root);
   dialog.append(topLayer);
   const shadowRoot = container.attachShadow({ mode: "open" });
@@ -494,35 +506,36 @@ export function createUi(): Ui {
     const { activeElement } = shadowRoot;
     const focusInOverlay =
       activeElement !== null &&
-      activeElement !== overlay &&
+      activeElement !== overlayContent &&
       overlay.contains(activeElement);
     const focusKey = focusInOverlay
       ? (activeElement.getAttribute(DATA_FOCUS_KEY) ?? undefined)
       : undefined;
     const focusVisible =
       focusInOverlay && activeElement.matches(":focus-visible");
-    const { scrollTop } = overlay;
+    const { scrollTop } = overlayContent;
     // The error ID is JSON, so it can’t be confused with "show all".
     const renderedKey = overlayShowAll ? "show all" : selectedError?.id;
 
-    overlay.replaceChildren(
-      overlayCloseButton,
-      ...viewOverlay({
-        group,
-        selection: overlaySelection,
-        showAll: overlayShowAll,
-        expanded: overlayExpanded,
-        onKey: handleOverlayKey,
-        onOpenEditor: (item, location) => {
-          openEditorForItem(item, location);
-        },
-        editor: getOverlayEditor(),
-        openEditorError,
-      }),
-    );
+    const view = viewOverlay({
+      group,
+      selection: overlaySelection,
+      showAll: overlayShowAll,
+      expanded: overlayExpanded,
+      onKey: handleOverlayKey,
+      onOpenEditor: (item, location) => {
+        openEditorForItem(item, location);
+      },
+      editor: getOverlayEditor(),
+      openEditorError,
+    });
+    // The two parts stay put, so that the focused content keeps its focus.
+    overlayContent.replaceChildren(overlayCloseButton, ...(view?.errors ?? []));
+    overlayBottom.replaceChildren(...(view?.bottom ?? []));
 
     // Start from the top when going to another error.
-    overlay.scrollTop = renderedKey === overlayRenderedKey ? scrollTop : 0;
+    overlayContent.scrollTop =
+      renderedKey === overlayRenderedKey ? scrollTop : 0;
     // Only touch the live region when the text changes, to avoid repeated
     // announcements.
     const announcement = getOverlayAnnouncement(
@@ -542,7 +555,7 @@ export function createUi(): Ui {
       if (element instanceof HTMLElement && !element.matches(":disabled")) {
         element.focus({ preventScroll: true });
       } else {
-        overlay.focus({ preventScroll: true });
+        overlayContent.focus({ preventScroll: true });
       }
     }
   };
@@ -1021,7 +1034,7 @@ export function createUi(): Ui {
       } else if (!dialog.open) {
         dialog.setAttribute("aria-label", "elm-watch errors");
         dialog.showModal();
-        overlay.focus({ preventScroll: true });
+        overlayContent.focus({ preventScroll: true });
       }
     }
 
@@ -1809,6 +1822,7 @@ const CLASS = {
   note: "note",
   overlay: "overlay",
   overlayCloseButton: "overlayCloseButton",
+  overlayContent: "overlayContent",
   overlayBottom: "overlayBottom",
   overlayError: "overlayError",
   overlayErrorHeader: "overlayErrorHeader",
@@ -1913,8 +1927,6 @@ supported by browsers, for browsers without popover support.
   position: fixed;
   z-index: -2;
   inset: 0;
-  overflow-y: auto;
-  /* The footer sticks to the bottom, even if the error is short. */
   display: flex;
   flex-direction: column;
   user-select: text;
@@ -1924,14 +1936,18 @@ supported by browsers, for browsers without popover support.
   color: var(--fg);
 }
 
-.${CLASS.overlay} > * {
-  flex-shrink: 0;
+/* Only the errors scroll. They take up the space left over by the footer, so
+   the footer stays at the bottom even if the error is short. */
+.${CLASS.overlayContent} {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Browsers make scrollable elements focusable, and the dialog focuses the
-   overlay when it opens. An outline around the whole window is just noise. */
-.${CLASS.overlay}:focus-visible {
-  outline: none;
+.${CLASS.overlayContent} > * {
+  flex-shrink: 0;
 }
 
 /* Like the borders in the overlay, rather than the browser default. */
@@ -1940,8 +1956,16 @@ supported by browsers, for browsers without popover support.
   outline-offset: 0.25em;
 }
 
-/* Sticking to the top right of the overlay’s content box keeps the button the
-   same distance from the edges, whether there is a scrollbar or not. */
+/* Browsers make scrollable elements focusable, and the content is focused when
+   the overlay opens. An outline around the whole window is just noise. (This
+   must come after the rule above.) */
+.${CLASS.overlayContent}:focus-visible {
+  outline: none;
+}
+
+/* Sticking to the top right of the scrollable content box keeps the button the
+   same distance from the edges, whether there is a scrollbar or not (and never
+   on top of the scrollbar). */
 .${CLASS.overlayCloseButton} {
   position: sticky;
   z-index: 1;
@@ -1960,6 +1984,7 @@ supported by browsers, for browsers without popover support.
   background: none;
   color: inherit;
   cursor: pointer;
+  /* Keep the icon visible on top of scrolled errors. */
   filter: drop-shadow(0 0 2px var(--bg));
 }
 
@@ -2067,16 +2092,12 @@ supported by browsers, for browsers without popover support.
   overflow-x: auto;
 }
 
-/* The footer, and the editor chooser above it, stick to the bottom, so that the
-   chooser is visible even if the error is long. */
+/* The footer, and the editor chooser above it. If the chooser is too tall, the
+   errors shrink away first, and then the chooser scrolls. */
 .${CLASS.overlayBottom} {
-  position: sticky;
-  bottom: 0;
-  margin-top: auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  max-height: 100%;
-  background-color: inherit;
 }
 
 .${CLASS.overlayFooter} {
@@ -2089,7 +2110,6 @@ supported by browsers, for browsers without popover support.
   /* Room for the emoji button, which can be on either side. */
   padding: 1ch calc(${TOGGLE_SIZE} + 2ch);
   border-top: 0.125em solid;
-  background-color: inherit;
 }
 
 .${CLASS.overlayPosition} {
@@ -3468,9 +3488,9 @@ function viewOverlay({
   onOpenEditor: (item: OverlayErrorItem, location: LocationToOpen) => void;
   editor: OverlayEditor;
   openEditorError: string | undefined;
-}): Array<HTMLElement> {
+}): { errors: Array<HTMLElement>; bottom: Array<HTMLElement> } | undefined {
   if (group.numErrors === 0) {
-    return [];
+    return undefined;
   }
 
   // While choosing an editor, the other keys are paused.
@@ -3502,9 +3522,11 @@ function viewOverlay({
 
   if (showAll || selection === undefined) {
     const items = group.files.flatMap((file) => file.errors);
-    return [
-      ...items.map((item) => viewOverlayError(item, true, onKey, onOpenEditor)),
-      viewOverlayFooter(
+    return {
+      errors: items.map((item) =>
+        viewOverlayError(item, true, onKey, onOpenEditor),
+      ),
+      bottom: viewOverlayFooter(
         aboveFooter,
         `🚨 ${items.length} error${items.length === 1 ? "" : "s"}`,
         editor.chooser === undefined
@@ -3524,12 +3546,12 @@ function viewOverlay({
           : cancelHints,
         onKey,
       ),
-    ];
+    };
   }
 
   const item = getSelectedError(selection, [group]);
   if (item === undefined) {
-    return [];
+    return undefined;
   }
   const errorNumber = getErrorNumber(selection, group);
   const position = [
@@ -3544,9 +3566,9 @@ function viewOverlay({
   const canOpenEditor = getOverlayOpenEditorLocation(item) !== undefined;
   const openInName = editor.current?.name ?? "editor";
 
-  return [
-    viewOverlayError(item, expanded, onKey, onOpenEditor),
-    viewOverlayFooter(
+  return {
+    errors: [viewOverlayError(item, expanded, onKey, onOpenEditor)],
+    bottom: viewOverlayFooter(
       aboveFooter,
       `🚨 ${position}`,
       editor.chooser !== undefined
@@ -3601,7 +3623,7 @@ function viewOverlay({
           ],
       onKey,
     ),
-  ];
+  };
 }
 
 // Shown in the error overlay when clicking an error location without having
@@ -3773,7 +3795,7 @@ function viewOverlayFooter(
   position: string,
   hints: Array<OverlayHint | undefined>,
   onKey: (key: OverlayKey) => void,
-): HTMLElement {
+): Array<HTMLElement> {
   const footer = h(
     HTMLDivElement,
     { className: CLASS.overlayFooter },
@@ -3850,12 +3872,7 @@ function viewOverlayFooter(
       }),
     ),
   );
-  return h(
-    HTMLDivElement,
-    { className: CLASS.overlayBottom },
-    ...aboveFooter,
-    footer,
-  );
+  return [...aboveFooter.flatMap((element) => element ?? []), footer];
 }
 
 function viewErrorLocation(

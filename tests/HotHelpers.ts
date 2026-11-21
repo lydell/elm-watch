@@ -826,11 +826,13 @@ export function getOverlay(): string {
     const overlay = shadowRoot.querySelector(`[data-test-id="Overlay"]`);
     if (overlay instanceof HTMLElement) {
       const children = Array.from(overlay.children, (child): Array<Element> =>
-        child.classList.contains("overlayCloseButton")
-          ? []
-          : child.classList.contains("overlayBottom")
-            ? Array.from(child.children)
-            : [child],
+        child.classList.contains("overlayContent") ||
+        child.classList.contains("overlayBottom")
+          ? Array.from(child.children).filter(
+              (grandchild) =>
+                !grandchild.classList.contains("overlayCloseButton"),
+            )
+          : [child],
       )
         .flat()
         .map((child, index) => {
