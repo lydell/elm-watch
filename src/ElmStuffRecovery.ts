@@ -36,8 +36,8 @@ import type { Compiler, ElmJsonPath } from "./Types.ts";
 // The marker is a file in elm-stuff/elm-watch/, so we can also recover after
 // elm-watch itself was killed while `elm` was running.
 
-// Lamdera 1.5.0 uses elm-stuff/lamdera-1.5.0-0.19.3/, while older versions
-// use elm-stuff/0.19.1/ just like Elm.
+// Lamdera 1.5.0 and later use elm-stuff/lamdera-1.5.0-0.19.3/ (with their own
+// version), while older versions use elm-stuff/0.19.1/ just like Elm.
 const compilerDirRegexes: Record<Compiler, RegExp> = {
   elm: /^\d+\.\d+\.\d+$/,
   lamdera: /^(?:lamdera-\d+\.\d+\.\d+-)?\d+\.\d+\.\d+$/,
